@@ -8,7 +8,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 // Add services to the container.
-var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") 
+var envConn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+if (!string.IsNullOrEmpty(envConn)) 
+{
+    Console.WriteLine($"Using Environment Variable for DB: {envConn.Substring(0, 15)}...");
+}
+else
+{
+    Console.WriteLine("Environment Variable 'ConnectionStrings__DefaultConnection' is NULL or EMPTY. Using Config.");
+}
+
+var connectionString = envConn 
                        ?? builder.Configuration.GetConnectionString("DefaultConnection") 
                        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
