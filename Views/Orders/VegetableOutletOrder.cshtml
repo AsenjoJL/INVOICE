@@ -142,108 +142,86 @@
 (function () {
   'use strict';
 
-  let grandTotalQty = @grandTotalQ;
-  let grandTotalAmt = @grandTotalAmt;
-
+  // Efficient DOM elements
+  const table = document.getElementById('orderTable');
   const gtQtyEl = document.getElementById('grandTotalQty');
   const gtAmtEl = document.getElementById('grandTotalAmt');
   const fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  function num(v) {
-    if (v == null) return 0;
-    const s = ('' + v).trim();
-    if (s === '') return 0;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : 0;
-  }
-
-  function updateTotals() {
-    if (gtQtyEl) gtQtyEl.textContent = grandTotalQty ? grandTotalQty.toFixed(2).replace(/\.?0+$/, '') : '0';
-    if (gtAmtEl) gtAmtEl.textContent = fmt.format(grandTotalAmt || 0);
-  }
-
-  const table = document.getElementById('orderTable');
   if (!table) return;
 
-  const prevValues = new WeakMap(); // lazy
-  const rafByInput = new WeakMap();
-  const rowRefs = new WeakMap();
+  // Helper to parse numbers safely
+  const num = (val) => {
+      const n = parseFloat(val);
+      return Number.isFinite(n) ? n : 0;
+  };
 
-  function getRowRefs(row) {
-    let r = rowRefs.get(row);
-    if (r) return r;
-    r = {
-      priceInput: row.querySelector('.price-input'),
-      qtyInput: row.querySelector('.qty-input'),
-      amtCell: row.querySelector('.amount-cell')
-    };
-    rowRefs.set(row, r);
-    return r;
+  // 1. FAST: Update Single Row Amount only (Runs on every keystroke)
+  function updateRow(row) {
+      const priceInput = row.querySelector('.price-input');
+      const qtyInput = row.querySelector('.qty-input');
+      const amtCell = row.querySelector('.amount-cell');
+
+      if (!priceInput || !qtyInput || !amtCell) return;
+
+      const price = num(priceInput.value);
+      const qty = num(qtyInput.value);
+      const total = price * qty;
+
+      // Update text directly
+      amtCell.textContent = total > 0 ? fmt.format(total) : '-';
   }
 
-  function schedule(input) {
-    const old = rafByInput.get(input);
-    if (old) cancelAnimationFrame(old);
-    const id = requestAnimationFrame(() => {
-      rafByInput.delete(input);
-      handle(input);
-    });
-    rafByInput.set(input, id);
+  // 2. SLOW: Update Grand Totals (Runs only on BLUR/CHANGE)
+  // This avoids recalculating the whole table while the user is typing
+  function updateGrandTotal() {
+      let totalQty = 0;
+      let totalAmt = 0;
+
+      // Query all rows efficiently
+      const rows = table.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+          const qtyVal = row.querySelector('.qty-input').value;
+          const priceVal = row.querySelector('.price-input').value;
+          
+          const qty = num(qtyVal);
+          const price = num(priceVal);
+          
+          if (qty > 0) {
+              totalQty += qty;
+              totalAmt += (qty * price);
+          }
+      });
+
+      if (gtQtyEl) gtQtyEl.textContent = totalQty > 0 ? parseFloat(totalQty.toFixed(2)) : '0';
+      if (gtAmtEl) gtAmtEl.textContent = fmt.format(totalAmt);
   }
 
-  table.addEventListener('focusin', (e) => {
-    const input = e.target;
-    if (!(input instanceof HTMLInputElement)) return;
-    if (!input.classList.contains('table-input')) return;
-
-    if (!prevValues.has(input)) prevValues.set(input, num(input.value));
-    try { input.select(); } catch {}
-  });
-
+  // Event Delegation
   table.addEventListener('input', (e) => {
-    const input = e.target;
-    if (!(input instanceof HTMLInputElement)) return;
-    if (!input.classList.contains('table-input')) return;
-    schedule(input);
+      if (e.target.classList.contains('table-input')) {
+          const row = e.target.closest('tr');
+          if (row) updateRow(row);
+      }
   }, { passive: true });
 
-  table.addEventListener('blur', (e) => {
-    const input = e.target;
-    if (!(input instanceof HTMLInputElement)) return;
-    if (!input.classList.contains('table-input')) return;
+  table.addEventListener('change', (e) => {
+      if (e.target.classList.contains('table-input')) {
+          const row = e.target.closest('tr');
+          if (row) {
+              updateRow(row); // Ensure row is correct
+              updateGrandTotal(); // Update totals when user leaves the field
+          }
+      }
+  });
+  
+  // Optional: Select text on focus for easier editing
+  table.addEventListener('focusin', (e) => {
+      if (e.target.classList.contains('table-input')) {
+          try { e.target.select(); } catch {}
+      }
+  });
 
-    const old = rafByInput.get(input);
-    if (old) { cancelAnimationFrame(old); rafByInput.delete(input); }
-    handle(input);
-  }, true);
-
-  function handle(input) {
-    const row = input.closest('tr');
-    if (!row) return;
-
-    const oldVal = prevValues.get(input) ?? 0;
-    const newVal = num(input.value);
-    if (oldVal === newVal) return;
-    prevValues.set(input, newVal);
-
-    const refs = getRowRefs(row);
-    const isQty = input.classList.contains('qty-input');
-
-    const price = isQty ? num(refs.priceInput?.value) : newVal;
-    const qty = isQty ? newVal : num(refs.qtyInput?.value);
-    const newAmount = qty * price;
-
-    if (isQty) {
-      const deltaQty = newVal - oldVal;
-      grandTotalQty += deltaQty;
-      grandTotalAmt += (deltaQty * price);
-    } else {
-      const deltaPrice = newVal - oldVal;
-      grandTotalAmt += (deltaPrice * qty);
-    }
-
-    if (refs.amtCell) refs.amtCell.textContent = newAmount > 0 ? fmt.format(newAmount) : '-';
-    updateTotals();
-  }
 })();
 </script>

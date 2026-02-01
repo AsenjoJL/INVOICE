@@ -1,0 +1,9 @@
+bin/
+obj/
+.git/
+.github/
+.vscode/
+.vs/
+*.user
+*.lock
+appsettings.Development.json

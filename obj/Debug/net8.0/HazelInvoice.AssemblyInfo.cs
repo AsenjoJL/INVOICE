@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HazelInvoice")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0868c73c8222afeac996b0fc43b5d4c6a1d7de7c")]
 [assembly: System.Reflection.AssemblyProductAttribute("HazelInvoice")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HazelInvoice")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

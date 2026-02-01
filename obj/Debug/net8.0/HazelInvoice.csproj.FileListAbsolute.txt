@@ -108,3 +108,4 @@ C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\refint\HazelInvoice.d
 C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\HazelInvoice.pdb
 C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\HazelInvoice.genruntimeconfig.cache
 C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\ref\HazelInvoice.dll
+C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\HazelInvoice.sourcelink.json
