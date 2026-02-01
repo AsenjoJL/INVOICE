@@ -1,0 +1,64 @@
+@model HazelInvoice.Models.WeeklyPrice
+
+@{
+    ViewData["Title"] = "Edit Price";
+}
+
+<div class="container p-4">
+    <div class="card shadow border-0" style="max-width: 600px; margin: 0 auto;">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0">Edit Price</h4>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit">
+                <input type="hidden" asp-for="Id" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
+                <div class="mb-3">
+                    <label asp-for="ProductId" class="form-label">Product</label>
+                    <select asp-for="ProductId" class ="form-select" asp-items="ViewBag.ProductId"></select>
+                    <span asp-validation-for="ProductId" class="text-danger"></span>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="EffectiveFrom" class="form-label">Effective From</label>
+                        <input asp-for="EffectiveFrom" class="form-control" type="date" />
+                        <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="EffectiveTo" class="form-label">Effective To</label>
+                        <input asp-for="EffectiveTo" class="form-control" type="date" />
+                        <span asp-validation-for="EffectiveTo" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input asp-for="BasePrice" class="form-control" placeholder="Base Price" />
+                            <label asp-for="BasePrice">Base Price (Walk-in)</label>
+                            <span asp-validation-for="BasePrice" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                         <div class="form-floating">
+                            <input asp-for="DeliveryPrice" class="form-control" placeholder="Delivery Price" />
+                            <label asp-for="DeliveryPrice">Delivery Price</label>
+                            <span asp-validation-for="DeliveryPrice" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
+                    <a asp-action="Index" class="btn btn-light">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

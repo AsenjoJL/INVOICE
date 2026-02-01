@@ -1,0 +1,45 @@
+@model IEnumerable<HazelInvoice.ViewModels.InventoryReportItem>
+
+@{
+    ViewData["Title"] = "Inventory Report";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Inventory Report</h2>
+        <button onclick="window.print()" class="btn btn-outline-secondary no-print"><i class="bi bi-printer"></i> Print</button>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th class="text-center">Current Stock</th>
+                        <th class="text-center">Unit</th>
+                        <th class="text-center">Reorder Level</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var statusClass = item.Status == "Low Stock" ? "bg-danger" : "bg-success";
+                        <tr>
+                            <td class="fw-bold">@item.Product.Name</td>
+                            <td>@item.Product.Category</td>
+                            <td class="text-center h5">@item.CurrentStock</td>
+                            <td class="text-center">@item.Product.Unit</td>
+                            <td class="text-center">@item.Product.ReorderLevel</td>
+                            <td class="text-center">
+                                <span class="badge @statusClass">@item.Status</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

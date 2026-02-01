@@ -1,0 +1,32 @@
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using HazelInvoice.Models;
+
+namespace HazelInvoice.Data;
+
+public class ApplicationDbContext : IdentityDbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options)
+    {
+    }
+
+    public DbSet<Product> Products { get; set; }
+    public DbSet<Service> Services { get; set; }
+    public DbSet<WeeklyPrice> WeeklyPrices { get; set; }
+    public DbSet<Receipt> Receipts { get; set; }
+    public DbSet<ReceiptLine> ReceiptLines { get; set; }
+    public DbSet<Payment> Payments { get; set; }
+    public DbSet<ReceiptSequence> ReceiptSequences { get; set; }
+    public DbSet<Expense> Expenses { get; set; }
+    public DbSet<Goal> Goals { get; set; }
+    public DbSet<Supply> Supplies { get; set; }
+    public DbSet<ProductStockMovement> ProductStockMovements { get; set; }
+    public DbSet<SupplyStockMovement> SupplyStockMovements { get; set; }
+    public DbSet<Customer> Customers { get; set; }
+    public DbSet<Deduction> Deductions { get; set; }
+    public DbSet<PartnerPurchase> PartnerPurchases { get; set; }
+    public DbSet<PartnerBalanceConfig> PartnerBalanceConfigs { get; set; }
+    public DbSet<PartnerCapital> PartnerCapitals { get; set; }
+
+}

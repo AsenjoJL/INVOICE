@@ -1,0 +1,282 @@
+@model HazelInvoice.Models.Receipt
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Delivery Receipt - @Model.ReceiptNumber</title>
+    <style>
+        body { 
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+        .receipt-container {
+            width: 800px;
+            margin: 0 auto;
+        }
+        /* Header Grid */
+        .header-grid {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            position: relative;
+        }
+        .logo-placeholder {
+            width: 100px;
+            height: 80px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+            border: 1px dashed #ccc; /* Placeholder border */
+        }
+        .header-text {
+            text-align: center;
+            width: 100%;
+        }
+        .company-name {
+            font-size: 20px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .company-details {
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        /* Receipt Meta */
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+        .dr-title {
+            font-size: 22px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        .dr-no-date {
+            text-align: right;
+            font-size: 16px;
+        }
+        .dr-number {
+            color: red;
+            font-weight: bold;
+            font-size: 20px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        /* Customer Info Lines */
+        .info-line {
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        .info-label {
+            white-space: nowrap;
+            margin-right: 5px;
+        }
+        .info-value {
+            border-bottom: 1px solid #000;
+            flex-grow: 1;
+            padding-left: 10px;
+            font-weight: bold;
+        }
+        .info-value-short {
+            border-bottom: 1px solid #000;
+            width: 250px;
+            padding-left: 10px;
+            font-weight: bold;
+        }
+
+        /* Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            border: 2px solid #000;
+        }
+        .items-table th {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: center;
+            font-weight: bold;
+            background-color: #ddd; /* Light gray to match */
+            text-transform: uppercase;
+        }
+        .items-table td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            vertical-align: middle;
+            height: 24px; /* Fixed height for consistency */
+        }
+        .col-qty { width: 8%; text-align: center; }
+        .col-unit { width: 10%; text-align: center; }
+        .col-part { width: 52%; }
+        .col-price { width: 15%; text-align: right; }
+        .col-amount { width: 15%; text-align: right; }
+
+        /* Footer */
+        .total-row td {
+            font-weight: bold;
+        }
+        .footer-note {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .received-line {
+            margin-top: 30px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .received-label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .received-input {
+            border-bottom: 1px solid #000;
+            width: 300px;
+        }
+
+        @@media print {
+            body { padding: 0; margin: 0; }
+            .receipt-container { width: 100%; max-width: 100%; }
+            .no-print { display: none !important; }
+            .items-table th { -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print p-3 text-center bg-light" style="margin-bottom: 20px; font-family: sans-serif;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #4e73df; color: white; border: none; border-radius: 5px;">Print Receipt</button>
+        <a href="/Receipts" style="margin-left: 10px; text-decoration: none; color: #555;">Back to List</a>
+    </div>
+
+    <div class="receipt-container">
+        <!-- Header -->
+        <div class="header-grid">
+            <!-- Simulated Logo Area based on image -->
+            <div class="logo-placeholder" style="border: none;">
+                <img src="/images/logo.png" alt="Logo" style="width: 100%; height: auto; max-height: 80px; object-fit: contain;" />
+            </div>
+            
+            <div class="header-text">
+                <div class="company-name">HEALTHY HARVEST VEGETABLE TRADING</div>
+                <div class="company-details">
+                    Plaridel St., Brgy. Ermita, Cebu City<br/>
+                    Contact#: 0969-2044656 • 0966-0861132<br/>
+                    Prop.: Ma. Hazel M. Calvo
+                </div>
+            </div>
+        </div>
+
+        <!-- Meta -->
+        <div class="meta-row">
+            <div class="dr-title">DELIVERY RECEIPT</div>
+            <div class="dr-no-date">
+                <span style="font-weight: bold; margin-right: 5px;">No.</span> <span class="dr-number">@Model.ReceiptNumber.Replace("DR-", "").Substring(Math.Max(0, Model.ReceiptNumber.Length - 9))</span><br/>
+                <span style="font-weight: bold; margin-right: 5px;">Date:</span> <span style="font-family: 'Courier New'; font-weight: bold; text-decoration: underline;">@Model.Date.ToString("MM/dd/yy")</span>
+            </div>
+        </div>
+
+        <!-- Customer Info -->
+        <div class="info-line">
+            <div class="info-label">Delivered to:</div>
+            <div class="info-value">@Model.CustomerName</div>
+        </div>
+        <div class="info-line">
+            <div class="info-label">Address:</div>
+            <div class="info-value">@Model.CustomerAddress</div>
+            <div class="info-label" style="margin-left: 20px;">Contact:</div>
+            <div class="info-value-short">@Model.ContactNumber</div>
+        </div>
+
+        <!-- Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th class="col-qty">QTY.</th>
+                    <th class="col-unit">UNIT</th>
+                    <th class="col-part">PARTICULARS</th>
+                    <th class="col-price">PRICE</th>
+                    <th class="col-amount">AMOUNT</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int maxRows = 15; // Fill page
+                    int count = 0;
+                }
+                @foreach (var item in Model.Lines)
+                {
+                    <tr>
+                        <td class="col-qty">@item.Quantity</td>
+                        <td class="col-unit">@item.Unit</td>
+                        <td class="col-part">@item.ItemName</td>
+                        <td class="col-price">@item.Price.ToString("N2")</td>
+                        <td class="col-amount">@item.Amount.ToString("N2")</td>
+                    </tr>
+                    count++;
+                }
+                
+                @* Fill empty rows *@
+                @for (int i = count; i < maxRows; i++)
+                {
+                    <tr>
+                        <td class="col-qty">&nbsp;</td>
+                        <td class="col-unit">&nbsp;</td>
+                        <td class="col-part">&nbsp;</td>
+                        <td class="col-price">&nbsp;</td>
+                        <td class="col-amount">&nbsp;</td>
+                    </tr>
+                }
+
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: center; border-right: none;">TOTAL AMOUNT DUE</td>
+                    <td style="border-left: none; background-color: #f9f9f9;"></td>
+                    <td class="col-amount">@Model.TotalAmount.ToString("N2")</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Footer -->
+        <div class="footer-note">
+            Received the above merchandise in good order condition.
+        </div>
+
+        <div class="received-line">
+            <div class="received-label">Received By:</div>
+            <div class="received-input"></div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = () => {
+             setTimeout(() => {
+                 window.print();
+             }, 800);
+        };
+    </script>
+</body>
+</html>

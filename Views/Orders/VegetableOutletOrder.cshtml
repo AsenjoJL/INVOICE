@@ -1,0 +1,249 @@
+@model HazelInvoice.ViewModels.VegetableOutletOrderViewModel
+
+@{
+    ViewData["Title"] = "Per Outlet Order";
+    decimal grandTotalAmt = 0;
+    decimal grandTotalQ = 0;
+}
+
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3 sticky-top" style="z-index: 1000; top:0;">
+        <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-shop"></i> PER OUTLET ORDER</h4>
+
+        <form method="get" class="d-flex gap-2 align-items-center flex-grow-1 mx-4">
+            <div class="input-group" style="max-width: 250px;">
+                <span class="input-group-text fw-bold">Date</span>
+                <input type="date" name="date" class="form-control"
+                       value="@Model.Date.ToString("yyyy-MM-dd")"
+                       onchange="this.form.submit()" />
+            </div>
+
+            <div class="input-group" style="max-width: 400px;">
+                <span class="input-group-text fw-bold">Outlet</span>
+                <select name="customerId" class="form-select" onchange="this.form.submit()">
+                    @if (!Model.Customers.Any())
+                    {
+                        <option value="">No Active Outlets</option>
+                    }
+                    @foreach (var c in Model.Customers)
+                    {
+                        <option value="@c.Id" selected="@(c.Id == Model.SelectedCustomerId)">@c.Name</option>
+                    }
+                </select>
+            </div>
+        </form>
+
+        <a asp-controller="ProfitReport" asp-action="Index" class="btn btn-info text-white me-3" target="_blank"><i class="bi bi-bar-chart-fill"></i> Profit & Sales</a>
+        <button type="submit" form="orderForm" class="btn btn-primary btn-lg px-4">
+            <i class="bi bi-save"></i> Save Order
+        </button>
+    </div>
+
+    @if (Model.SelectedCustomerId == 0)
+    {
+        <div class="alert alert-info m-3">Please add customers to start ordering.</div>
+    }
+    else
+    {
+        <div asp-validation-summary="All" class="alert alert-danger mx-3 my-2"></div>
+         <form asp-action="SaveOutletOrder" method="post" id="orderForm">
+
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Date" />
+            <input type="hidden" asp-for="SelectedCustomerId" />
+
+            <div class="table-responsive" style="height: 75vh; overflow: auto; position: relative;">
+                <table class="table table-bordered table-hover table-sm align-middle mb-0" id="orderTable">
+                    <thead class="bg-light sticky-top" style="top: 0; z-index: 10;">
+                        <tr class="text-center">
+                            <th class="bg-light" style="width: 40%;">VEGETABLE</th>
+                            <th style="width: 15%;">PRICE</th>
+                            <th style="width: 15%;">QTY</th>
+                            <th style="width: 20%;">AMOUNT</th>
+                            <th style="width: 10%;">UOM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in Model.Products)
+                        {
+                            decimal price = Model.ProductPrices.TryGetValue(product.Id, out var pr) ? pr : 0m;
+                            decimal qty = Model.Quantities.TryGetValue(product.Id, out var q) ? q : 0m;
+                            decimal amount = qty * price;
+
+                            grandTotalQ += qty;
+                            grandTotalAmt += amount;
+
+                            <tr>
+                                <td class="fw-bold px-3">@product.Name</td>
+
+                                <td class="p-0">
+                                    <input asp-for="ProductPrices[product.Id]"
+                                           type="number" step="0.01" inputmode="decimal"
+                                           value="@price.ToString("0.00")"
+                                           class="table-input price-input text-end pe-2"
+                                           autocomplete="off" />
+                                </td>
+
+                                <td class="p-0">
+                                    <input asp-for="Quantities[product.Id]"
+                                           type="number" step="0.01" inputmode="decimal"
+                                           value="@(qty > 0 ? qty.ToString("0.##") : "")"
+                                           class="table-input qty-input text-center fw-bold"
+                                           autocomplete="off" />
+                                </td>
+
+                                <td class="text-end px-3 fw-bold text-primary amount-cell">
+                                    @(amount > 0 ? amount.ToString("N2") : "-")
+                                </td>
+
+                                <td class="text-center text-muted small">@product.Unit</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="sticky-bottom bg-light fw-bold" style="bottom: 0; z-index: 10;">
+                        <tr class="fs-5">
+                            <td class="text-end px-3">GRAND TOTAL:</td>
+                            <td></td>
+                            <td class="text-center text-danger" id="grandTotalQty">@grandTotalQ.ToString("0.##")</td>
+                            <td class="text-end px-3 text-primary" id="grandTotalAmt">@grandTotalAmt.ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </form>
+    }
+</div>
+
+<style>
+    .table-input {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: transparent;
+        padding: 8px;
+        font-size: 1rem;
+        outline: none;
+    }
+    .table-input:focus {
+        background-color: #e8f0fe;
+        box-shadow: inset 0 0 0 2px #0d6efd;
+    }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    tbody tr:hover td { background-color: #f1f3f5; }
+    tbody tr { content-visibility: auto; contain-intrinsic-size: 28px; }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  let grandTotalQty = @grandTotalQ;
+  let grandTotalAmt = @grandTotalAmt;
+
+  const gtQtyEl = document.getElementById('grandTotalQty');
+  const gtAmtEl = document.getElementById('grandTotalAmt');
+  const fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  function num(v) {
+    if (v == null) return 0;
+    const s = ('' + v).trim();
+    if (s === '') return 0;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function updateTotals() {
+    if (gtQtyEl) gtQtyEl.textContent = grandTotalQty ? grandTotalQty.toFixed(2).replace(/\.?0+$/, '') : '0';
+    if (gtAmtEl) gtAmtEl.textContent = fmt.format(grandTotalAmt || 0);
+  }
+
+  const table = document.getElementById('orderTable');
+  if (!table) return;
+
+  const prevValues = new WeakMap(); // lazy
+  const rafByInput = new WeakMap();
+  const rowRefs = new WeakMap();
+
+  function getRowRefs(row) {
+    let r = rowRefs.get(row);
+    if (r) return r;
+    r = {
+      priceInput: row.querySelector('.price-input'),
+      qtyInput: row.querySelector('.qty-input'),
+      amtCell: row.querySelector('.amount-cell')
+    };
+    rowRefs.set(row, r);
+    return r;
+  }
+
+  function schedule(input) {
+    const old = rafByInput.get(input);
+    if (old) cancelAnimationFrame(old);
+    const id = requestAnimationFrame(() => {
+      rafByInput.delete(input);
+      handle(input);
+    });
+    rafByInput.set(input, id);
+  }
+
+  table.addEventListener('focusin', (e) => {
+    const input = e.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (!input.classList.contains('table-input')) return;
+
+    if (!prevValues.has(input)) prevValues.set(input, num(input.value));
+    try { input.select(); } catch {}
+  });
+
+  table.addEventListener('input', (e) => {
+    const input = e.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (!input.classList.contains('table-input')) return;
+    schedule(input);
+  }, { passive: true });
+
+  table.addEventListener('blur', (e) => {
+    const input = e.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (!input.classList.contains('table-input')) return;
+
+    const old = rafByInput.get(input);
+    if (old) { cancelAnimationFrame(old); rafByInput.delete(input); }
+    handle(input);
+  }, true);
+
+  function handle(input) {
+    const row = input.closest('tr');
+    if (!row) return;
+
+    const oldVal = prevValues.get(input) ?? 0;
+    const newVal = num(input.value);
+    if (oldVal === newVal) return;
+    prevValues.set(input, newVal);
+
+    const refs = getRowRefs(row);
+    const isQty = input.classList.contains('qty-input');
+
+    const price = isQty ? num(refs.priceInput?.value) : newVal;
+    const qty = isQty ? newVal : num(refs.qtyInput?.value);
+    const newAmount = qty * price;
+
+    if (isQty) {
+      const deltaQty = newVal - oldVal;
+      grandTotalQty += deltaQty;
+      grandTotalAmt += (deltaQty * price);
+    } else {
+      const deltaPrice = newVal - oldVal;
+      grandTotalAmt += (deltaPrice * qty);
+    }
+
+    if (refs.amtCell) refs.amtCell.textContent = newAmount > 0 ? fmt.format(newAmount) : '-';
+    updateTotals();
+  }
+})();
+</script>

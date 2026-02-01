@@ -1,0 +1,504 @@
+@model HazelInvoice.ViewModels.ProfitSummaryViewModel
+@{
+    ViewData["Title"] = "Profit & Sales Summary";
+}
+
+<style>
+    :root {
+        --excel-border: 1px solid #7f8c8d;
+        --excel-header-bg: #ecf0f1;
+        --excel-header-text: #2c3e50;
+        --excel-footer-bg: #f8f9fa;
+    }
+    
+    .excel-font {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* SECTION HEADERS */
+    .section-header {
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        letter-spacing: 0.5px;
+        border: 1px solid #333;
+        margin-bottom: 0;
+    }
+    .header-sales { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+    .header-profit { background: #198754; color: #fff; border-color: #198754; }
+    .header-deduct { background: #dc3545; color: #fff; border-color: #dc3545; }
+    .header-capital { background: #0dcaf0; color: #fff; border-color: #0dcaf0; }
+    .header-ledger { background: #6c757d; color: #fff; border-color: #6c757d; }
+    .header-main { background: #000; color: #fff; }
+
+    /* EXCEL TABLE */
+    .table-excel {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        background: #fff;
+    }
+    .table-excel th, .table-excel td {
+        border: var(--excel-border);
+        padding: 6px 10px;
+        vertical-align: middle;
+    }
+    .table-excel th {
+        background-color: var(--excel-header-bg);
+        color: var(--excel-header-text);
+        font-weight: 700;
+        text-align: center;
+        border-bottom: 2px solid #555;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    /* Footer Row Emphasis */
+    .table-excel tfoot td {
+        background-color: var(--excel-footer-bg);
+        font-weight: 800;
+        border-top: 2px solid #000 !important;
+        font-size: 1rem;
+    }
+
+    /* ALIGNMENT */
+    .num-col { text-align: right; font-family: 'Consolas', monospace; letter-spacing: -0.5px; }
+    .text-center { text-align: center; }
+    .text-start { text-align: left; }
+
+    /* COLORS */
+    .val-pos { color: #155724; } /* Dark Green */
+    .val-neg { color: #a91e2a; } /* Dark Red */
+    .val-warn { color: #856404; } /* Dark Yellow */
+
+    /* SCROLL WRAPPERS */
+    .excel-box {
+        border: 1px solid #333;
+        border-top: none;
+        max-height: 400px;
+        overflow-y: auto;
+        background: #fff;
+    }
+
+    /* KPI CARDS */
+    .kpi-card {
+        border: 1px solid #ccc;
+        border-left: 5px solid #333;
+        background: #fff;
+        padding: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .kpi-title { font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 700; margin-bottom: 4px; }
+    .kpi-value { font-size: 1.5rem; font-weight: 800; color: #333; font-family: 'Consolas', monospace; }
+</style>
+
+<div class="container-fluid p-4 excel-font bg-light min-vh-100">
+    <!-- Header & Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div>
+            <h2 class="fw-black mb-0 text-uppercase" style="letter-spacing:1px"><i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Profit & Sales Summary</h2>
+            <div class="text-muted small">Financial Report: @Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#deductionModal">+ DEDUCTION</button>
+            <button class="btn btn-outline-info btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#capitalModal">+ CAPITAL FUND</button>
+            <button class="btn btn-outline-secondary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#purchaseModal">+ PURCHASE</button>
+            <a href="javascript:window.print()" class="btn btn-dark btn-sm fw-bold"><i class="bi bi-printer"></i> PRINT</a>
+        </div>
+    </div>
+
+    <!-- Filters (Hidden on Print) -->
+    <form method="get" class="card p-3 mb-4 shadow-sm border-0 d-print-none">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted">START DATE</label>
+                <input type="date" name="startDate" class="form-control form-control-sm fw-bold" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted">END DATE</label>
+                <input type="date" name="endDate" class="form-control form-control-sm fw-bold" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-1">
+                <label class="small fw-bold text-muted">FEE %</label>
+                <input type="number" step="0.1" name="percentFee" class="form-control form-control-sm text-center fw-bold" value="@Model.PercentFee" />
+            </div>
+            <div class="col-md-1">
+                <label class="small fw-bold text-muted">P1 SHARE %</label>
+                <input type="number" step="1" name="split1" class="form-control form-control-sm text-center fw-bold" value="@Model.Partner1SharePercent" />
+            </div>
+            <div class="col-md-2">
+                <div class="form-check pt-4">
+                    <input class="form-check-input" type="checkbox" name="includeUnpaid" value="true" @(Model.IncludeUnpaid ? "checked" : "") id="checkUnpaid">
+                    <label class="form-check-label small fw-bold" for="checkUnpaid">INCLUDE UNPAID</label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">REFRESH DATA</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- KPI Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card" style="border-left-color: #0d6efd;">
+                <div class="kpi-title">TOTAL SALES (@(Model.IncludeUnpaid ? "ALL" : "PAID"))</div>
+                <div class="kpi-value text-primary">₱@Model.TotalGrossSales.ToString("N2")</div>
+                <small class="text-muted d-block mt-1">@Model.TotalReceiptCount Receipts</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card" style="border-left-color: #198754;">
+                 <div class="kpi-title">TOTAL PAID</div>
+                 <div class="kpi-value text-success">₱@Model.TotalPaidReceipts.ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+             <div class="kpi-card" style="border-left-color: #dc3545;">
+                 <div class="kpi-title">TOTAL UNPAID</div>
+                 <div class="kpi-value text-danger">₱@Model.TotalUnpaidReceipts.ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+             <div class="kpi-card" style="border-left-color: #0dcaf0;">
+                 <div class="kpi-title">ITEMS SOLD</div>
+                 <div class="kpi-value text-info">@Model.TotalItemsSold.ToString("N0") <span class="fs-6 text-muted">pcs</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="row g-4">
+        <!-- LEFT: Breakdowns -->
+        <div class="col-lg-8">
+            <!-- Row: Sales & Profit Tables -->
+            <div class="row g-0">
+                <div class="col-md-6 pe-md-2">
+                    <div class="section-header header-sales">A. SALES & FEES (@Model.PercentFee%)</div>
+                    <div class="excel-box">
+                        <table class="table-excel">
+                            <thead>
+                                <tr><th>DATE</th><th>SALES</th><th>FEE</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var day in Model.DailyStats) {
+                                    <tr>
+                                        <td class="text-center">@day.Date.ToString("MM/dd")</td>
+                                        <td class="num-col">@day.SalesAmount.ToString("N2")</td>
+                                        <td class="num-col val-neg">@day.FeeAmount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>TOTAL</td>
+                                    <td class="num-col">₱@Model.TotalGrossSales.ToString("N2")</td>
+                                    <td class="num-col val-neg">₱@Model.TotalFees.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6 ps-md-2 mt-3 mt-md-0">
+                    <div class="section-header header-profit">B. GROSS PROFIT</div>
+                     <div class="excel-box">
+                        <table class="table-excel">
+                            <thead>
+                                <tr><th>DATE</th><th class="bg-profit-light">PROFIT</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var day in Model.DailyStats) {
+                                    <tr>
+                                        <td class="text-center">@day.Date.ToString("MM/dd")</td>
+                                        <td class="num-col fw-bold val-pos bg-profit-light">@day.GrossProfit.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>TOTAL</td>
+                                    <td class="num-col val-pos">₱@Model.TotalGrossProfit.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row: Deductions & Capital -->
+            <div class="row g-0 mt-4">
+                <div class="col-md-6 pe-md-2">
+                    <div class="section-header header-deduct">C. DEDUCTIONS</div>
+                     <div class="excel-box">
+                        <table class="table-excel">
+                            <thead>
+                                <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var d in Model.Deductions) {
+                                    <tr>
+                                        <td>@d.Description <br><small class="text-muted">@d.Date.ToString("MM/dd")</small></td>
+                                        <td class="num-col val-neg">@d.Amount.ToString("N2")</td>
+                                    </tr>
+                                }
+                                @if(!Model.Deductions.Any()) { <tr><td colspan="2" class="text-center text-muted fst-italic py-3">No deductions recorded</td></tr>}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>TOTAL DEDUCTIONS</td>
+                                    <td class="num-col val-neg">₱@Model.TotalDeductions.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6 ps-md-2 mt-3 mt-md-0">
+                    <div class="section-header header-capital">D. CAPITAL FUNDS</div>
+                     <div class="excel-box">
+                        <table class="table-excel">
+                            <thead>
+                                <tr><th>FUND NAME</th><th>AMOUNT</th></tr>
+                            </thead>
+                             <tbody>
+                                @foreach(var c in Model.CapitalFunds) {
+                                    <tr>
+                                        <td>@c.Description <br><small class="text-muted">@c.Date.ToString("MM/dd")</small></td>
+                                        <td class="num-col text-info">@c.Amount.ToString("N2")</td>
+                                    </tr>
+                                }
+                                @if(!Model.CapitalFunds.Any()) { <tr><td colspan="2" class="text-center text-muted fst-italic py-3">No capital allocations</td></tr>}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>TOTAL FUND</td>
+                                    <td class="num-col text-info">₱@Model.TotalCapitalFund.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NET PROFIT CALCULATION BOX -->
+            <div class="mt-4 p-3 bg-white border border-dark border-2 shadow-sm">
+                 <h5 class="fw-bold border-bottom pb-2 mb-3 text-center bg-light">NET PROFIT CALCULATION</h5>
+                 <div class="row text-center align-items-center g-2">
+                     <div class="col">
+                         <div class="text-muted small fw-bold text-uppercase">Gross Profit</div>
+                         <div class="fs-4 fw-bold val-pos">₱@Model.TotalGrossProfit.ToString("N0")</div>
+                     </div>
+                     <div class="col-auto fs-4 text-muted">-</div>
+                     <div class="col">
+                         <div class="text-muted small fw-bold text-uppercase">Deductions</div>
+                         <div class="fs-4 fw-bold val-neg">₱@Model.TotalDeductions.ToString("N0")</div>
+                     </div>
+                     <div class="col-auto fs-4 text-muted">-</div>
+                     <div class="col">
+                         <div class="text-muted small fw-bold text-uppercase">Capital Fund</div>
+                         <div class="fs-4 fw-bold text-info">₱@Model.TotalCapitalFund.ToString("N0")</div>
+                     </div>
+                     <div class="col-auto fs-4 text-dark">=</div>
+                     <div class="col-md-4">
+                         <div class="bg-dark text-white p-2 rounded-1 border border-secondary">
+                             <div class="small text-uppercase text-warning fw-bold">NET DISTRIBUTABLE PROFIT</div>
+                             <div class="fs-2 fw-black">₱@Model.NetProfit.ToString("N2")</div>
+                         </div>
+                     </div>
+                 </div>
+            </div>
+            
+            <!-- PARTNERS SPLIT -->
+            <div class="row g-3 mt-2">
+                <!-- Partner 1 -->
+                <div class="col-md-6">
+                    <div class="card h-100 border-dark shadow-sm">
+                        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
+                            <span>@Model.Partner1Name</span>
+                            <span class="badge bg-warning text-dark border border-white">@Model.Partner1SharePercent.ToString("0")% SHARE</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table-excel mb-0">
+                                <tr>
+                                    <td class="fw-bold bg-light">Profit Share</td>
+                                    <td class="num-col fw-bold val-pos fs-5">₱@Model.Partner1ShareAmount.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="text-muted small fw-bold bg-light border-top text-uppercase ps-3">Less Purchases:</td>
+                                </tr>
+                                @foreach(var p in Model.PartnerPurchases.Where(x => x.PartnerName == Model.Partner1Name)) {
+                                <tr>
+                                    <td class="ps-4">@p.Notes <small class="text-muted">(@p.Date.ToString("MM/dd"))</small></td>
+                                    <td class="num-col val-neg">(@p.Amount.ToString("N2"))</td>
+                                </tr>
+                                }
+                                <tr>
+                                    <td class="fw-black bg-warning text-dark border-top-2">FINAL PAYOUT</td>
+                                    <td class="num-col fw-black bg-warning text-dark border-top-2 fs-4">₱@Model.Partner1Final.ToString("N2")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- Partner 2 -->
+                <div class="col-md-6">
+                     <div class="card h-100 border-dark shadow-sm">
+                        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
+                            <span>@Model.Partner2Name</span>
+                             <span class="badge bg-warning text-dark border border-white">@Model.Partner2SharePercent.ToString("0")% SHARE</span>
+                        </div>
+                        <div class="card-body p-0">
+                             <table class="table-excel mb-0">
+                                <tr>
+                                    <td class="fw-bold bg-light">Profit Share</td>
+                                    <td class="num-col fw-bold val-pos fs-5">₱@Model.Partner2ShareAmount.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="text-muted small fw-bold bg-light border-top text-uppercase ps-3">Less Purchases:</td>
+                                </tr>
+                                @foreach(var p in Model.PartnerPurchases.Where(x => x.PartnerName == Model.Partner2Name)) {
+                                <tr>
+                                    <td class="ps-4">@p.Notes <small class="text-muted">(@p.Date.ToString("MM/dd"))</small></td>
+                                    <td class="num-col val-neg">(@p.Amount.ToString("N2"))</td>
+                                </tr>
+                                }
+                                <tr>
+                                    <td class="fw-black bg-warning text-dark border-top-2">FINAL PAYOUT</td>
+                                    <td class="num-col fw-black bg-warning text-dark border-top-2 fs-4">₱@Model.Partner2Final.ToString("N2")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: LEDGER -->
+        <div class="col-lg-4">
+            <div class="section-header header-ledger">F. ACCOUNT LEDGER</div>
+            <div class="excel-box" style="max-height: 800px;">
+                <table class="table-excel table-striped">
+                    <thead>
+                         <tr><th colspan="3" class="bg-light text-start border-bottom-2">OPENING BALANCE: <span class="float-end fw-bold">₱@Model.Partner1OpeningBalance.ToString("N2")</span></th></tr>
+                        <tr>
+                            <th class="text-start">DATE / DESC</th>
+                            <th>AMT</th>
+                            <th>BAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var row in Model.Ledger) {
+                        <tr>
+                            <td>
+                                <div class="fw-bold" style="font-size:0.8rem">@row.Date.ToString("MM/dd")</div>
+                                <div class="text-muted small" style="line-height:1.1">@row.Description</div>
+                            </td>
+                            <td class="num-col @(row.Amount < 0 ? "val-neg" : "val-pos")">@row.Amount.ToString("N2")</td>
+                            <td class="num-col fw-bold">@row.Balance.ToString("N2")</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DETAILED ANALYTICS FOOTER -->
+    <div class="mt-5 pt-3 border-top border-3">
+        <h4 class="fw-black text-uppercase text-secondary mb-3"><i class="bi bi-bar-chart-fill"></i> Detailed Analytics</h4>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="section-header header-main">TOP SELLING ITEMS</div>
+                <div class="excel-box">
+                    <table class="table-excel">
+                        <thead><tr><th>ITEM NAME</th><th>QTY</th><th>TOTAL</th></tr></thead>
+                        <tbody>
+                             @foreach(var item in Model.TopItems) {
+                                <tr>
+                                    <td>@item.ItemName</td>
+                                    <td class="num-col fw-bold">@item.Quantity.ToString("N0")</td>
+                                    <td class="num-col">₱@item.TotalAmount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="section-header header-main">OUTLET PERFORMANCE</div>
+                <div class="excel-box">
+                     <table class="table-excel">
+                        <thead><tr><th>OUTLET</th><th>PAID</th><th>UNPAID</th><th>TOTAL</th></tr></thead>
+                        <tbody>
+                             @foreach(var outlet in Model.OutletSummaries) {
+                                <tr>
+                                    <td>@outlet.OutletName</td>
+                                    <td class="num-col text-success">₱@outlet.PaidAmount.ToString("N2")</td>
+                                    <td class="num-col text-danger">₱@outlet.UnpaidAmount.ToString("N2")</td>
+                                    <td class="num-col fw-bold">₱@outlet.TotalAmount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<!-- ADD DEDUCTION -->
+<div class="modal fade" id="deductionModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form asp-action="AddDeduction" method="post" class="modal-content shadow-lg border-0">
+             @Html.AntiForgeryToken()
+             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+            <div class="modal-header bg-danger text-white py-2"><h6 class="modal-title fw-bold">ADD DEDUCTION</h6><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body bg-light">
+                <input type="text" name="Description" class="form-control mb-2 fw-bold" required placeholder="Description (e.g. Salary)" />
+                <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
+                <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="modal-footer py-1 bg-white"><button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">SAVE DEDUCTION</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD CAPITAL -->
+<div class="modal fade" id="capitalModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form asp-action="AddCapital" method="post" class="modal-content shadow-lg border-0">
+             @Html.AntiForgeryToken()
+             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+            <div class="modal-header bg-info text-white py-2"><h6 class="modal-title fw-bold">ADD CAPITAL</h6><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+             <div class="modal-body bg-light">
+                <input type="text" name="Description" class="form-control mb-2 fw-bold" placeholder="Description (Optional)" />
+                <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
+                <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="modal-footer py-1 bg-white"><button type="submit" class="btn btn-info text-white btn-sm w-100 fw-bold">SAVE CAPITAL</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD PURCHASE -->
+<div class="modal fade" id="purchaseModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form asp-action="AddPurchase" method="post" class="modal-content shadow-lg border-0">
+             @Html.AntiForgeryToken()
+             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+            <div class="modal-header bg-secondary text-white py-2"><h6 class="modal-title fw-bold">PARTNER PURCHASE</h6><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body bg-light">
+                <select name="PartnerName" class="form-select mb-2 fw-bold">
+                    <option value="@Model.Partner1Name">@Model.Partner1Name</option>
+                    <option value="@Model.Partner2Name">@Model.Partner2Name</option>
+                </select>
+                <input type="text" name="Notes" class="form-control mb-2 fw-bold" required placeholder="Item / Reason" />
+                <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
+                <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div class="modal-footer py-1 bg-white"><button type="submit" class="btn btn-secondary btn-sm w-100 fw-bold">SAVE PURCHASE</button></div>
+        </form>
+    </div>
+</div>

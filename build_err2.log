@@ -1,0 +1,29 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(17,20): warning CS8618: Non-nullable property 'Product' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(19,19): warning CS8618: Non-nullable property 'Status' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\ReportsController.cs(49,81): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(32,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(62,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(474,33): error CS1912: Duplicate initialization of member 'Quantity' [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(475,33): error CS1912: Duplicate initialization of member 'Price' [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(386,39): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(750,37): error CS1912: Duplicate initialization of member 'Price' [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(646,34): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+
+Build FAILED.
+
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(17,20): warning CS8618: Non-nullable property 'Product' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(19,19): warning CS8618: Non-nullable property 'Status' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\ReportsController.cs(49,81): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(32,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(62,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(386,39): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(646,34): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(474,33): error CS1912: Duplicate initialization of member 'Quantity' [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(475,33): error CS1912: Duplicate initialization of member 'Price' [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(750,37): error CS1912: Duplicate initialization of member 'Price' [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+    7 Warning(s)
+    3 Error(s)
+
+Time Elapsed 00:00:02.97

@@ -1,0 +1,129 @@
+@model HazelInvoice.ViewModels.PriceVersusViewModel
+
+@{
+    ViewData["Title"] = "Price Versus Setup";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary">Price Versus Setup</h2>
+            <p class="text-muted">
+                Cost vs Selling Price for Week: 
+                <span class="fw-bold text-dark">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd, yyyy")</span>
+            </p>
+        </div>
+        <div>
+            <a asp-controller="Orders" asp-action="VegetableMatrix" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Matrix
+            </a>
+            <button type="submit" form="versusForm" class="btn btn-success fw-bold ms-2 px-4 shadow-sm">
+                <i class="bi bi-save me-1"></i> Save Changes
+            </button>
+        </div>
+    </div>
+
+    <form method="get" class="mb-4 bg-white p-3 rounded shadow-sm d-inline-block">
+        <label class="fw-bold me-2">View Prices For Date:</label>
+        <input type="date" name="date" class="form-control d-inline-block w-auto" value="@Model.TargetDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+    </form>
+
+    <div class="card shadow-lg border-0 rounded-3">
+        <div class="card-body p-0">
+            <form method="post" id="versusForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="TargetDate" />
+                
+                <div class="table-responsive" style="max-height: 70vh;">
+                    <table class="table table-hover align-middle mb-0" id="priceTable">
+                        <thead class="bg-primary text-white sticky-top" style="top: 0; z-index: 10;">
+                            <tr>
+                                <th class="ps-4 py-3">Product Name</th>
+                                <th class="py-3">Unit</th>
+                                @if (User.IsInRole("Admin")) { <th class="text-end py-3" style="width: 150px;">Cost Price</th> }
+                                <th class="text-end py-3" style="width: 150px;">Markup</th>
+                                <th class="text-end py-3" style="width: 150px;">Selling Price</th>
+                                <th class="text-center py-3" style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Items.Count; i++)
+                            {
+                                var item = Model.Items[i];
+                                <tr class="item-row">
+                                    <td class="ps-4 fw-bold">
+                                        @item.ProductName
+                                        <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
+                                        <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
+                                    </td>
+                                    <td class="text-muted">@item.Unit</td>
+                                    
+                                    @if (User.IsInRole("Admin")) {
+                                    <td class="text-end">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light border-0">₱</span>
+                                            <input type="number" 
+                                                   class="form-control text-end cost-input bg-light border-0" 
+                                                   value="@item.Cost.ToString("0.00")" 
+                                                   readonly 
+                                                   step="0.01" />
+                                        </div>
+                                    </td>
+                                    }
+                                    
+                                    <td class="text-end">
+                                        <input type="number" step="0.01"
+                                               name="Items[@i].Markup"
+                                               class="form-control text-end markup-input fw-bold"
+                                               value="@item.Markup.ToString("0.00")"
+                                               data-cost="@item.Cost" />
+                                    </td>
+                                    
+                                    <td class="text-end">
+                                        <input type="text" 
+                                               class="form-control text-end selling-input border-0 bg-transparent fw-bold text-primary" 
+                                               value="@((item.Cost + item.Markup).ToString("0.00"))" 
+                                               readonly />
+                                    </td>
+                                    
+                                    <td class="text-center">
+                                        @if (item.HasWeeklyRecord)
+                                        {
+                                            <span class="badge bg-warning text-dark">Weekly</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-light text-muted border">Default</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const table = document.getElementById('priceTable');
+        
+        table.addEventListener('input', function(e) {
+            if (e.target.classList.contains('markup-input')) {
+                const row = e.target.closest('tr');
+                const cost = parseFloat(e.target.dataset.cost) || 0;
+                const markup = parseFloat(e.target.value) || 0;
+                
+                const selling = cost + markup;
+                
+                const sellingInput = row.querySelector('.selling-input');
+                if(sellingInput) sellingInput.value = selling.toFixed(2);
+                
+                // Highlight modified
+                row.classList.add('table-warning');
+            }
+        });
+    });
+</script>

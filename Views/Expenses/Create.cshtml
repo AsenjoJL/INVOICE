@@ -1,0 +1,80 @@
+@model HazelInvoice.Models.Expense
+@using HazelInvoice.Models
+
+@{
+    ViewData["Title"] = "Record Expense";
+}
+
+<div class="container p-4">
+    <div class="card shadow border-0" style="max-width: 600px; margin: 0 auto;">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">Record Expense</h4>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
+                <div class="row g-2 mb-3">
+                     <div class="col-md-6">
+                        <label asp-for="Date" class="form-label">Date</label>
+                        <input asp-for="Date" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="Date" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Amount" class="form-label">Amount</label>
+                        <input asp-for="Amount" class="form-control" step="0.01" />
+                        <span asp-validation-for="Amount" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input asp-for="Category" class="form-control" placeholder="Category" list="categories" />
+                    <label asp-for="Category">Category (e.g. Rent, Electricity, Supplies)</label>
+                    <span asp-validation-for="Category" class="text-danger"></span>
+                    <datalist id="categories">
+                        <option value="Rent" />
+                        <option value="Utilities" />
+                        <option value="Salaries" />
+                        <option value="Supplies" />
+                        <option value="Transportation" />
+                        <option value="Food & Meals" />
+                    </datalist>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input asp-for="Vendor" class="form-control" placeholder="Vendor" />
+                    <label asp-for="Vendor">Payee / Vendor</label>
+                    <span asp-validation-for="Vendor" class="text-danger"></span>
+                </div>
+                
+                <div class="row g-2 mb-3">
+                     <div class="col-md-6">
+                        <label asp-for="PaymentMethod" class="form-label">Payment Method</label>
+                        <select asp-for="PaymentMethod" class="form-select" asp-items="Html.GetEnumSelectList<PaymentMethod>()"></select>
+                        <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                         <div class="form-floating">
+                            <input asp-for="ReferenceNo" class="form-control" placeholder="Ref No" />
+                            <label asp-for="ReferenceNo">Reference No.</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <textarea asp-for="Description" class="form-control" placeholder="Description" style="height: 100px"></textarea>
+                    <label asp-for="Description">Notes / Description</label>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-danger btn-lg">Record Expense</button>
+                    <a asp-action="Index" class="btn btn-light">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

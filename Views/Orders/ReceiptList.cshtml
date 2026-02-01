@@ -1,0 +1,104 @@
+@model HazelInvoice.ViewModels.ReceiptListViewModel
+
+@{
+    bool isUnpaid = Model.Status == HazelInvoice.Models.PaymentStatus.Unpaid;
+    ViewData["Title"] = isUnpaid ? "Unpaid Orders" : "Paid Orders";
+    string grandTotalClass = isUnpaid ? "text-danger" : "text-success";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>@ViewData["Title"]</h1>
+        <div class="d-flex gap-2">
+            <a asp-action="VegetableMatrix" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-outline-secondary">
+                <i class="bi bi-grid-3x3"></i> Back to Matrix
+            </a>
+            @if(isUnpaid) {
+                <a asp-action="PaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-warning">View PAID</a>
+            } else {
+                <a asp-action="UnpaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-danger">View UNPAID</a>
+            }
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <form method="get" class="mb-4 d-flex align-items-center gap-2 bg-light p-2 rounded border" style="max-width: 400px;">
+        <label class="fw-bold">Date:</label>
+        <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" 
+               class="form-control" onchange="this.form.submit()" />
+    </form>
+
+    @if (!Model.Receipts.Any())
+    {
+        <div class="alert alert-info">No @Model.Status.ToString().ToLower() orders found for this date.</div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var r in Model.Receipts)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card shadow-sm h-100 border-top-0 border-end-0 border-bottom-0 border-start border-4 @(isUnpaid ? "border-danger" : "border-success")">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="fw-bold mb-0">@r.CustomerName</h5>
+                                <div class="small text-muted">@r.ReceiptNumber</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold fs-5 @(isUnpaid ? "text-danger" : "text-success")">
+                                    @r.TotalAmount.ToString("N2")
+                                </div>
+                                @if (isUnpaid)
+                                {
+                                    <form asp-action="MarkAsPaid" method="post" class="mt-1">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@r.Id" />
+                                        <input type="hidden" name="returnDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Mark this receipt as PAID?');">
+                                            <i class="bi bi-check-lg"></i> Mark Paid
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Item</th>
+                                        <th class="text-end">Price</th>
+                                        <th class="text-center">Qty</th>
+                                        <th class="text-end">Amt</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in r.Lines)
+                                    {
+                                        <tr>
+                                            <td>@line.ItemName</td>
+                                            <td class="text-end">@line.Price.ToString("N0")</td>
+                                            <td class="text-center">@line.Quantity @line.Unit</td>
+                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (!string.IsNullOrEmpty(r.CustomerAddress))
+                        {
+                            <div class="card-footer bg-light small text-muted">
+                                @r.CustomerAddress
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="fixed-bottom bg-white border-top p-3 shadow-lg d-flex justify-content-between align-items-center">
+            <div class="fw-bold fs-5">Grand Total (@Model.Status):</div>
+            <div class="fw-bold fs-3 @grandTotalClass">@Model.GrandTotal.ToString("N2")</div>
+        </div>
+        <div style="height: 80px;"></div>
+    }
+</div>

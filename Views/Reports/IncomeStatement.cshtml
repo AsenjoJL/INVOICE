@@ -1,0 +1,54 @@
+@model HazelInvoice.ViewModels.IncomeStatementViewModel
+
+@{
+    ViewData["Title"] = "Income Statement";
+}
+
+<div class="container p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Income Statement</h2>
+        <h4 class="text-muted">@Model.Period</h4>
+    </div>
+    
+    <div class="card shadow-lg border-0" style="max-width: 800px; margin: 0 auto;">
+        <div class="card-body p-5">
+            <h5 class="text-center mb-4 text-uppercase letter-spacing-1">Statement of Profit & Loss</h5>
+
+            <div class="row mb-2">
+                <div class="col-8 h5">Revenue (Sales)</div>
+                <div class="col-4 h5 text-end">@Model.Revenue.ToString("N2")</div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-8 text-muted">Less: Cost of Goods Sold</div>
+                 <div class="col-4 text-end text-danger">(@Model.COGS.ToString("N2"))</div>
+            </div>
+
+            <div class="border-top border-bottom py-3 mb-4 bg-light">
+                <div class="row">
+                    <div class="col-8 h4 fw-bold mb-0">Gross Profit</div>
+                    <div class="col-4 h4 fw-bold text-end mb-0">@Model.GrossProfit.ToString("N2")</div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="h6 text-uppercase text-muted mb-3">Operating Expenses</div>
+                <div class="row">
+                    <div class="col-8">Total Expenses</div>
+                    <div class="col-4 text-end text-danger">(@Model.Expenses.ToString("N2"))</div>
+                </div>
+            </div>
+
+            <div class="border-top border-2 border-primary py-3">
+                <div class="row">
+                    <div class="col-8 h3 fw-bold text-primary mb-0">Net Profit</div>
+                    <div class="col-4 h3 fw-bold text-end text-primary mb-0">@Model.NetProfit.ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center mt-4 no-print">
+        <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer"></i> Print Report</button>
+    </div>
+</div>

@@ -1,0 +1,15 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\John Lester\Desktop\HazelInvoice\Views\Receipts\Print.cshtml(68,10): error CS0103: The name 'media' does not exist in the current context [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(32,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(62,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+
+Build FAILED.
+
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(32,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(62,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Views\Receipts\Print.cshtml(68,10): error CS0103: The name 'media' does not exist in the current context [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+    2 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:02.27

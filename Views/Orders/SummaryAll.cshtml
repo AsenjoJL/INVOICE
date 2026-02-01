@@ -1,0 +1,196 @@
+@model HazelInvoice.ViewModels.SummaryAllViewModel
+@{
+    ViewData["Title"] = "Summary All";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 text-primary fw-bold">Summary Report</h1>
+            <p class="text-muted">Overview from @Model.StartDate.ToString("MMM dd, yyyy") to @Model.EndDate.ToString("MMM dd, yyyy")</p>
+        </div>
+        <div>
+             <a asp-action="VegetableMatrix" class="btn btn-outline-primary me-2"><i class="bi bi-grid-3x3"></i> Matrix</a>
+             <a asp-action="VegetableOutletOrder" class="btn btn-outline-primary"><i class="bi bi-cart"></i> Order Entry</a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Start Date</label>
+                    <input type="date" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">End Date</label>
+                    <input type="date" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Outlet / Customer</label>
+                    <select name="outletId" asp-items="Model.Outlets" class="form-select">
+                        <option value="">-- All Outlets --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="All" selected="@(Model.StatusFilter == "All")">All Status</option>
+                        <option value="Paid" selected="@(Model.StatusFilter == "Paid")">Paid Only</option>
+                        <option value="Unpaid" selected="@(Model.StatusFilter == "Unpaid")">Unpaid Only</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Apply Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 border-start border-4 border-primary h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Sales (@Model.StatusFilter)</h6>
+                    <h3 class="fw-bold text-primary mb-0">@Model.TotalSales.ToString("C")</h3>
+                    <small>@Model.TotalCount Receipts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 border-start border-4 border-success h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Paid</h6>
+                    <h3 class="fw-bold text-success mb-0">@Model.TotalPaid.ToString("C")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 border-start border-4 border-danger h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Unpaid</h6>
+                    <h3 class="fw-bold text-danger mb-0">@Model.TotalUnpaid.ToString("C")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+             <div class="card shadow-sm border-0 border-start border-4 border-warning h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Items Sold</h6>
+                    <h3 class="fw-bold text-dark mb-0">@Model.TotalItemsSold.ToString("N0")</h3>
+                    <small>Units/Qty</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables Row -->
+    <div class="row g-4">
+        <!-- Top Items -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">Top Selling Items</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y:auto;">
+                        <table class="table table-hover table-striped align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var item in Model.TopItems)
+                                {
+                                    <tr>
+                                        <td>@item.ItemName</td>
+                                        <td class="text-end fw-bold">@item.Quantity.ToString("N0")</td>
+                                        <td class="text-end text-muted">@item.TotalAmount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outlet Summary -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Outlet Performance</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y:auto;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Outlet</th>
+                                    <th class="text-end">Paid</th>
+                                    <th class="text-end">Unpaid</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var outlet in Model.OutletSummaries)
+                                {
+                                    <tr>
+                                        <td class="fw-bold">@outlet.OutletName</td>
+                                        <td class="text-end text-success">@outlet.PaidAmount.ToString("N2")</td>
+                                        <td class="text-end text-danger">@outlet.UnpaidAmount.ToString("N2")</td>
+                                        <td class="text-end fw-bold">@outlet.TotalAmount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Trend Table -->
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">Daily Breakdown</h5>
+        </div>
+        <div class="card-body p-0">
+             <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-end">Paid Amount</th>
+                            <th class="text-end">Unpaid Amount</th>
+                            <th class="text-end">Total Sales</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var day in Model.DailyTrends)
+                        {
+                            <tr>
+                                <td>@day.Date.ToString("MMM dd, yyyy (ddd)")</td>
+                                <td class="text-end text-success">@day.PaidAmount.ToString("N2")</td>
+                                <td class="text-end text-danger">@day.UnpaidAmount.ToString("N2")</td>
+                                <td class="text-end fw-bold">@day.TotalAmount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <!-- Totals Row -->
+                        <tr class="table-active fw-bold">
+                            <td>TOTAL</td>
+                            <td class="text-end text-success">@Model.TotalPaid.ToString("C")</td>
+                            <td class="text-end text-danger">@Model.TotalUnpaid.ToString("C")</td>
+                            <td class="text-end text-primary">@Model.TotalSales.ToString("C")</td> 
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

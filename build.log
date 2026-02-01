@@ -1,0 +1,27 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(17,20): warning CS8618: Non-nullable property 'Product' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(19,19): warning CS8618: Non-nullable property 'Status' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\ReportsController.cs(49,81): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(32,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(62,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Views\Orders\VegetableMatrix.cshtml(326,43): error CS0136: A local or parameter named 'c' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(363,50): error CS1061: '<anonymous type: int Id, string Name, string Unit, decimal UnitCost>' does not contain a definition for 'Markup' and no accessible extension method 'Markup' accepting a first argument of type '<anonymous type: int Id, string Name, string Unit, decimal UnitCost>' could be found (are you missing a using directive or an assembly reference?) [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(386,39): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(640,34): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+
+Build FAILED.
+
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(17,20): warning CS8618: Non-nullable property 'Product' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\ViewModels\ReportsViewModels.cs(19,19): warning CS8618: Non-nullable property 'Status' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\ReportsController.cs(49,81): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(32,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\DashboardController.cs(62,25): warning CS8602: Dereference of a possibly null reference. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(386,39): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(640,34): warning CS8629: Nullable value type may be null. [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Views\Orders\VegetableMatrix.cshtml(326,43): error CS0136: A local or parameter named 'c' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+C:\Users\John Lester\Desktop\HazelInvoice\Controllers\OrdersController.cs(363,50): error CS1061: '<anonymous type: int Id, string Name, string Unit, decimal UnitCost>' does not contain a definition for 'Markup' and no accessible extension method 'Markup' accepting a first argument of type '<anonymous type: int Id, string Name, string Unit, decimal UnitCost>' could be found (are you missing a using directive or an assembly reference?) [C:\Users\John Lester\Desktop\HazelInvoice\HazelInvoice.csproj]
+    7 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:03.09

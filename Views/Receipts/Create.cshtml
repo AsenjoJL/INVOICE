@@ -1,0 +1,295 @@
+@model HazelInvoice.Models.Receipt
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "New Receipt";
+    var products = ViewBag.Products as List<HazelInvoice.Models.Product> ?? new List<HazelInvoice.Models.Product>();
+    var services = ViewBag.Services as List<HazelInvoice.Models.Service> ?? new List<HazelInvoice.Models.Service>();
+    var priceList = ViewBag.PriceList as List<HazelInvoice.Models.WeeklyPrice> ?? new List<HazelInvoice.Models.WeeklyPrice>();
+    
+    // Create a dictionary for quick price lookup
+    var productPrices = priceList.Select(x => new {
+        x.ProductId,
+        x.BasePrice,
+        x.DeliveryPrice,
+        x.EffectiveFrom,
+        x.EffectiveTo
+    }).ToList();
+}
+
+<div class="container-fluid p-4">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-primary text-white p-3 rounded-top-4">
+            <h4 class="mb-0"><i class="bi bi-receipt"></i> Create New Receipt</h4>
+        </div>
+        <div class="card-body bg-light">
+            <form asp-action="Create" method="post" id="receiptForm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <!-- Customer Info -->
+                <!-- Customer Info -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label asp-for="CustomerName" class="form-label fw-bold">Customer Name (Delivered To)</label>
+                        <select asp-for="CustomerName" class="form-select" required>
+                            <option value="">-- Select Customer --</option>
+                            @foreach (var customer in ViewBag.Customers as List<HazelInvoice.Models.Customer> ?? new List<HazelInvoice.Models.Customer>())
+                            {
+                                <option value="@customer.Name">@customer.Name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="CustomerName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="ContactNumber" class="form-label fw-bold">Contact Number <span class="text-muted fw-normal">(Optional)</span></label>
+                        <input asp-for="ContactNumber" class="form-control" placeholder="Mobile / Tel" />
+                    </div>
+                    <div class="col-md-4">
+                        <!-- Defaulting to Delivery type, hidden from user -->
+                        <input type="hidden" asp-for="Type" id="orderType" value="Delivery" />
+                        <label asp-for="CustomerAddress" class="form-label fw-bold">Address <span class="text-muted fw-normal">(Optional)</span></label>
+                        <input asp-for="CustomerAddress" class="form-control" placeholder="Complete address" />
+                    </div>
+                    <!-- Removed separate Address row to compact layout since Type is hidden -->
+                </div>
+
+                <!-- Items Table -->
+                <div class="table-responsive mb-4 bg-white p-3 rounded-3 shadow-sm">
+                    <table class="table table-hover align-middle" id="itemsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40%">Item / Particulars</th>
+                                <th style="width: 15%">Quantity</th>
+                                <th style="width: 10%">Unit</th>
+                                <th style="width: 15%">Price</th>
+                                <th style="width: 15%">Amount</th>
+                                <th style="width: 5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody">
+                            <!-- Rows will be added here -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="6">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addItemRow()">
+                                        <i class="bi bi-plus-lg"></i> Add Item
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Footer / Totals -->
+                <div class="row g-3 justify-content-end">
+                    <div class="col-md-4">
+                        <div class="card bg-white shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold">Total Amount:</span>
+                                    <h4 class="text-primary mb-0" id="totalAmountDisplay">0.00</h4>
+                                    <input type="hidden" asp-for="TotalAmount" id="totalAmountInput" />
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold">Paid:</span>
+                                    <input asp-for="PaidAmount" class="form-control form-control-sm text-end w-50" value="0.00" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" name="action" value="Save" class="btn btn-secondary me-2">Save Only</button>
+                    <button type="submit" name="action" value="Print" class="btn btn-success btn-lg">
+                        <i class="bi bi-printer"></i> Save & Print
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Safely serialize data with check for nulls
+    var productData = @Html.Raw(JsonSerializer.Serialize(products));
+    var serviceData = @Html.Raw(JsonSerializer.Serialize(services));
+    var priceData = @Html.Raw(JsonSerializer.Serialize(productPrices));
+    
+    // Debug info
+    console.log("Products Loaded:", productData.length);
+    console.log("Services Loaded:", serviceData.length);
+    console.log("Prices Loaded:", priceData.length);
+
+    var rowIndex = 0;
+
+    function addItemRow() {
+        // Build Options string manually to avoid template literal complexity
+        var optionsHtml = '<option value="">-- Select Item --</option>';
+        
+        if (productData.length > 0) {
+            optionsHtml += '<optgroup label="Products">';
+            productData.forEach(function(p) {
+                // Escape quotes in name just in case
+                var cleanName = p.Name.replace(/"/g, '&quot;');
+                optionsHtml += `<option value="PROD:${p.Id}" data-type="product" data-unit="${p.Unit}" data-cost="${p.UnitCost}">${cleanName}</option>`;
+            });
+            optionsHtml += '</optgroup>';
+        }
+        
+        if (serviceData.length > 0) {
+            optionsHtml += '<optgroup label="Services">';
+            serviceData.forEach(function(s) {
+                 var cleanName = s.Name.replace(/"/g, '&quot;');
+                 optionsHtml += `<option value="SERV:${s.Id}" data-type="service" data-rate="${s.Rate}">${cleanName}</option>`;
+            });
+            optionsHtml += '</optgroup>';
+        }
+
+        var html = `
+            <tr id="row_${rowIndex}">
+                <td>
+                    <select class="form-select item-select" onchange="itemCreateChanged(this, ${rowIndex})" required>
+                         ${optionsHtml}
+                    </select>
+                    <input type="hidden" name="Lines[${rowIndex}].ProductId" id="prodId_${rowIndex}" />
+                    <input type="hidden" name="Lines[${rowIndex}].ServiceId" id="servId_${rowIndex}" />
+                    <input type="hidden" name="Lines[${rowIndex}].ItemName" id="itemName_${rowIndex}" />
+                </td>
+                <td>
+                    <input type="number" name="Lines[${rowIndex}].Quantity" class="form-control text-center" value="1" min="1" onchange="calculateRow(${rowIndex})" required />
+                </td>
+                <td>
+                    <select name="Lines[${rowIndex}].Unit" id="unit_${rowIndex}" class="form-select text-center" required>
+                        <option value="kg">kg</option>
+                        <option value="pcs">pcs</option>
+                        <option value="pack">pack</option>
+                        <option value="bundle">bundle</option>
+                        <option value="box">box</option>
+                        <option value="sack">sack</option>
+                        <option value="tray">tray</option>
+                        <option value="srv">srv</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" step="0.01" name="Lines[${rowIndex}].Price" id="price_${rowIndex}" class="form-control text-end" onchange="calculateRow(${rowIndex})" required />
+                </td>
+                <td>
+                    <input type="number" step="0.01" name="Lines[${rowIndex}].Amount" id="amount_${rowIndex}" class="form-control text-end" readonly />
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(${rowIndex})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `;
+        document.getElementById('itemsBody').insertAdjacentHTML('beforeend', html);
+        rowIndex++;
+    }
+
+    function removeRow(index) {
+        var row = document.getElementById(`row_${index}`);
+        if(row) row.remove();
+        calculateTotal();
+    }
+
+    function itemCreateChanged(select, index) {
+        var option = select.options[select.selectedIndex];
+        if (!option.value) return;
+
+        var type = option.getAttribute('data-type');
+        var val = option.value.split(':')[1];
+        var name = option.text;
+
+        document.getElementById(`itemName_${index}`).value = name;
+        
+        if (type === 'product') {
+            document.getElementById(`prodId_${index}`).value = val;
+            document.getElementById(`servId_${index}`).value = '';
+            document.getElementById(`unit_${index}`).value = option.getAttribute('data-unit');
+            
+            var cost = parseFloat(option.getAttribute('data-cost')) || 0;
+            
+            // Find price
+            var priceObj = priceData.find(p => p.ProductId == val); 
+            var orderType = document.getElementById('orderType').value;
+            var price = 0;
+            
+            if (priceObj) {
+                price = (orderType === 'Delivery') ? priceObj.DeliveryPrice : priceObj.BasePrice;
+            } else {
+                // Fallback to Unit Cost if no price set (alert user?)
+                console.warn('No weekly price found for product ' + val);
+                price = cost; // Default to cost so it's not zero
+            }
+            document.getElementById(`price_${index}`).value = price.toFixed(2);
+            
+        } else {
+            document.getElementById(`prodId_${index}`).value = '';
+            document.getElementById(`servId_${index}`).value = val;
+            document.getElementById(`unit_${index}`).value = 'srv';
+            document.getElementById(`price_${index}`).value = option.getAttribute('data-rate');
+        }
+
+        calculateRow(index);
+    }
+
+    function calculateRow(index) {
+        // Use more specific selectors in case of nesting, though ID uniqueness handles it better
+        // But for inputs, we used Name attr in querySelector before.
+        // Let's use ID for price and amount, but quantity we need to find.
+        
+        var qtyInput = document.querySelector(`input[name="Lines[${index}].Quantity"]`);
+        var priceInput = document.getElementById(`price_${index}`);
+        
+        if(!qtyInput || !priceInput) return;
+
+        var qty = parseFloat(qtyInput.value) || 0;
+        var price = parseFloat(priceInput.value) || 0;
+        
+        var amount = qty * price;
+        document.getElementById(`amount_${index}`).value = amount.toFixed(2);
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        var total = 0;
+        document.querySelectorAll('input[id^="amount_"]').forEach(inp => {
+            total += parseFloat(inp.value) || 0;
+        });
+        document.getElementById('totalAmountDisplay').innerText = total.toFixed(2);
+        document.getElementById('totalAmountInput').value = total.toFixed(2);
+    }
+
+    function updatePrices() {
+         var orderType = document.getElementById('orderType').value;
+         
+         // Iterate all possible rows up to rowIndex
+         for(let i=0; i<rowIndex; i++) {
+             var row = document.getElementById(`row_${i}`);
+             if(!row) continue;
+             
+             var prodId = document.getElementById(`prodId_${i}`).value;
+             if(prodId) {
+                var priceObj = priceData.find(p => p.ProductId == prodId);
+                var price = 0;
+                
+                if (priceObj) {
+                    price = (orderType === 'Delivery') ? priceObj.DeliveryPrice : priceObj.BasePrice;
+                } else {
+                    // Fallback to current value or cost?
+                    // Getting the option to find cost again is hard without storing it.
+                    // Just keep current if no price list found, or try to reset.
+                    // For now, let's leave it alone if no price list found during toggle.
+                    continue; 
+                }
+                document.getElementById(`price_${i}`).value = price.toFixed(2);
+                calculateRow(i);
+             }
+         }
+    }
+    
+    window.onload = function() {
+        addItemRow();
+    }
+</script>

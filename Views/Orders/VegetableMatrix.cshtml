@@ -1,0 +1,534 @@
+@model HazelInvoice.ViewModels.VegetableMatrixViewModel
+
+@{
+    ViewData["Title"] = "Vegetable Order Matrix";
+    string peachBg = "#fce5cd";
+    string yellowBg = "#fff2cc";
+    string blueText = "#0000FF";
+}
+
+<style>
+    .matrix-container {
+        height: 85vh;
+        overflow: auto;
+        border: 1px solid #777;
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+        position: relative;
+        background: #fff;
+    }
+
+    .matrix-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    .matrix-table th, .matrix-table td {
+        border: 1px solid #ccc;
+        border-right: 1px solid #aaa;
+        border-bottom: 1px solid #aaa;
+        padding: 4px;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .sticky-h { position: sticky; z-index: 10; background: #fff; }
+
+    .sticky-left-col {
+        position: sticky;
+        left: 0;
+        z-index: 25;
+        border-right: 2px solid #555 !important;
+        min-width: 200px;
+        max-width: 200px;
+        background: #fff;
+    }
+    thead .sticky-left-col { z-index: 60; }
+
+    .excel-input {
+        width: 100%;
+        border: none;
+        text-align: center;
+        background: transparent;
+        outline: none;
+        font-weight: bold;
+        padding: 2px 0;
+    }
+    .excel-input:focus {
+        background-color: #e8f0fe;
+        box-shadow: inset 0 0 0 2px #0d6efd;
+    }
+    .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .header-row-1-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-align: center;
+        background: white;
+        border-bottom: none !important;
+    }
+    .header-row-2-date {
+        text-align: right;
+        background: white;
+        padding-right: 20px;
+        border-top: none !important;
+    }
+    .header-row-3-group {
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        border: 2px solid #000 !important;
+        background: white;
+    }
+    .header-row-4-main {
+        background-color: @peachBg !important;
+        color: @blueText;
+        font-weight: bold;
+        text-align: center;
+        text-transform: uppercase;
+    }
+    .header-row-5-sub {
+        background-color: @yellowBg !important;
+        color: #555;
+        font-size: 0.85rem;
+        height: 30px;
+    }
+
+    .status-noorders { background-color: white; color: black; }
+    .status-unpaid { background-color: #ff0000 !important; color: white !important; }
+    .status-paid { background-color: #ffc000 !important; color: black !important; }
+    .status-threeplus { background-color: black !important; color: white !important; }
+
+    .qty-positive { background-color: #fff3cd; }
+    .qty-3plus { font-weight: 900; color: #000; background-color: #ffecb5; border: 2px solid #ffc107; }
+
+    tfoot td {
+        position: sticky;
+        bottom: 0;
+        z-index: 70;
+        background: #f8f9fa;
+        border-top: 2px solid #000;
+    }
+
+    tbody tr { content-visibility: auto; contain-intrinsic-size: 28px; }
+
+    .cell-paid { background-color: #ffc000 !important; color: black !important; }
+    .cell-unpaid { background-color: #ff0000 !important; color: white !important; }
+    .cell-unpaid input { color: white !important; }
+    .cell-paid input { color: black !important; }
+</style>
+
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-2 px-3 py-2 bg-light border-bottom">
+        <div class="d-flex flex-column">
+            <div class="fw-bold">Daily Order Matrix</div>
+            <div class="small text-muted">
+                Outlets Page @Model.CurrentPage / @Model.TotalPages • Products Page @Model.ProductPage / @Model.TotalProductPages
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="changeOutletPage(-1)" @(Model.CurrentPage <= 1 ? "disabled" : "")>
+                Prev Outlet
+            </button>
+
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="changeOutletPage(1)" @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")>
+                Next Outlet
+            </button>
+
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3"
+                    onclick="changeProductPage(-1)" @(Model.ProductPage <= 1 ? "disabled" : "")>
+                Prev Products
+            </button>
+
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="changeProductPage(1)" @(Model.ProductPage >= Model.TotalProductPages ? "disabled" : "")>
+                Next Products
+            </button>
+
+            <button type="submit" form="matrixForm" class="btn btn-sm btn-success fw-bold ms-3 px-4">SAVE CHANGES</button>
+        
+            <div class="vr mx-3"></div>
+            <a asp-action="UnpaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-danger fw-bold">View UNPAID</a>
+            <a asp-action="PaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-warning fw-bold ms-1">View PAID</a>
+            <a asp-controller="ProfitReport" asp-action="Index" class="btn btn-sm btn-info text-white fw-bold ms-3" target="_blank"><i class="bi bi-bar-chart-fill"></i> Profit & Sales</a>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-2 px-3 py-2 bg-white border-bottom small">
+        <div class="fw-bold me-2">LEGEND:</div>
+        
+        <div class="d-flex align-items-center">
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#ff0000; border-radius:3px;"></span> 
+            <span>Unpaid</span>
+        </div>
+        
+        <div class="d-flex align-items-center">
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#ffc000; border-radius:3px;"></span> 
+            <span>Paid</span>
+        </div>
+
+        <div class="d-flex align-items-center">
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:black; border-radius:3px;"></span> 
+            <span class="text-muted">3+ Customer Orders</span>
+        </div>
+
+        <div class="border-start mx-2 h-50"></div>
+
+        <div class="d-flex align-items-center">
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#fff3cd; border-radius:3px;"></span> 
+            <span>Item Ordered</span>
+        </div>
+        
+        <div class="d-flex align-items-center">
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#ffecb5; border: 2px solid #ffc107; border-radius:3px;"></span> 
+            <span>High Qty (≥ 3)</span>
+        </div>
+    </div>
+
+    <form id="filterForm" method="get">
+        <input type="hidden" name="date" id="hiddenDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="page" id="hiddenOutletPage" value="@Model.CurrentPage" />
+        <input type="hidden" name="productPage" id="hiddenProductPage" value="@Model.ProductPage" />
+    </form>
+
+    <form asp-action="SaveMatrix" method="post" id="matrixForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Date" />
+        <input type="hidden" asp-for="CurrentPage" />
+        <input type="hidden" asp-for="ProductPage" />
+        <input type="hidden" asp-for="SelectedGroupName" />
+
+        <div class="matrix-container">
+            <table class="matrix-table" id="mainTable">
+                <thead>
+                    <tr>
+                        <th class="sticky-left-col header-row-1-title sticky-h" style="top:0;"></th>
+                        <th colspan="@(5 + Model.VisibleOutlets.Count + 2)" class="header-row-1-title sticky-h" style="top:0;">VEGEATABLE ORDER</th>
+                    </tr>
+
+                    <tr>
+                        <th class="sticky-left-col bg-white sticky-h" style="top:35px;"></th>
+                        <th colspan="@(5 + Model.VisibleOutlets.Count + 2)" class="header-row-2-date sticky-h" style="top:35px;">
+                            <span class="fw-bold me-2">DELIVERY DATE:</span>
+                            <input type="date"
+                                   value="@Model.Date.ToString("yyyy-MM-dd")"
+                                   class="border-0 text-danger fw-bold"
+                                   onchange="document.getElementById('hiddenDate').value=this.value; document.getElementById('filterForm').submit();" />
+                        </th>
+                    </tr>
+
+                    <tr>
+                        <th class="sticky-left-col bg-white sticky-h" style="top:70px;"></th>
+                        <th colspan="5" class="bg-white sticky-h" style="top:70px;"></th>
+
+                        @{
+                            if (!Model.VisibleOutlets.Any())
+                            {
+                                <th class="bg-white sticky-h" style="top:70px;"></th>
+                            }
+                            else
+                            {
+                                for (int i = 0; i < Model.VisibleOutlets.Count; i++)
+                                {
+                                    var grp = Model.VisibleOutlets[i].GroupName;
+                                    int span = 1;
+                                    while (i + span < Model.VisibleOutlets.Count && Model.VisibleOutlets[i + span].GroupName == grp)
+                                        span++;
+
+                                    <th colspan="@span" class="header-row-3-group sticky-h" style="top:70px;">@grp</th>
+                                    i += span - 1;
+                                }
+                            }
+                        }
+
+                        <th colspan="2" class="bg-white sticky-h" style="top:70px;"></th>
+                    </tr>
+
+                    <tr>
+                        <th class="sticky-left-col header-row-4-main sticky-h" style="top:105px;">VEGETABLES</th>
+                        @if (User.IsInRole("Admin")) { <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Cost</th> }
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Markup</th>
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Price</th>
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Total</th>
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:50px;">UOM</th>
+
+                        @foreach (var c in Model.VisibleOutlets)
+                        {
+                            <th class="header-row-4-main sticky-h" style="top:105px; min-width:80px;">@c.Name</th>
+                        }
+
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:80px;">Total Qty</th>
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:50px;">uom</th>
+                    </tr>
+
+                    <tr>
+                        <th class="sticky-left-col header-row-5-sub sticky-h" style="top:140px; text-align:left; padding-left:10px;">PO NUMBER</th>
+                        <th class="header-row-5-sub sticky-h" style="top:140px;" colspan="5"></th>
+
+                        @foreach (var c in Model.VisibleOutlets)
+                        {
+                            <th class="header-row-5-sub sticky-h text-center fst-italic" style="top:140px;">@c.SubLabel</th>
+                        }
+
+                        <th class="header-row-5-sub sticky-h" style="top:140px;" colspan="2"></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var p in Model.VisibleProducts)
+                    {
+                        decimal rowTotalQty = Model.ProductTotalQtyAllOutletsInGroup.TryGetValue(p.Id, out var tq) ? tq : 0m;
+                        decimal cost = Model.ProductCosts.TryGetValue(p.Id, out var cCost) ? cCost : 0m;
+                        decimal markup = Model.ProductMarkups.TryGetValue(p.Id, out var m) ? m : 0m;
+                        decimal price = Model.ProductPrices.TryGetValue(p.Id, out var pr) ? pr : 0m;
+                        decimal rowTotalAmt = rowTotalQty * price;
+
+                        string status = Model.ProductStatuses.TryGetValue(p.Id, out var st) ? st : "NO_ORDERS";
+                        string statusClass = status switch
+                        {
+                            "UNPAID" => "status-unpaid",
+                            "PAID" => "status-paid",
+                            "THREE_PLUS" => "status-threeplus",
+                            _ => "status-noorders"
+                        };
+
+                        <tr data-row-qty="@rowTotalQty" data-price="@price" data-cost="@cost">
+                            <td class="sticky-left-col fw-bold border-end vege-cell @statusClass">@p.Name</td>
+
+                            @if (User.IsInRole("Admin")) { <td class="text-end pe-2 bg-light text-muted">@cost.ToString("N2")</td> }
+
+                            <td style="background:#fff;">
+                                <input type="number" step="0.01"
+                                       class="excel-input markup-input no-spin text-end"
+                                       name="ProductMarkups[@p.Id]"
+                                       value="@markup.ToString("0.00")" />
+                            </td>
+
+                            <td style="background:#fff;">
+                                <input type="number" step="0.01"
+                                       class="excel-input price-input no-spin text-end"
+                                       name="ProductPrices[@p.Id]"
+                                       value="@price.ToString("0.00")"
+                                       readonly />
+                                <!-- Readonly because Price is auto-calculated from Markup? Or Allow override? User said "User only edits Markup OR edits SellingPrice... preferred compute dynamically". Given logic, Markup drives Price. Setting Price readonly prevents conflict, forcing user to edit Markup. -->
+                            </td>
+
+                            <td class="text-end pe-2 row-amt-cell">@(rowTotalAmt > 0 ? rowTotalAmt.ToString("N2") : "-")</td>
+                            <td class="text-center small text-muted">@p.Unit</td>
+
+                            @foreach (var c in Model.VisibleOutlets)
+                            {
+                                string key = $"{p.Id}_{c.Id}";
+                                decimal val = Model.MatrixQuantities.TryGetValue(key, out var v) ? v : 0m;
+                                string mSt = Model.MatrixStatuses.TryGetValue(key, out var s) ? s : "";
+                                
+                                string qtyClass = "";
+                                if (mSt == "PAID") qtyClass = "cell-paid";
+                                else if (mSt == "UNPAID") qtyClass = "cell-unpaid";
+                                else if (val >= 3) qtyClass = "qty-3plus";
+                                else if (val > 0) qtyClass = "qty-positive";
+
+                                <td class="qty-td @qtyClass">
+                                    <input type="number" step="0.01"
+                                           class="excel-input qty-input no-spin"
+                                           name="MatrixQuantities[@key]"
+                                           value="@(val > 0 ? val.ToString("0.##") : "")" />
+                                </td>
+                            }
+
+                            <td class="text-center fw-bold bg-light row-qty-cell">@(rowTotalQty > 0 ? rowTotalQty.ToString("0.##") : "")</td>
+                            <td class="text-center small text-muted">@p.Unit</td>
+                        </tr>
+                    }
+                </tbody>
+
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td class="sticky-left-col text-end pe-3 bg-light">GRAND TOTAL</td>
+                        <td></td><td></td><td></td>
+                        <td class="text-end pe-2 text-primary" id="grandTotalAmt">@Model.GrandTotalAmount.ToString("N2")</td>
+                        <td></td>
+
+                        @foreach (var _ in Model.VisibleOutlets) { <td></td> }
+
+                        <td class="text-center text-danger" id="grandTotalQty">@Model.GrandTotalQty.ToString("0.##")</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </form>
+</div>
+
+<script>
+    function changeOutletPage(d) {
+        const p = document.getElementById('hiddenOutletPage');
+        p.value = Math.max(1, (parseInt(p.value) || 1) + d);
+        document.getElementById('filterForm').submit();
+    }
+    function changeProductPage(d) {
+        const p = document.getElementById('hiddenProductPage');
+        p.value = Math.max(1, (parseInt(p.value) || 1) + d);
+        document.getElementById('filterForm').submit();
+    }
+
+    (function () {
+        'use strict';
+
+        const table = document.getElementById('mainTable');
+        if (!table) return;
+
+        const elGrandAmt = document.getElementById('grandTotalAmt');
+        const elGrandQty = document.getElementById('grandTotalQty');
+        const fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        let totalQty = @Model.GrandTotalQty;
+        let totalAmt = @Model.GrandTotalAmount;
+
+        const prevValues = new WeakMap();
+        const rafByInput = new WeakMap();
+        const rowRefs = new WeakMap();
+
+        function num(v) {
+            if (v == null) return 0;
+            const s = ('' + v).trim();
+            if (s === '') return 0;
+            const n = Number(s);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function getRowRefs(row) {
+            let refs = rowRefs.get(row);
+            if (refs) return refs;
+            refs = {
+                amtCell: row.querySelector('.row-amt-cell'),
+                qtyCell: row.querySelector('.row-qty-cell'),
+                vegeCell: row.querySelector('.vege-cell')
+            };
+            rowRefs.set(row, refs);
+            return refs;
+        }
+
+        function schedule(input) {
+            const old = rafByInput.get(input);
+            if (old) cancelAnimationFrame(old);
+
+            const id = requestAnimationFrame(() => {
+                rafByInput.delete(input);
+                handle(input);
+            });
+
+            rafByInput.set(input, id);
+        }
+
+        table.addEventListener('focusin', (e) => {
+            const input = e.target;
+            if (!(input instanceof HTMLInputElement)) return;
+            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input')) return;
+            if (!prevValues.has(input)) prevValues.set(input, num(input.value));
+        });
+
+        table.addEventListener('input', (e) => {
+            const input = e.target;
+            if (!(input instanceof HTMLInputElement)) return;
+            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input') && !input.classList.contains('markup-input')) return;
+            schedule(input);
+        }, { passive: true });
+
+        table.addEventListener('blur', (e) => {
+            const input = e.target;
+            if (!(input instanceof HTMLInputElement)) return;
+            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input') && !input.classList.contains('markup-input')) return;
+
+            const old = rafByInput.get(input);
+            if (old) { cancelAnimationFrame(old); rafByInput.delete(input); }
+            handle(input);
+        }, true);
+
+        function handle(input) {
+            const row = input.closest('tr');
+            if (!row) return;
+
+            const oldVal = prevValues.get(input) ?? 0;
+            const newVal = num(input.value);
+            if (oldVal === newVal) return;
+            prevValues.set(input, newVal);
+
+            let rowQty = num(row.dataset.rowQty);
+            let price = num(row.dataset.price);
+            let cost = num(row.dataset.cost);
+
+            const refs = getRowRefs(row);
+
+            // Find Price Inp
+            const priceInp = row.querySelector('.price-input');
+
+            if (input.classList.contains('qty-input')) {
+                const diff = newVal - oldVal;
+                rowQty += diff;
+                row.dataset.rowQty = rowQty;
+
+                totalQty += diff;
+                totalAmt += (diff * price);
+
+                const td = input.closest('td');
+                if (td) {
+                    td.classList.remove('qty-positive', 'qty-3plus');
+                    if (newVal >= 3) td.classList.add('qty-3plus');
+                    else if (newVal > 0) td.classList.add('qty-positive');
+                }
+            } else if (input.classList.contains('markup-input')) {
+                // Markup Changed -> Update Price
+                const newMarkup = newVal;
+                // Old Markup? We don't track old markup delta directly, we Re-calculate Price
+                // But we need to update TotalAmt based on Price delta.
+                
+                const oldPrice = price;
+                const newPrice = cost + newMarkup;
+                
+                price = newPrice;
+                row.dataset.price = price;
+                if(priceInp) priceInp.value = price.toFixed(2);
+                
+                const priceDiff = newPrice - oldPrice;
+                totalAmt += (rowQty * priceDiff);
+            } 
+            // If we had Price input editable:
+            /*
+            else if (input.classList.contains('price-input')) {
+                const diff = newVal - oldVal;
+                totalAmt += (rowQty * diff);
+                price = newVal;
+                row.dataset.price = price;
+                // Reverse calc markup? 
+                const markupInp = row.querySelector('.markup-input');
+                if(markupInp) markupInp.value = (price - cost).toFixed(2);
+            }
+            */
+
+            const rowAmt = rowQty * price;
+            if (refs.amtCell) refs.amtCell.textContent = rowAmt !== 0 ? fmt.format(rowAmt) : '-';
+            if (refs.qtyCell) refs.qtyCell.textContent = rowQty !== 0 ? rowQty.toFixed(2).replace(/\.?0+$/, '') : '';
+            if (elGrandAmt) elGrandAmt.textContent = fmt.format(totalAmt);
+            if (elGrandQty) elGrandQty.textContent = totalQty !== 0 ? totalQty.toFixed(2).replace(/\.?0+$/, '') : '0';
+
+            if (refs.vegeCell) {
+                const isPaid = refs.vegeCell.classList.contains('status-paid');
+                const isUnpaid = refs.vegeCell.classList.contains('status-unpaid');
+                if (!isPaid && !isUnpaid) {
+                    refs.vegeCell.classList.remove('status-noorders', 'status-threeplus');
+                    if (rowQty <= 0) refs.vegeCell.classList.add('status-noorders');
+                    else if (rowQty >= 3) refs.vegeCell.classList.add('status-threeplus');
+                }
+            }
+        }
+    })();
+</script>
