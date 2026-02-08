@@ -1,11 +1,13 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
 using HazelInvoice.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace HazelInvoice.Controllers;
 
+[Authorize]
 public class ReceiptsController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -47,9 +49,10 @@ public class ReceiptsController : Controller
         // Pass products and services for dropdowns
         ViewBag.Products = await _context.Products.Where(p => p.IsActive).ToListAsync();
         ViewBag.Services = await _context.Services.Where(s => s.IsActive).ToListAsync();
+        var today = DateTime.Today;
         ViewBag.PriceList = await _context.WeeklyPrices
             .Include(p => p.Product)
-            .Where(w => w.EffectiveFrom.Date <= DateTime.Today && w.EffectiveTo.Date >= DateTime.Today)
+            .Where(w => w.EffectiveFrom <= today && w.EffectiveTo >= today)
             .ToListAsync();
 
         ViewBag.Customers = await _context.Customers.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
@@ -63,6 +66,33 @@ public class ReceiptsController : Controller
     public async Task<IActionResult> Create(Receipt receipt, string action)
     {
         ModelState.Remove("ReceiptNumber"); // Generated server-side
+        ModelState.Remove("CustomerName"); // Set server-side from CustomerId
+
+        if (ModelState.IsValid)
+        {
+            if (receipt.CustomerId == null)
+            {
+                ModelState.AddModelError("CustomerId", "Please select a customer.");
+            }
+            else
+            {
+                var customer = await _context.Customers.FindAsync(receipt.CustomerId.Value);
+                if (customer == null)
+                {
+                    ModelState.AddModelError("CustomerId", "Customer not found.");
+                }
+                else
+                {
+                    receipt.CustomerName = customer.Name;
+
+                    if (string.IsNullOrWhiteSpace(receipt.CustomerAddress))
+                        receipt.CustomerAddress = customer.Address;
+
+                    if (string.IsNullOrWhiteSpace(receipt.ContactNumber))
+                        receipt.ContactNumber = customer.ContactNumber;
+                }
+            }
+        }
 
         if (ModelState.IsValid)
         {
@@ -111,9 +141,10 @@ public class ReceiptsController : Controller
         // Reload filtered lists on failure
         ViewBag.Products = await _context.Products.Where(p => p.IsActive).ToListAsync();
         ViewBag.Services = await _context.Services.Where(s => s.IsActive).ToListAsync();
+        var today = DateTime.Today;
         ViewBag.PriceList = await _context.WeeklyPrices
             .Include(p => p.Product)
-            .Where(w => w.EffectiveFrom.Date <= DateTime.Today && w.EffectiveTo.Date >= DateTime.Today)
+            .Where(w => w.EffectiveFrom <= today && w.EffectiveTo >= today)
             .ToListAsync();
         ViewBag.Customers = await _context.Customers.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
 

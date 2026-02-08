@@ -66,7 +66,7 @@ public class ProfitSummaryViewModel
 public class LedgerRow 
 {
     public DateTime Date { get; set; }
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public decimal Balance { get; set; }
 }

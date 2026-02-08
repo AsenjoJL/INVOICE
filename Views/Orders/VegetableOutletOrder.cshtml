@@ -4,6 +4,7 @@
     ViewData["Title"] = "Per Outlet Order";
     decimal grandTotalAmt = 0;
     decimal grandTotalQ = 0;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
 }
 
 <div class="container-fluid p-0">
@@ -73,23 +74,23 @@
                             grandTotalQ += qty;
                             grandTotalAmt += amount;
 
-                            <tr>
+                            <tr data-qty="@qty.ToString("0.##", inv)" data-price="@price.ToString("0.00", inv)">
                                 <td class="fw-bold px-3">@product.Name</td>
 
                                 <td class="p-0">
                                     <input asp-for="ProductPrices[product.Id]"
-                                           type="number" step="0.01" inputmode="decimal"
+                                           type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                            value="@price.ToString("0.00")"
                                            class="table-input price-input text-end pe-2"
-                                           autocomplete="off" />
+                                           autocomplete="off" spellcheck="false" />
                                 </td>
 
                                 <td class="p-0">
                                     <input asp-for="Quantities[product.Id]"
-                                           type="number" step="0.01" inputmode="decimal"
+                                           type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                            value="@(qty > 0 ? qty.ToString("0.##") : "")"
                                            class="table-input qty-input text-center fw-bold"
-                                           autocomplete="off" />
+                                           autocomplete="off" spellcheck="false" />
                                 </td>
 
                                 <td class="text-end px-3 fw-bold text-primary amount-cell">
@@ -116,6 +117,7 @@
 </div>
 
 <style>
+    #orderTable { table-layout: fixed; }
     .table-input {
         width: 100%;
         height: 100%;
@@ -124,6 +126,7 @@
         padding: 8px;
         font-size: 1rem;
         outline: none;
+        font-variant-numeric: tabular-nums;
     }
     .table-input:focus {
         background-color: #e8f0fe;
@@ -135,7 +138,6 @@
         margin: 0;
     }
     tbody tr:hover td { background-color: #f1f3f5; }
-    tbody tr { content-visibility: auto; contain-intrinsic-size: 28px; }
 </style>
 
 <script>
@@ -152,73 +154,93 @@
 
   // Helper to parse numbers safely
   const num = (val) => {
-      const n = parseFloat(val);
+      if (val == null) return 0;
+      let s = ('' + val).trim();
+      if (!s) return 0;
+      const hasComma = s.includes(',');
+      const hasDot = s.includes('.');
+      if (hasComma && !hasDot) {
+          s = s.replace(',', '.');
+      } else if (hasComma && hasDot) {
+          s = s.replace(/,/g, '');
+      }
+      const n = parseFloat(s);
       return Number.isFinite(n) ? n : 0;
   };
 
-  // 1. FAST: Update Single Row Amount only (Runs on every keystroke)
-  function updateRow(row) {
-      const priceInput = row.querySelector('.price-input');
-      const qtyInput = row.querySelector('.qty-input');
-      const amtCell = row.querySelector('.amount-cell');
+  let totalQty = @grandTotalQ.ToString("0.##", inv);
+  let totalAmt = @grandTotalAmt.ToString("0.00", inv);
 
-      if (!priceInput || !qtyInput || !amtCell) return;
+  const prevValues = new WeakMap();
+  const rowRefs = new WeakMap();
 
-      const price = num(priceInput.value);
-      const qty = num(qtyInput.value);
-      const total = price * qty;
-
-      // Update text directly
-      amtCell.textContent = total > 0 ? fmt.format(total) : '-';
+  function getRowRefs(row) {
+      let refs = rowRefs.get(row);
+      if (refs) return refs;
+      refs = {
+          priceInput: row.querySelector('.price-input'),
+          qtyInput: row.querySelector('.qty-input'),
+          amtCell: row.querySelector('.amount-cell')
+      };
+      rowRefs.set(row, refs);
+      return refs;
   }
 
-  // 2. SLOW: Update Grand Totals (Runs only on BLUR/CHANGE)
-  // This avoids recalculating the whole table while the user is typing
-  function updateGrandTotal() {
-      let totalQty = 0;
-      let totalAmt = 0;
-
-      // Query all rows efficiently
-      const rows = table.querySelectorAll('tbody tr');
-      
-      rows.forEach(row => {
-          const qtyVal = row.querySelector('.qty-input').value;
-          const priceVal = row.querySelector('.price-input').value;
-          
-          const qty = num(qtyVal);
-          const price = num(priceVal);
-          
-          if (qty > 0) {
-              totalQty += qty;
-              totalAmt += (qty * price);
-          }
-      });
-
-      if (gtQtyEl) gtQtyEl.textContent = totalQty > 0 ? parseFloat(totalQty.toFixed(2)) : '0';
+  function updateTotalsDisplay() {
+      if (gtQtyEl) gtQtyEl.textContent = totalQty !== 0 ? parseFloat(totalQty.toFixed(2)) : '0';
       if (gtAmtEl) gtAmtEl.textContent = fmt.format(totalAmt);
   }
 
-  // Event Delegation
-  table.addEventListener('input', (e) => {
-      if (e.target.classList.contains('table-input')) {
-          const row = e.target.closest('tr');
-          if (row) updateRow(row);
-      }
-  }, { passive: true });
+  function handle(input) {
+      const row = input.closest('tr');
+      if (!row) return;
 
+      const refs = getRowRefs(row);
+      if (!refs.priceInput || !refs.qtyInput || !refs.amtCell) return;
+
+      const oldVal = prevValues.get(input) ?? 0;
+      const newVal = num(input.value);
+      if (oldVal === newVal) return;
+      prevValues.set(input, newVal);
+
+      let rowQty = num(row.dataset.qty);
+      let rowPrice = num(row.dataset.price);
+
+      if (input.classList.contains('qty-input')) {
+          const diff = newVal - oldVal;
+          rowQty += diff;
+          row.dataset.qty = rowQty.toString();
+          totalQty += diff;
+          totalAmt += (diff * rowPrice);
+      } else if (input.classList.contains('price-input')) {
+          const diff = newVal - oldVal;
+          rowPrice = newVal;
+          row.dataset.price = rowPrice.toString();
+          totalAmt += (rowQty * diff);
+      }
+
+      const rowAmt = rowQty * rowPrice;
+      refs.amtCell.textContent = rowAmt > 0 ? fmt.format(rowAmt) : '-';
+      updateTotalsDisplay();
+  }
+
+  // Event Delegation
   table.addEventListener('change', (e) => {
       if (e.target.classList.contains('table-input')) {
-          const row = e.target.closest('tr');
-          if (row) {
-              updateRow(row); // Ensure row is correct
-              updateGrandTotal(); // Update totals when user leaves the field
-          }
+          handle(e.target);
       }
   });
+
+  table.addEventListener('blur', (e) => {
+      if (e.target.classList.contains('table-input')) {
+          handle(e.target);
+      }
+  }, true);
   
   // Optional: Select text on focus for easier editing
   table.addEventListener('focusin', (e) => {
       if (e.target.classList.contains('table-input')) {
+          if (!prevValues.has(e.target)) prevValues.set(e.target, num(e.target.value));
           try { e.target.select(); } catch {}
       }
   });

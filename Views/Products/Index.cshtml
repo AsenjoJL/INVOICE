@@ -32,6 +32,7 @@
                             <th>Category</th>
                             <th>Unit</th>
                             <th>Cost</th>
+                            <th>Delivery Fee</th>
                             <th>Reorder Level</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -46,6 +47,7 @@
                                 <td>@item.Category</td>
                                 <td>@item.Unit</td>
                                 <td>@item.UnitCost.ToString("N2")</td>
+                                <td>@item.DeliveryFee.ToString("N2")</td>
                                 <td>
                                     @if(item.ReorderLevel > 0) 
                                     {
@@ -64,6 +66,7 @@
                                 </td>
                                 <td>
                                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></a>
                                 </td>
                             </tr>
                         }

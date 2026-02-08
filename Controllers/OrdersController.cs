@@ -22,6 +22,8 @@ public class OrdersController : Controller
     public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1)
     {
         var targetDate = (date ?? DateTime.Today).Date;
+        var dayStart = targetDate;
+        var dayEnd = targetDate.AddDays(1);
 
         int outletPageSize = 12;
         int productPageSize = 25;
@@ -65,7 +67,9 @@ public class OrdersController : Controller
             .ToListAsync();
 
         // Needed for filtering receipts (all outlets in allowed groups)
-        var allOutletNames = await outletsBaseQuery.Select(c => c.Name).ToListAsync();
+        var allOutletList = await outletsBaseQuery.Select(c => new { c.Id, c.Name }).ToListAsync();
+        var allOutletIds = allOutletList.Select(c => c.Id).ToList();
+        var allOutletNames = allOutletList.Select(c => c.Name).ToList();
 
         // 2) PRODUCTS (paged)
         var productsBaseQuery = _context.Products
@@ -85,6 +89,7 @@ public class OrdersController : Controller
             .ToListAsync();
 
         var visibleProductIds = visibleProducts.Select(p => p.Id).ToList();
+        var visibleOutletIds = visibleOutlets.Select(o => o.Id).ToList();
         var visibleOutletNameSet = visibleOutlets.Select(o => o.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         // 3) TOTAL QTY PER PRODUCT (ALL outlets in groups) – FAST SQL GROUP BY
@@ -95,9 +100,10 @@ public class OrdersController : Controller
                 l => l.ReceiptId,
                 r => r.Id,
                 (l, r) => new { l, r })
-            .Where(x => x.r.Date.Date == targetDate &&
+            .Where(x => x.r.Date >= dayStart && x.r.Date < dayEnd &&
                         x.r.Status != PaymentStatus.Void &&
-                        allOutletNames.Contains(x.r.CustomerName))
+                        ((x.r.CustomerId.HasValue && allOutletIds.Contains(x.r.CustomerId.Value)) ||
+                         (!x.r.CustomerId.HasValue && allOutletNames.Contains(x.r.CustomerName))))
             .GroupBy(x => x.l.ProductId!.Value)
             .Select(g => new
             {
@@ -121,12 +127,12 @@ public class OrdersController : Controller
         var productsData = await _context.Products
             .AsNoTracking()
             .Where(p => priceProductIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.UnitCost, p.Markup })
+            .Select(p => new { p.Id, p.UnitCost, p.Markup, p.DeliveryFee })
             .ToDictionaryAsync(x => x.Id, x => x);
 
         var weeklyPrices = await _context.WeeklyPrices
             .AsNoTracking()
-            .Where(w => w.EffectiveFrom.Date <= targetDate && w.EffectiveTo.Date >= targetDate)
+            .Where(w => w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart)
             .Where(w => priceProductIds.Contains(w.ProductId))
             .ToListAsync();
 
@@ -142,30 +148,40 @@ public class OrdersController : Controller
         {
             decimal cost = 0m;
             decimal markup = 0m;
+            decimal deliveryFee = 0m;
 
             if (productsData.TryGetValue(pid, out var pData))
             {
                 cost = pData.UnitCost;
                 markup = pData.Markup;
+                deliveryFee = pData.DeliveryFee;
             }
 
             if (weeklyPriceMap.TryGetValue(pid, out var wp))
             {
+                if (wp.CostOverride.HasValue)
+                    cost = wp.CostOverride.Value;
+
                 // Override with WeeklyPrice logic if present
                 if (wp.Markup != 0)
                 {
                     markup = wp.Markup;
                 }
-                else if (wp.DeliveryPrice > 0 && cost > 0)
+                else if (wp.BasePrice > 0 && cost > 0)
                 {
                     // Fallback for legacy records without stored Markup
-                    markup = wp.DeliveryPrice - cost;
+                    markup = wp.BasePrice - cost;
+                }
+
+                if (wp.DeliveryFee.HasValue)
+                {
+                    deliveryFee = wp.DeliveryFee.Value;
                 }
             }
             
             productCosts[pid] = cost;
             productMarkups[pid] = markup;
-            productPrices[pid] = cost + markup;
+            productPrices[pid] = cost + markup + deliveryFee;
         }
 
         // 5) MATRIX QUANTITIES (VISIBLE only) – FAST SQL GROUP BY
@@ -176,13 +192,15 @@ public class OrdersController : Controller
                 l => l.ReceiptId,
                 r => r.Id,
                 (l, r) => new { l, r })
-            .Where(x => x.r.Date.Date == targetDate &&
+            .Where(x => x.r.Date >= dayStart && x.r.Date < dayEnd &&
                         x.r.Status != PaymentStatus.Void &&
-                        visibleOutletNameSet.Contains(x.r.CustomerName))
-            .GroupBy(x => new { ProductId = x.l.ProductId!.Value, x.r.CustomerName })
+                        ((x.r.CustomerId.HasValue && visibleOutletIds.Contains(x.r.CustomerId.Value)) ||
+                         (!x.r.CustomerId.HasValue && visibleOutletNameSet.Contains(x.r.CustomerName))))
+            .GroupBy(x => new { ProductId = x.l.ProductId!.Value, x.r.CustomerId, x.r.CustomerName })
             .Select(g => new
             {
                 g.Key.ProductId,
+                g.Key.CustomerId,
                 g.Key.CustomerName,
                 Qty = g.Sum(z => (decimal)z.l.Quantity),
                 Status = g.Min(z => z.r.Status) // Prioritize Unpaid(0) over Paid(2)
@@ -194,10 +212,19 @@ public class OrdersController : Controller
         var matrixQuantities = new Dictionary<string, decimal>(matrixRows.Count);
         var matrixStatuses = new Dictionary<string, string>(matrixRows.Count);
 
+        var visibleOutletIdSet = visibleOutletIds.ToHashSet();
+
         foreach (var row in matrixRows)
         {
-            if (!visibleNameToId.TryGetValue(row.CustomerName, out int cid)) continue;
-            string key = $"{row.ProductId}_{cid}";
+            int? cid = null;
+            if (row.CustomerId.HasValue && visibleOutletIdSet.Contains(row.CustomerId.Value))
+                cid = row.CustomerId.Value;
+            else if (!string.IsNullOrWhiteSpace(row.CustomerName) && visibleNameToId.TryGetValue(row.CustomerName, out int nameCid))
+                cid = nameCid;
+
+            if (cid == null) continue;
+
+            string key = $"{row.ProductId}_{cid.Value}";
             matrixQuantities[key] = row.Qty;
             matrixStatuses[key] = row.Status.ToString().ToUpper();
         }
@@ -210,9 +237,10 @@ public class OrdersController : Controller
                 l => l.ReceiptId,
                 r => r.Id,
                 (l, r) => new { l, r })
-            .Where(x => x.r.Date.Date == targetDate &&
+            .Where(x => x.r.Date >= dayStart && x.r.Date < dayEnd &&
                         x.r.Status != PaymentStatus.Void &&
-                        allOutletNames.Contains(x.r.CustomerName))
+                        ((x.r.CustomerId.HasValue && allOutletIds.Contains(x.r.CustomerId.Value)) ||
+                         (!x.r.CustomerId.HasValue && allOutletNames.Contains(x.r.CustomerName))))
             .GroupBy(x => x.l.ProductId!.Value)
             .Select(g => new
             {
@@ -301,6 +329,8 @@ public class OrdersController : Controller
     public async Task<IActionResult> SaveMatrix(VegetableMatrixViewModel model)
     {
         if (model == null) return BadRequest("Model is null");
+        var dayStart = model.Date.Date;
+        var dayEnd = dayStart.AddDays(1);
 
         var affectedCustomerIds = model.MatrixQuantities.Keys
             .Select(k => int.Parse(k.Split('_')[1]))
@@ -310,6 +340,8 @@ public class OrdersController : Controller
         var customers = await _context.Customers
             .Where(c => affectedCustomerIds.Contains(c.Id))
             .ToListAsync();
+        var customerIdSet = customers.Select(c => c.Id).ToHashSet();
+        var customerNameSet = customers.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var affectedProductIds = model.MatrixQuantities.Keys
             .Select(k => int.Parse(k.Split('_')[0]))
@@ -320,8 +352,21 @@ public class OrdersController : Controller
         var productMap = await _context.Products
             .AsNoTracking()
             .Where(p => affectedProductIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.Name, p.Unit, p.UnitCost, p.Markup })
+            .Select(p => new { p.Id, p.Name, p.Unit, p.UnitCost, p.Markup, p.DeliveryFee })
             .ToDictionaryAsync(x => x.Id, x => x);
+
+        var weeklyCostOverrides = await _context.WeeklyPrices
+            .AsNoTracking()
+            .Where(w => affectedProductIds.Contains(w.ProductId) &&
+                        w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart &&
+                        w.CostOverride != null)
+            .ToDictionaryAsync(w => w.ProductId, w => w.CostOverride!.Value);
+
+        decimal GetEffectiveCost(int pid)
+        {
+            if (weeklyCostOverrides.TryGetValue(pid, out var c)) return c;
+            return productMap.TryGetValue(pid, out var prod) ? prod.UnitCost : 0m;
+        }
 
         var strategy = _context.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
@@ -331,8 +376,12 @@ public class OrdersController : Controller
             {
                 var existingReceipts = await _context.Receipts
                     .Include(r => r.Lines)
-                    .Where(r => r.Date.Date == model.Date.Date && r.Status != PaymentStatus.Void)
+                    .Where(r => r.Date >= dayStart && r.Date < dayEnd && r.Status != PaymentStatus.Void)
                     .ToListAsync();
+
+                bool MatchesCustomer(Receipt r, Customer c) =>
+                    (r.CustomerId.HasValue && r.CustomerId.Value == c.Id) ||
+                    (!r.CustomerId.HasValue && r.CustomerName == c.Name);
 
                 // 0) Update Weekly Prices (Markups) if provided
                 if (model.ProductMarkups != null && model.ProductMarkups.Any())
@@ -352,22 +401,28 @@ public class OrdersController : Controller
                           
                          var wp = wps.FirstOrDefault(w => w.ProductId == pid);
                          if (wp != null) {
-                             if (wp.Markup != markup) {
+                             var effectiveCost = wp.CostOverride ?? prod.UnitCost;
+                             var effectiveDeliveryFee = wp.DeliveryFee ?? prod.DeliveryFee;
+                             var basePrice = effectiveCost + markup;
+                             var deliveryPrice = basePrice + effectiveDeliveryFee;
+                             if (wp.Markup != markup || wp.DeliveryPrice != deliveryPrice || wp.BasePrice != basePrice) {
                                   wp.Markup = markup;
-                                  wp.DeliveryPrice = prod.UnitCost + markup;
-                                  wp.BasePrice = prod.UnitCost + markup;
+                                  wp.BasePrice = basePrice;
+                                  wp.DeliveryPrice = deliveryPrice;
                              }
                          } else {
                               // Only create new WP if markup differs from product default
                               // (Or if user explicitly wants to set price for week? Assuming diff implies intent)
                               if (markup != prod.Markup)
                               {
+                                   var basePrice = prod.UnitCost + markup;
+                                   var deliveryPrice = basePrice + prod.DeliveryFee;
                                    _context.WeeklyPrices.Add(new WeeklyPrice {
                                        ProductId = pid,
                                        EffectiveFrom = model.Date,
                                        EffectiveTo = model.Date.AddDays(6),
-                                       BasePrice = prod.UnitCost + markup,
-                                       DeliveryPrice = prod.UnitCost + markup,
+                                       BasePrice = basePrice,
+                                       DeliveryPrice = deliveryPrice,
                                        Markup = markup
                                    });
                               }
@@ -380,10 +435,10 @@ public class OrdersController : Controller
                 {
                     // 1) Calculate PAID quantities (Locked)
                     var paidLines = existingReceipts
-                        .Where(r => r.CustomerName == customer.Name && r.Status == PaymentStatus.Paid)
+                        .Where(r => MatchesCustomer(r, customer) && r.Status == PaymentStatus.Paid)
                         .SelectMany(r => r.Lines)
                         .Where(l => l.ProductId.HasValue)
-                        .GroupBy(l => l.ProductId.Value)
+                        .GroupBy(l => l.ProductId!.Value)
                         .ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
 
                     var inputs = model.MatrixQuantities
@@ -392,7 +447,7 @@ public class OrdersController : Controller
 
                     // 2) Find Existing UNPAID receipt or Create NEW
                     var unpaidReceipt = existingReceipts.FirstOrDefault(r => 
-                        r.CustomerName == customer.Name && r.Status == PaymentStatus.Unpaid);
+                        MatchesCustomer(r, customer) && r.Status == PaymentStatus.Unpaid);
 
                     // If no unpaid receipt, do we need one?
                     if (unpaidReceipt == null)
@@ -409,6 +464,7 @@ public class OrdersController : Controller
 
                         unpaidReceipt = new Receipt
                         {
+                            CustomerId = customer.Id,
                             CustomerName = customer.Name,
                             CustomerAddress = customer.Address,
                             ContactNumber = customer.ContactNumber,
@@ -440,8 +496,14 @@ public class OrdersController : Controller
                         if (unpaidQty < 0) unpaidQty = 0; 
 
                         decimal price = model.ProductPrices.TryGetValue(pid, out var pr) ? pr : 0m;
-                        if (price <= 0 && productMap.TryGetValue(pid, out var prodFromMap))
-                            price = prodFromMap.UnitCost;
+                        if (price <= 0)
+                        {
+                            var markup = model.ProductMarkups != null && model.ProductMarkups.TryGetValue(pid, out var mk)
+                                ? mk
+                                : (productMap.TryGetValue(pid, out var prodFromMap) ? prodFromMap.Markup : 0m);
+                            var deliveryFee = productMap.TryGetValue(pid, out var prodFromMap2) ? prodFromMap2.DeliveryFee : 0m;
+                            price = GetEffectiveCost(pid) + markup + deliveryFee;
+                        }
 
                         var line = lines.FirstOrDefault(l => l.ProductId == pid);
 
@@ -453,8 +515,7 @@ public class OrdersController : Controller
                                 line.Price = price;
                                 line.Amount = unpaidQty * price;
                                 // Update snapshot for draft/unpaid
-                                if (productMap.TryGetValue(pid, out var pSnap))
-                                    line.CostPriceSnapshot = pSnap.UnitCost;
+                                line.CostPriceSnapshot = GetEffectiveCost(pid);
                             }
                             else
                             {
@@ -472,7 +533,7 @@ public class OrdersController : Controller
                                 Quantity = unpaidQty,
                                 Price = price,
                                 Amount = unpaidQty * price,
-                                CostPriceSnapshot = prod?.UnitCost ?? 0
+                                CostPriceSnapshot = GetEffectiveCost(pid)
                             });
                         }
                     }
@@ -482,7 +543,8 @@ public class OrdersController : Controller
 
                 foreach (var r in existingReceipts)
                 {
-                    if (customers.Any(c => c.Name == r.CustomerName))
+                    if ((r.CustomerId.HasValue && customerIdSet.Contains(r.CustomerId.Value)) ||
+                        (!r.CustomerId.HasValue && customerNameSet.Contains(r.CustomerName)))
                         r.TotalAmount = r.Lines.Sum(l => l.Amount);
                 }
 
@@ -508,6 +570,8 @@ public class OrdersController : Controller
     public async Task<IActionResult> VegetableOutletOrder(DateTime? date, int? customerId)
     {
         var targetDate = (date ?? DateTime.Today).Date;
+        var dayStart = targetDate;
+        var dayEnd = targetDate.AddDays(1);
 
         var customers = await _context.Customers
             .AsNoTracking()
@@ -528,7 +592,7 @@ public class OrdersController : Controller
 
         var weeklyPrices = await _context.WeeklyPrices
             .AsNoTracking()
-            .Where(w => w.EffectiveFrom.Date <= targetDate && w.EffectiveTo.Date >= targetDate)
+            .Where(w => w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart)
             .Where(w => productIds.Contains(w.ProductId))
             .Select(w => new { w.ProductId, w.DeliveryPrice })
             .ToListAsync();
@@ -537,7 +601,7 @@ public class OrdersController : Controller
 
         var productPrices = new Dictionary<int, decimal>(products.Count);
         foreach (var p in products)
-            productPrices[p.Id] = weeklyPriceMap.TryGetValue(p.Id, out var dp) ? dp : p.UnitCost;
+            productPrices[p.Id] = weeklyPriceMap.TryGetValue(p.Id, out var dp) ? dp : (p.UnitCost + p.Markup + p.DeliveryFee);
 
         var quantities = new Dictionary<int, decimal>();
 
@@ -549,9 +613,10 @@ public class OrdersController : Controller
                 var allReceipts = await _context.Receipts
                     .AsNoTracking()
                     .Include(r => r.Lines)
-                    .Where(r => r.Date.Date == targetDate &&
-                                r.CustomerName == targetCustomer.Name &&
-                                r.Status != PaymentStatus.Void)
+                    .Where(r => r.Date >= dayStart && r.Date < dayEnd &&
+                                r.Status != PaymentStatus.Void &&
+                                ((r.CustomerId.HasValue && r.CustomerId.Value == targetCustomer.Id) ||
+                                 (!r.CustomerId.HasValue && r.CustomerName == targetCustomer.Name)))
                     .ToListAsync();
 
                 foreach (var receipt in allReceipts)
@@ -591,6 +656,8 @@ public class OrdersController : Controller
     public async Task<IActionResult> SaveOutletOrder(VegetableOutletOrderViewModel model)
     {
         if (model == null) return BadRequest("Model is null");
+        var dayStart = model.Date.Date;
+        var dayEnd = dayStart.AddDays(1);
 
         // VALIDATION: Prevent disappearing prices
         // Check for Orphaned Prices (Price > 0 but Qty <= 0)
@@ -631,9 +698,10 @@ public class OrdersController : Controller
                 // LOAD ALL RECEIPTS FOR CUSTOMER/DATE (Paid and Unpaid)
                 var allReceipts = await _context.Receipts
                     .Include(r => r.Lines)
-                    .Where(r => r.Date.Date == model.Date.Date &&
-                                r.CustomerName == customer.Name &&
-                                r.Status != PaymentStatus.Void)
+                    .Where(r => r.Date >= dayStart && r.Date < dayEnd &&
+                                r.Status != PaymentStatus.Void &&
+                                ((r.CustomerId.HasValue && r.CustomerId.Value == customer.Id) ||
+                                 (!r.CustomerId.HasValue && r.CustomerName == customer.Name)))
                     .ToListAsync();
                     
                 // Identify Locked Paid Qty
@@ -641,7 +709,7 @@ public class OrdersController : Controller
                    .Where(r => r.Status == PaymentStatus.Paid)
                    .SelectMany(r => r.Lines)
                    .Where(l => l.ProductId.HasValue)
-                   .GroupBy(l => l.ProductId.Value)
+                   .GroupBy(l => l.ProductId!.Value)
                    .ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
                    
                 // Identify target Unpaid Receipt
@@ -671,6 +739,7 @@ public class OrdersController : Controller
                         {
                             unpaidReceipt = new Receipt
                             {
+                                CustomerId = customer.Id,
                                 CustomerName = customer.Name,
                                 CustomerAddress = customer.Address,
                                 ContactNumber = customer.ContactNumber,
@@ -691,8 +760,21 @@ public class OrdersController : Controller
                         var prodMap = await _context.Products
                             .AsNoTracking()
                             .Where(p => usedProductIds.Contains(p.Id))
-                            .Select(p => new { p.Id, p.Name, p.Unit, p.UnitCost })
+                            .Select(p => new { p.Id, p.Name, p.Unit, p.UnitCost, p.Markup, p.DeliveryFee })
                             .ToDictionaryAsync(x => x.Id, x => x);
+
+                        var weeklyCostOverrides = await _context.WeeklyPrices
+                            .AsNoTracking()
+                            .Where(w => usedProductIds.Contains(w.ProductId) &&
+                                        w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart &&
+                                        w.CostOverride != null)
+                            .ToDictionaryAsync(w => w.ProductId, w => w.CostOverride!.Value);
+
+                        decimal GetEffectiveCost(int pid)
+                        {
+                            if (weeklyCostOverrides.TryGetValue(pid, out var c)) return c;
+                            return prodMap.TryGetValue(pid, out var prod) ? prod.UnitCost : 0m;
+                        }
 
                         foreach (var kvp in quantities)
                         {
@@ -707,8 +789,12 @@ public class OrdersController : Controller
                             if (unpaidQty < 0) unpaidQty = 0;
 
                             decimal price = model.ProductPrices.TryGetValue(productId, out var pr) ? pr : 0m;
-                            if (price <= 0 && prodMap.TryGetValue(productId, out var prodFromMap))
-                                price = prodFromMap.UnitCost;
+                            if (price <= 0)
+                            {
+                                var markup = prodMap.TryGetValue(productId, out var prodFromMap) ? prodFromMap.Markup : 0m;
+                                var deliveryFee = prodMap.TryGetValue(productId, out var prodFromMap2) ? prodFromMap2.DeliveryFee : 0m;
+                                price = GetEffectiveCost(productId) + markup + deliveryFee;
+                            }
 
                             var existingLine = currentLines.FirstOrDefault(l => l.ProductId == productId);
                             if (existingLine != null)
@@ -719,8 +805,7 @@ public class OrdersController : Controller
                                     existingLine.Price = price;
                                     existingLine.Amount = unpaidQty * price;
                                     // Update snapshot
-                                    if (prodMap.TryGetValue(productId, out var pSnap))
-                                        existingLine.CostPriceSnapshot = pSnap.UnitCost;
+                                    existingLine.CostPriceSnapshot = GetEffectiveCost(productId);
                                 }
                                 else
                                 {
@@ -746,7 +831,7 @@ public class OrdersController : Controller
                                     Quantity = unpaidQty,
                                     Price = price,
                                     Amount = unpaidQty * price,
-                                    CostPriceSnapshot = prod?.UnitCost ?? 0
+                                    CostPriceSnapshot = GetEffectiveCost(productId)
                                 });
                             }
                         }
@@ -792,10 +877,12 @@ public class OrdersController : Controller
 
     private async Task<IActionResult> GetOrdersByStatus(DateTime date, PaymentStatus status)
     {
+        var dayStart = date.Date;
+        var dayEnd = dayStart.AddDays(1);
         var receipts = await _context.Receipts
             .AsNoTracking()
             .Include(r => r.Lines)
-            .Where(r => r.Date.Date == date.Date && r.Status == status)
+            .Where(r => r.Date >= dayStart && r.Date < dayEnd && r.Status == status)
             .OrderBy(r => r.CustomerName)
             .ToListAsync();
 
@@ -840,6 +927,9 @@ public class OrdersController : Controller
     {
         var start = startDate ?? DateTime.Today;
         var end = endDate ?? DateTime.Today;
+        var startDateOnly = start.Date;
+        var endExclusive = end.Date.AddDays(1);
+        int? targetOutletId = outletId;
         string? targetOutletName = null;
 
         if (outletId.HasValue)
@@ -850,11 +940,13 @@ public class OrdersController : Controller
 
         // Base Query
         var query = _context.Receipts.AsNoTracking()
-            .Where(r => r.Date.Date >= start.Date && r.Date.Date <= end.Date && r.Status != PaymentStatus.Void);
+            .Where(r => r.Date >= startDateOnly && r.Date < endExclusive && r.Status != PaymentStatus.Void);
 
-        if (targetOutletName != null)
+        if (targetOutletId.HasValue)
         {
-            query = query.Where(r => r.CustomerName == targetOutletName);
+            query = query.Where(r =>
+                (r.CustomerId.HasValue && r.CustomerId.Value == targetOutletId.Value) ||
+                (!r.CustomerId.HasValue && r.CustomerName == targetOutletName));
         }
 
         if (status == "Paid") query = query.Where(r => r.Status == PaymentStatus.Paid);
@@ -895,13 +987,18 @@ public class OrdersController : Controller
 
         // 4. Top Items
         var lineQuery = _context.ReceiptLines.AsNoTracking()
-            .Where(l => l.Receipt.Date.Date >= start.Date && l.Receipt.Date.Date <= end.Date && l.Receipt.Status != PaymentStatus.Void);
+            .Where(l => l.Receipt != null)
+            .Where(l => l.Receipt!.Date >= startDateOnly && l.Receipt.Date < endExclusive && l.Receipt.Status != PaymentStatus.Void);
             
-        if (targetOutletName != null) 
-             lineQuery = lineQuery.Where(l => l.Receipt.CustomerName == targetOutletName);
+        if (targetOutletId.HasValue)
+        {
+            lineQuery = lineQuery.Where(l =>
+                (l.Receipt!.CustomerId.HasValue && l.Receipt.CustomerId.Value == targetOutletId.Value) ||
+                (!l.Receipt.CustomerId.HasValue && l.Receipt.CustomerName == targetOutletName));
+        }
 
-        if (status == "Paid") lineQuery = lineQuery.Where(l => l.Receipt.Status == PaymentStatus.Paid);
-        else if (status == "Unpaid") lineQuery = lineQuery.Where(l => l.Receipt.Status == PaymentStatus.Unpaid);
+        if (status == "Paid") lineQuery = lineQuery.Where(l => l.Receipt!.Status == PaymentStatus.Paid);
+        else if (status == "Unpaid") lineQuery = lineQuery.Where(l => l.Receipt!.Status == PaymentStatus.Unpaid);
 
         var totalItemsCount = await lineQuery.SumAsync(l => l.Quantity);
 

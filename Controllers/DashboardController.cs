@@ -19,12 +19,14 @@ public class DashboardController : Controller
     public async Task<IActionResult> Index()
     {
         var today = DateTime.Today;
+        var dayStart = today;
+        var dayEnd = today.AddDays(1);
         
         var model = new DashboardViewModel();
 
         // 1. Sales Today
         model.SalesToday = await _context.Receipts
-            .Where(r => r.Date.Date == today && r.Status != Models.PaymentStatus.Void)
+            .Where(r => r.Date >= dayStart && r.Date < dayEnd && r.Status != Models.PaymentStatus.Void)
             .SumAsync(r => r.TotalAmount);
 
         // (New) Weekly (Mon-Sun)
@@ -51,12 +53,14 @@ public class DashboardController : Controller
 
         // 2. Items Sold Today
         model.ItemsSoldToday = await _context.ReceiptLines
-            .Where(l => l.Receipt.Date.Date == today && l.Receipt.Status != Models.PaymentStatus.Void)
+            .Where(l => l.Receipt != null &&
+                        l.Receipt.Date >= dayStart && l.Receipt.Date < dayEnd &&
+                        l.Receipt.Status != Models.PaymentStatus.Void)
             .SumAsync(l => l.Quantity);
 
         // 3. Expense Today
         model.ExpenseToday = await _context.Expenses
-            .Where(e => e.Date.Date == today)
+            .Where(e => e.Date >= dayStart && e.Date < dayEnd)
             .SumAsync(e => e.Amount);
 
         // 4. All Time Sales
@@ -82,7 +86,7 @@ public class DashboardController : Controller
         var salesLines = await _context.ReceiptLines
             .Include(l => l.Product)
             .Include(l => l.Service)
-            .Where(l => l.Receipt.Status != Models.PaymentStatus.Void)
+            .Where(l => l.Receipt != null && l.Receipt.Status != Models.PaymentStatus.Void)
             .ToListAsync(); // Pull into memory for complex calcs or optimize later
 
         decimal totalRevenue = salesLines.Sum(l => l.Amount);
@@ -101,8 +105,6 @@ public class DashboardController : Controller
             .Select(g => new DateValuePoint { Date = g.Key, Value = g.Sum(r => r.TotalAmount) })
             .ToListAsync();
         
-        model.DailySales = last7Days;
-
         model.DailySales = last7Days;
 
         // Top Items (Top 10)

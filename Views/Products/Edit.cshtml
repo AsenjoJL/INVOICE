@@ -60,6 +60,16 @@
                     </div>
                 </div>
 
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input asp-for="DeliveryFee" class="form-control" placeholder="Delivery Fee" />
+                            <label asp-for="DeliveryFee">Delivery Fee (Default)</label>
+                            <span asp-validation-for="DeliveryFee" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-check mb-3">
                     <input class="form-check-input" asp-for="IsActive" />
                     <label class="form-check-label" asp-for="IsActive">

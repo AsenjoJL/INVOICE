@@ -28,13 +28,15 @@ public class ReportsController : Controller
         var now = DateTime.Now;
         int m = month ?? now.Month;
         int y = year ?? now.Year;
+        var monthStart = new DateTime(y, m, 1);
+        var monthEnd = monthStart.AddMonths(1);
 
         ViewData["Month"] = m;
         ViewData["Year"] = y;
 
         // Sales for the month
         var sales = await _context.Receipts
-             .Where(r => r.Date.Month == m && r.Date.Year == y && r.Status != PaymentStatus.Void)
+             .Where(r => r.Date >= monthStart && r.Date < monthEnd && r.Status != PaymentStatus.Void)
              .Include(r => r.Lines)
              .ToListAsync();
 
@@ -46,7 +48,7 @@ public class ReportsController : Controller
         // Here we'll use current product cost if not doing FIFO/LIFO.
         // Optimization: Fetch all needed products to memory or join.
         var lineItems = sales.SelectMany(r => r.Lines).ToList();
-        var productIds = lineItems.Where(l => l.ProductId.HasValue).Select(l => l.ProductId.Value).Distinct().ToList();
+        var productIds = lineItems.Where(l => l.ProductId.HasValue).Select(l => l.ProductId!.Value).Distinct().ToList();
         var products = await _context.Products.Where(p => productIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
 
         decimal cogs = 0;
@@ -63,7 +65,7 @@ public class ReportsController : Controller
 
         // Expenses
         decimal expenses = await _context.Expenses
-            .Where(e => e.Date.Month == m && e.Date.Year == y)
+            .Where(e => e.Date >= monthStart && e.Date < monthEnd)
             .SumAsync(e => e.Amount);
 
         var model = new IncomeStatementViewModel
@@ -82,24 +84,26 @@ public class ReportsController : Controller
     // GET: Reports/Inventory
     public async Task<IActionResult> Inventory()
     {
-        // Calculate current stock
-        // Start with all products
+        // Calculate current stock in one query to avoid N+1
         var products = await _context.Products.Where(p => p.IsActive).ToListAsync();
-        var stock = new List<InventoryReportItem>();
+        var productIds = products.Select(p => p.Id).ToList();
 
-        foreach(var p in products)
+        var movementMap = await _context.ProductStockMovements
+            .Where(m => productIds.Contains(m.ProductId))
+            .GroupBy(m => m.ProductId)
+            .Select(g => new { ProductId = g.Key, Qty = g.Sum(m => m.Quantity) })
+            .ToDictionaryAsync(x => x.ProductId, x => x.Qty);
+
+        var stock = products.Select(p =>
         {
-             var movement = await _context.ProductStockMovements
-                 .Where(m => m.ProductId == p.Id)
-                 .SumAsync(m => m.Quantity);
-             
-             stock.Add(new InventoryReportItem
-             {
-                 Product = p,
-                 CurrentStock = movement, // Assuming stock started at 0 or adjustments included
-                 Status = movement <= p.ReorderLevel ? "Low Stock" : "Good"
-             });
-        }
+            var movement = movementMap.TryGetValue(p.Id, out var qty) ? qty : 0;
+            return new InventoryReportItem
+            {
+                Product = p,
+                CurrentStock = movement, // Assuming stock started at 0 or adjustments included
+                Status = movement <= p.ReorderLevel ? "Low Stock" : "Good"
+            };
+        }).ToList();
 
         return View(stock);
     }

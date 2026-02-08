@@ -24,7 +24,7 @@ public class SummaryAllViewModel
     public List<DailyTrendDto> DailyTrends { get; set; } = new();
 
     // Select Lists
-    public SelectList Outlets { get; set; }
+    public SelectList Outlets { get; set; } = new SelectList(Array.Empty<SelectListItem>());
 }
 
 

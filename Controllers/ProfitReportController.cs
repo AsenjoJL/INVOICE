@@ -7,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using HazelInvoice.Data;
 using HazelInvoice.Models;
 using HazelInvoice.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 
 namespace HazelInvoice.Controllers;
 
+[Authorize]
 public class ProfitReportController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -24,6 +26,8 @@ public class ProfitReportController : Controller
     {
         var start = startDate ?? DateTime.Today.AddDays(-14);
         var end = endDate ?? DateTime.Today;
+        var startDateOnly = start.Date;
+        var endExclusive = end.Date.AddDays(1);
 
         var vm = new ProfitSummaryViewModel
         {
@@ -41,7 +45,7 @@ public class ProfitReportController : Controller
             .AsNoTracking()
             .Include(r => r.Lines)
             .ThenInclude(l => l.Product)
-            .Where(r => r.Date.Date >= start.Date && r.Date.Date <= end.Date && r.Status != PaymentStatus.Void);
+            .Where(r => r.Date >= startDateOnly && r.Date < endExclusive && r.Status != PaymentStatus.Void);
 
         if (!includeUnpaid)
         {
@@ -53,17 +57,17 @@ public class ProfitReportController : Controller
         // 2. Fetch Deductions & Purchases & Capitals
         var deductions = await _context.Deductions
             .AsNoTracking()
-            .Where(d => d.Date.Date >= start.Date && d.Date.Date <= end.Date)
+            .Where(d => d.Date >= startDateOnly && d.Date < endExclusive)
             .ToListAsync();
             
         var purchases = await _context.PartnerPurchases
             .AsNoTracking()
-            .Where(p => p.Date.Date >= start.Date && p.Date.Date <= end.Date)
+            .Where(p => p.Date >= startDateOnly && p.Date < endExclusive)
             .ToListAsync();
 
         var capitals = await _context.PartnerCapitals
             .AsNoTracking()
-            .Where(c => c.Date.Date >= start.Date && c.Date.Date <= end.Date)
+            .Where(c => c.Date >= startDateOnly && c.Date < endExclusive)
             .ToListAsync();
 
         // 3. Opening Balances & Partner Names

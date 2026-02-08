@@ -9,7 +9,7 @@
         <div>
             <h2 class="fw-bold text-primary">Price Versus Setup</h2>
             <p class="text-muted">
-                Cost vs Selling Price for Week: 
+                Original Price vs Selling Price for Week: 
                 <span class="fw-bold text-dark">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd, yyyy")</span>
             </p>
         </div>
@@ -33,6 +33,17 @@
             <form method="post" id="versusForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="TargetDate" />
+
+                <div asp-validation-summary="All" class="text-danger px-4 pt-3"></div>
+                <div class="px-4 pt-2 pb-3 border-bottom">
+                    <div class="form-check">
+                        <input class="form-check-input" asp-for="ApplyToMasterCost" />
+                        <label class="form-check-label" asp-for="ApplyToMasterCost">
+                            Apply cost changes to master product cost
+                        </label>
+                    </div>
+                    <div class="text-muted small">If unchecked, cost changes apply only to the selected week.</div>
+                </div>
                 
                 <div class="table-responsive" style="max-height: 70vh;">
                     <table class="table table-hover align-middle mb-0" id="priceTable">
@@ -40,9 +51,12 @@
                             <tr>
                                 <th class="ps-4 py-3">Product Name</th>
                                 <th class="py-3">Unit</th>
-                                @if (User.IsInRole("Admin")) { <th class="text-end py-3" style="width: 150px;">Cost Price</th> }
-                                <th class="text-end py-3" style="width: 150px;">Markup</th>
-                                <th class="text-end py-3" style="width: 150px;">Selling Price</th>
+                                <th class="text-end py-3" style="width: 140px;">Original Price</th>
+                                <th class="text-end py-3" style="width: 140px;">Markup (Added)</th>
+                                <th class="text-end py-3" style="width: 140px;">Base Price</th>
+                                <th class="text-end py-3" style="width: 140px;">Delivery Fee</th>
+                                <th class="text-end py-3" style="width: 140px;">Delivery Price</th>
+                                <th class="text-center py-3" style="width: 90px;">Reset</th>
                                 <th class="text-center py-3" style="width: 100px;">Status</th>
                             </tr>
                         </thead>
@@ -50,7 +64,7 @@
                             @for (int i = 0; i < Model.Items.Count; i++)
                             {
                                 var item = Model.Items[i];
-                                <tr class="item-row">
+                                <tr class="item-row" data-master-cost="@item.MasterCost.ToString("0.00")" data-master-markup="@item.MasterMarkup.ToString("0.00")">
                                     <td class="ps-4 fw-bold">
                                         @item.ProductName
                                         <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
@@ -58,32 +72,46 @@
                                     </td>
                                     <td class="text-muted">@item.Unit</td>
                                     
-                                    @if (User.IsInRole("Admin")) {
                                     <td class="text-end">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-light border-0">₱</span>
-                                            <input type="number" 
-                                                   class="form-control text-end cost-input bg-light border-0" 
-                                                   value="@item.Cost.ToString("0.00")" 
-                                                   readonly 
-                                                   step="0.01" />
+                                            <input type="number" step="0.01" min="0"
+                                                   name="Items[@i].Cost"
+                                                   class="form-control text-end cost-input fw-bold"
+                                                   value="@item.Cost.ToString("0.00")" />
                                         </div>
                                     </td>
-                                    }
                                     
                                     <td class="text-end">
-                                        <input type="number" step="0.01"
+                                        <input type="number" step="0.01" min="0"
                                                name="Items[@i].Markup"
                                                class="form-control text-end markup-input fw-bold"
-                                               value="@item.Markup.ToString("0.00")"
-                                               data-cost="@item.Cost" />
+                                               value="@item.Markup.ToString("0.00")" />
+                                    </td>
+
+                                    <td class="text-end">
+                                        <input type="text" 
+                                               class="form-control text-end base-price-input border-0 bg-transparent fw-bold text-primary" 
+                                               value="@((item.Cost + item.Markup).ToString("0.00"))" 
+                                               readonly />
                                     </td>
                                     
                                     <td class="text-end">
+                                        <input type="number" step="0.01" min="0"
+                                               name="Items[@i].DeliveryFee"
+                                               class="form-control text-end delivery-fee-input fw-bold"
+                                               value="@item.DeliveryFee.ToString("0.00")" />
+                                    </td>
+
+                                    <td class="text-end">
                                         <input type="text" 
-                                               class="form-control text-end selling-input border-0 bg-transparent fw-bold text-primary" 
-                                               value="@((item.Cost + item.Markup).ToString("0.00"))" 
+                                               class="form-control text-end delivery-price-input border-0 bg-transparent fw-bold text-primary" 
+                                               value="@((item.Cost + item.Markup + item.DeliveryFee).ToString("0.00"))" 
                                                readonly />
+                                    </td>
+
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary reset-cost-btn">Reset</button>
                                     </td>
                                     
                                     <td class="text-center">
@@ -109,21 +137,51 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const table = document.getElementById('priceTable');
-        
+
+        const parseNumber = (value) => {
+            if (!value) return 0;
+            return parseFloat(value.toString().replace(',', '.')) || 0;
+        };
+
+        const updateRow = (row) => {
+            const costInput = row.querySelector('.cost-input');
+            const markupInput = row.querySelector('.markup-input');
+            const deliveryFeeInput = row.querySelector('.delivery-fee-input');
+
+            const cost = parseNumber(costInput?.value);
+            const markup = parseNumber(markupInput?.value);
+            const deliveryFee = parseNumber(deliveryFeeInput?.value);
+            const basePrice = cost + markup;
+            const deliveryPrice = basePrice + deliveryFee;
+
+            const basePriceInput = row.querySelector('.base-price-input');
+            if (basePriceInput) basePriceInput.value = basePrice.toFixed(2);
+
+            const deliveryPriceInput = row.querySelector('.delivery-price-input');
+            if (deliveryPriceInput) deliveryPriceInput.value = deliveryPrice.toFixed(2);
+
+            row.classList.add('table-warning');
+        };
+
         table.addEventListener('input', function(e) {
-            if (e.target.classList.contains('markup-input')) {
+            if (e.target.classList.contains('markup-input') || 
+                e.target.classList.contains('cost-input') ||
+                e.target.classList.contains('delivery-fee-input')) {
                 const row = e.target.closest('tr');
-                const cost = parseFloat(e.target.dataset.cost) || 0;
-                const markup = parseFloat(e.target.value) || 0;
-                
-                const selling = cost + markup;
-                
-                const sellingInput = row.querySelector('.selling-input');
-                if(sellingInput) sellingInput.value = selling.toFixed(2);
-                
-                // Highlight modified
-                row.classList.add('table-warning');
+                updateRow(row);
             }
+        });
+
+        table.addEventListener('click', function(e) {
+            const btn = e.target.closest('.reset-cost-btn');
+            if (!btn) return;
+
+            const row = btn.closest('tr');
+            const masterCost = parseNumber(row.dataset.masterCost);
+            const costInput = row.querySelector('.cost-input');
+            if (costInput) costInput.value = masterCost.toFixed(2);
+
+            updateRow(row);
         });
     });
 </script>

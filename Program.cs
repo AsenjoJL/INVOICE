@@ -4,18 +4,21 @@ using HazelInvoice.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 
 // Add services to the container.
 var envConn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-if (!string.IsNullOrEmpty(envConn)) 
+if (!string.IsNullOrEmpty(envConn))
 {
-    Console.WriteLine($"Using Environment Variable for DB: {envConn.Substring(0, 15)}...");
+    Console.WriteLine("Using environment variable for DB connection.");
 }
 else
 {
-    Console.WriteLine("Environment Variable 'ConnectionStrings__DefaultConnection' is NULL or EMPTY. Using Config.");
+    Console.WriteLine("Environment variable 'ConnectionStrings__DefaultConnection' is NULL or EMPTY. Using config.");
 }
 
 var connectionString = envConn 
@@ -23,9 +26,8 @@ var connectionString = envConn
                        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, 
-        new MySqlServerVersion(new Version(8, 0, 21)),
-        mySqlOptions => mySqlOptions.EnableRetryOnFailure()));
+    options.UseNpgsql(connectionString,
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false) // Simplified for ease of use
@@ -60,6 +62,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

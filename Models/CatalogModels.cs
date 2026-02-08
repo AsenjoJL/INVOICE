@@ -27,6 +27,9 @@ public class Product
     [Column(TypeName = "decimal(18,2)")]
     public decimal Markup { get; set; }
 
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal DeliveryFee { get; set; }
+
     public int ReorderLevel { get; set; } = 10;
 
     public bool IsActive { get; set; } = true;
@@ -60,6 +63,9 @@ public class WeeklyPrice
     public DateTime EffectiveTo { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
+    public decimal? CostOverride { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
     public decimal BasePrice { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
@@ -67,4 +73,7 @@ public class WeeklyPrice
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal Markup { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? DeliveryFee { get; set; }
 }

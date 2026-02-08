@@ -30,15 +30,15 @@
                 <!-- Customer Info -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <label asp-for="CustomerName" class="form-label fw-bold">Customer Name (Delivered To)</label>
-                        <select asp-for="CustomerName" class="form-select" required>
+                        <label asp-for="CustomerId" class="form-label fw-bold">Customer Name (Delivered To)</label>
+                        <select asp-for="CustomerId" class="form-select" required>
                             <option value="">-- Select Customer --</option>
                             @foreach (var customer in ViewBag.Customers as List<HazelInvoice.Models.Customer> ?? new List<HazelInvoice.Models.Customer>())
                             {
-                                <option value="@customer.Name">@customer.Name</option>
+                                <option value="@customer.Id">@customer.Name</option>
                             }
                         </select>
-                        <span asp-validation-for="CustomerName" class="text-danger"></span>
+                        <span asp-validation-for="CustomerId" class="text-danger"></span>
                     </div>
                     <div class="col-md-4">
                         <label asp-for="ContactNumber" class="form-label fw-bold">Contact Number <span class="text-muted fw-normal">(Optional)</span></label>

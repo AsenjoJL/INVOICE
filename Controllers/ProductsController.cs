@@ -31,7 +31,7 @@ public class ProductsController : Controller
     // POST: Products/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,Unit,UnitCost,ReorderLevel,IsActive")] Product product)
+    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,ReorderLevel,IsActive")] Product product)
     {
         // Auto-generate SKU if empty or default
         if (string.IsNullOrWhiteSpace(product.SKU) || product.SKU == "V-XXX")
@@ -76,7 +76,7 @@ public class ProductsController : Controller
     // POST: Products/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,Unit,UnitCost,ReorderLevel,IsActive")] Product product)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,ReorderLevel,IsActive")] Product product)
     {
         if (id != product.Id) return NotFound();
 
@@ -95,6 +95,32 @@ public class ProductsController : Controller
             return RedirectToAction(nameof(Index));
         }
         return View(product);
+    }
+
+    // GET: Products/Delete/5
+    public async Task<IActionResult> Delete(int? id)
+    {
+        if (id == null) return NotFound();
+
+        var product = await _context.Products.FindAsync(id);
+        if (product == null) return NotFound();
+
+        return View(product);
+    }
+
+    // POST: Products/Delete/5
+    [HttpPost, ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var product = await _context.Products.FindAsync(id);
+        if (product == null) return NotFound();
+
+        product.IsActive = false;
+        _context.Update(product);
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Index));
     }
 
     // POST: Products/GenerateSkus

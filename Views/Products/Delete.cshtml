@@ -1,0 +1,38 @@
+@model HazelInvoice.Models.Product
+
+@{
+    ViewData["Title"] = "Deactivate Product";
+}
+
+<div class="container p-4">
+    <div class="card shadow border-0" style="max-width: 700px; margin: 0 auto;">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">Deactivate Product</h4>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">
+                This will <strong>deactivate</strong> the product so it no longer appears in orders.
+                Existing receipts will remain intact.
+            </p>
+
+            <dl class="row">
+                <dt class="col-sm-4">Name</dt>
+                <dd class="col-sm-8">@Model.Name</dd>
+
+                <dt class="col-sm-4">SKU</dt>
+                <dd class="col-sm-8">@Model.SKU</dd>
+
+                <dt class="col-sm-4">Unit</dt>
+                <dd class="col-sm-8">@Model.Unit</dd>
+            </dl>
+
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-danger">Deactivate</button>
+                    <a asp-action="Index" class="btn btn-light">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -29,4 +29,29 @@ public class ApplicationDbContext : IdentityDbContext
     public DbSet<PartnerBalanceConfig> PartnerBalanceConfigs { get; set; }
     public DbSet<PartnerCapital> PartnerCapitals { get; set; }
 
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        builder.Entity<Receipt>().HasIndex(r => r.Date);
+        builder.Entity<Receipt>().HasIndex(r => r.Status);
+        builder.Entity<Receipt>().HasIndex(r => r.CustomerName);
+        builder.Entity<Receipt>().HasIndex(r => r.CustomerId);
+        builder.Entity<Receipt>().HasIndex(r => r.ReceiptNumber);
+
+        builder.Entity<Receipt>()
+            .HasOne(r => r.Customer)
+            .WithMany()
+            .HasForeignKey(r => r.CustomerId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<ReceiptLine>().HasIndex(l => l.ProductId);
+
+        builder.Entity<Product>().HasIndex(p => p.IsActive);
+        builder.Entity<Customer>().HasIndex(c => c.IsActive);
+
+        builder.Entity<WeeklyPrice>().HasIndex(w => new { w.ProductId, w.EffectiveFrom, w.EffectiveTo });
+        builder.Entity<ReceiptSequence>().HasIndex(s => s.Year);
+    }
+
 }

@@ -11,71 +11,69 @@
     <link rel="stylesheet" href="~/HazelInvoice.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-primary border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Dashboard" asp-action="Index">HazelInvoice</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="Receipts" asp-action="Index">Receipts</a>
-                        </li>
-                         <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="Receipts" asp-action="Create">New Sale</a>
-                        </li>
-                         <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="Products" asp-action="Index">Products</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="Orders" asp-action="VegetableMatrix">Vegetable Order</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white bg-warning text-dark fw-bold rounded px-2" asp-area="" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-bar-chart-fill"></i> Profit & Sales</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="WeeklyPrices" asp-action="PriceVersus">Price Setup</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="WeeklyPrices" asp-action="Index">Price History</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" asp-area="" asp-controller="Expenses" asp-action="Index">Expenses</a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Reports
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                <li><a class="dropdown-item" asp-controller="Reports" asp-action="IncomeStatement">Income Statement</a></li>
-                                <li><a class="dropdown-item" asp-controller="Reports" asp-action="Inventory">Inventory Status</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item fw-bold" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Profit Summary</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                    <partial name="_LoginPartial" />
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+    @{
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+        string NavClass(string controller, string? action = null)
+        {
+            if (!string.IsNullOrEmpty(action))
+                return currentController == controller && currentAction == action ? "sidebar-link active" : "sidebar-link";
+            return currentController == controller ? "sidebar-link active" : "sidebar-link";
+        }
+    }
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - HazelInvoice - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <div class="app-shell">
+        <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebarNav" aria-labelledby="sidebarLabel">
+            <div class="offcanvas-header d-lg-none">
+                <h5 class="offcanvas-title" id="sidebarLabel">HazelInvoice</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+
+            <div class="sidebar-header">
+                <a class="sidebar-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">HazelInvoice</a>
+                <div class="sidebar-subtitle">Invoice & Ordering</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="@NavClass("Dashboard", "Index")" asp-area="" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a class="@NavClass("Receipts", "Index")" asp-area="" asp-controller="Receipts" asp-action="Index"><i class="bi bi-receipt"></i> Receipts</a>
+                <a class="@NavClass("Receipts", "Create")" asp-area="" asp-controller="Receipts" asp-action="Create"><i class="bi bi-plus-circle"></i> New Sale</a>
+                <a class="@NavClass("Products", "Index")" asp-area="" asp-controller="Products" asp-action="Index"><i class="bi bi-box-seam"></i> Products</a>
+                <a class="@NavClass("Customers", "Index")" asp-area="" asp-controller="Customers" asp-action="Index"><i class="bi bi-shop"></i> Outlets</a>
+                <a class="@NavClass("Orders", "VegetableMatrix")" asp-area="" asp-controller="Orders" asp-action="VegetableMatrix"><i class="bi bi-grid-3x3-gap"></i> Vegetable Order</a>
+                <a class="@NavClass("ProfitReport", "Index")" asp-area="" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-bar-chart-fill"></i> Profit & Sales</a>
+                <a class="@NavClass("WeeklyPrices", "PriceVersus")" asp-area="" asp-controller="WeeklyPrices" asp-action="PriceVersus"><i class="bi bi-sliders"></i> Price Setup</a>
+                <a class="@NavClass("WeeklyPrices", "Index")" asp-area="" asp-controller="WeeklyPrices" asp-action="Index"><i class="bi bi-clock-history"></i> Price History</a>
+                <a class="@NavClass("Expenses", "Index")" asp-area="" asp-controller="Expenses" asp-action="Index"><i class="bi bi-cash-coin"></i> Expenses</a>
+
+                <div class="sidebar-section-title">Reports</div>
+                <a class="@NavClass("Reports", "IncomeStatement")" asp-controller="Reports" asp-action="IncomeStatement"><i class="bi bi-file-earmark-text"></i> Income Statement</a>
+                <a class="@NavClass("Reports", "Inventory")" asp-controller="Reports" asp-action="Inventory"><i class="bi bi-clipboard-data"></i> Inventory Status</a>
+                <a class="@NavClass("ProfitReport", "Index")" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Profit Summary</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <partial name="_LoginPartial" />
+            </div>
+        </aside>
+
+        <div class="content">
+            <div class="mobile-topbar d-lg-none">
+                <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarNav" aria-controls="sidebarNav">
+                    <i class="bi bi-list"></i>
+                </button>
+                <span class="mobile-title">HazelInvoice</span>
+            </div>
+            <main role="main" class="content-area">
+                @RenderBody()
+            </main>
+            <footer class="border-top footer text-muted">
+                <div class="container">
+                    &copy; 2026 - HazelInvoice - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                </div>
+            </footer>
         </div>
-    </footer>
+    </div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

@@ -206,17 +206,23 @@
         <input type="hidden" asp-for="ProductPage" />
         <input type="hidden" asp-for="SelectedGroupName" />
 
+        @{
+            var isAdmin = User.IsInRole("Admin");
+            var preOutletCols = isAdmin ? 6 : 5; // Cost? + Markup + Base + Delivery + Total + UOM
+            var headerSpan = preOutletCols + Model.VisibleOutlets.Count + 2;
+        }
+
         <div class="matrix-container">
             <table class="matrix-table" id="mainTable">
                 <thead>
                     <tr>
                         <th class="sticky-left-col header-row-1-title sticky-h" style="top:0;"></th>
-                        <th colspan="@(5 + Model.VisibleOutlets.Count + 2)" class="header-row-1-title sticky-h" style="top:0;">VEGEATABLE ORDER</th>
+                        <th colspan="@headerSpan" class="header-row-1-title sticky-h" style="top:0;">VEGEATABLE ORDER</th>
                     </tr>
 
                     <tr>
                         <th class="sticky-left-col bg-white sticky-h" style="top:35px;"></th>
-                        <th colspan="@(5 + Model.VisibleOutlets.Count + 2)" class="header-row-2-date sticky-h" style="top:35px;">
+                        <th colspan="@headerSpan" class="header-row-2-date sticky-h" style="top:35px;">
                             <span class="fw-bold me-2">DELIVERY DATE:</span>
                             <input type="date"
                                    value="@Model.Date.ToString("yyyy-MM-dd")"
@@ -227,7 +233,7 @@
 
                     <tr>
                         <th class="sticky-left-col bg-white sticky-h" style="top:70px;"></th>
-                        <th colspan="5" class="bg-white sticky-h" style="top:70px;"></th>
+                        <th colspan="@preOutletCols" class="bg-white sticky-h" style="top:70px;"></th>
 
                         @{
                             if (!Model.VisibleOutlets.Any())
@@ -256,7 +262,8 @@
                         <th class="sticky-left-col header-row-4-main sticky-h" style="top:105px;">VEGETABLES</th>
                         @if (User.IsInRole("Admin")) { <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Cost</th> }
                         <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Markup</th>
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Price</th>
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:80px;">Base</th>
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Delivery</th>
                         <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Total</th>
                         <th class="header-row-4-main sticky-h" style="top:105px; width:50px;">UOM</th>
 
@@ -271,7 +278,7 @@
 
                     <tr>
                         <th class="sticky-left-col header-row-5-sub sticky-h" style="top:140px; text-align:left; padding-left:10px;">PO NUMBER</th>
-                        <th class="header-row-5-sub sticky-h" style="top:140px;" colspan="5"></th>
+                        <th class="header-row-5-sub sticky-h" style="top:140px;" colspan="@preOutletCols"></th>
 
                         @foreach (var c in Model.VisibleOutlets)
                         {
@@ -288,8 +295,11 @@
                         decimal rowTotalQty = Model.ProductTotalQtyAllOutletsInGroup.TryGetValue(p.Id, out var tq) ? tq : 0m;
                         decimal cost = Model.ProductCosts.TryGetValue(p.Id, out var cCost) ? cCost : 0m;
                         decimal markup = Model.ProductMarkups.TryGetValue(p.Id, out var m) ? m : 0m;
-                        decimal price = Model.ProductPrices.TryGetValue(p.Id, out var pr) ? pr : 0m;
-                        decimal rowTotalAmt = rowTotalQty * price;
+                        decimal basePrice = cost + markup;
+                        decimal deliveryPrice = Model.ProductPrices.TryGetValue(p.Id, out var pr) ? pr : basePrice;
+                        decimal deliveryFee = deliveryPrice - basePrice;
+                        if (deliveryFee < 0) deliveryFee = 0;
+                        decimal rowTotalAmt = rowTotalQty * deliveryPrice;
 
                         string status = Model.ProductStatuses.TryGetValue(p.Id, out var st) ? st : "NO_ORDERS";
                         string statusClass = status switch
@@ -300,25 +310,32 @@
                             _ => "status-noorders"
                         };
 
-                        <tr data-row-qty="@rowTotalQty" data-price="@price" data-cost="@cost">
+                        <tr data-row-qty="@rowTotalQty" data-price="@deliveryPrice" data-cost="@cost" data-delivery-fee="@deliveryFee">
                             <td class="sticky-left-col fw-bold border-end vege-cell @statusClass">@p.Name</td>
 
                             @if (User.IsInRole("Admin")) { <td class="text-end pe-2 bg-light text-muted">@cost.ToString("N2")</td> }
 
                             <td style="background:#fff;">
-                                <input type="number" step="0.01"
+                                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                        class="excel-input markup-input no-spin text-end"
                                        name="ProductMarkups[@p.Id]"
-                                       value="@markup.ToString("0.00")" />
+                                       value="@markup.ToString("0.00")"
+                                       autocomplete="off" spellcheck="false" />
                             </td>
 
                             <td style="background:#fff;">
-                                <input type="number" step="0.01"
+                                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
+                                       class="excel-input base-price-input no-spin text-end"
+                                       value="@basePrice.ToString("0.00")"
+                                       readonly />
+                            </td>
+
+                            <td style="background:#fff;">
+                                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                        class="excel-input price-input no-spin text-end"
                                        name="ProductPrices[@p.Id]"
-                                       value="@price.ToString("0.00")"
+                                       value="@deliveryPrice.ToString("0.00")"
                                        readonly />
-                                <!-- Readonly because Price is auto-calculated from Markup? Or Allow override? User said "User only edits Markup OR edits SellingPrice... preferred compute dynamically". Given logic, Markup drives Price. Setting Price readonly prevents conflict, forcing user to edit Markup. -->
                             </td>
 
                             <td class="text-end pe-2 row-amt-cell">@(rowTotalAmt > 0 ? rowTotalAmt.ToString("N2") : "-")</td>
@@ -337,10 +354,11 @@
                                 else if (val > 0) qtyClass = "qty-positive";
 
                                 <td class="qty-td @qtyClass">
-                                    <input type="number" step="0.01"
+                                    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                            class="excel-input qty-input no-spin"
                                            name="MatrixQuantities[@key]"
-                                           value="@(val > 0 ? val.ToString("0.##") : "")" />
+                                           value="@(val > 0 ? val.ToString("0.##") : "")"
+                                           autocomplete="off" spellcheck="false" />
                                 </td>
                             }
 
@@ -394,13 +412,19 @@
         let totalAmt = @Model.GrandTotalAmount;
 
         const prevValues = new WeakMap();
-        const rafByInput = new WeakMap();
         const rowRefs = new WeakMap();
 
         function num(v) {
             if (v == null) return 0;
-            const s = ('' + v).trim();
+            let s = ('' + v).trim();
             if (s === '') return 0;
+            const hasComma = s.includes(',');
+            const hasDot = s.includes('.');
+            if (hasComma && !hasDot) {
+                s = s.replace(',', '.');
+            } else if (hasComma && hasDot) {
+                s = s.replace(/,/g, '');
+            }
             const n = Number(s);
             return Number.isFinite(n) ? n : 0;
         }
@@ -417,18 +441,6 @@
             return refs;
         }
 
-        function schedule(input) {
-            const old = rafByInput.get(input);
-            if (old) cancelAnimationFrame(old);
-
-            const id = requestAnimationFrame(() => {
-                rafByInput.delete(input);
-                handle(input);
-            });
-
-            rafByInput.set(input, id);
-        }
-
         table.addEventListener('focusin', (e) => {
             const input = e.target;
             if (!(input instanceof HTMLInputElement)) return;
@@ -436,20 +448,17 @@
             if (!prevValues.has(input)) prevValues.set(input, num(input.value));
         });
 
-        table.addEventListener('input', (e) => {
+        table.addEventListener('change', (e) => {
             const input = e.target;
             if (!(input instanceof HTMLInputElement)) return;
             if (!input.classList.contains('qty-input') && !input.classList.contains('price-input') && !input.classList.contains('markup-input')) return;
-            schedule(input);
-        }, { passive: true });
+            handle(input);
+        });
 
         table.addEventListener('blur', (e) => {
             const input = e.target;
             if (!(input instanceof HTMLInputElement)) return;
             if (!input.classList.contains('qty-input') && !input.classList.contains('price-input') && !input.classList.contains('markup-input')) return;
-
-            const old = rafByInput.get(input);
-            if (old) { cancelAnimationFrame(old); rafByInput.delete(input); }
             handle(input);
         }, true);
 
@@ -465,11 +474,13 @@
             let rowQty = num(row.dataset.rowQty);
             let price = num(row.dataset.price);
             let cost = num(row.dataset.cost);
+            let deliveryFee = num(row.dataset.deliveryFee);
 
             const refs = getRowRefs(row);
 
             // Find Price Inp
             const priceInp = row.querySelector('.price-input');
+            const basePriceInp = row.querySelector('.base-price-input');
 
             if (input.classList.contains('qty-input')) {
                 const diff = newVal - oldVal;
@@ -492,11 +503,13 @@
                 // But we need to update TotalAmt based on Price delta.
                 
                 const oldPrice = price;
-                const newPrice = cost + newMarkup;
+                const newBase = cost + newMarkup;
+                const newPrice = newBase + deliveryFee;
                 
                 price = newPrice;
                 row.dataset.price = price;
                 if(priceInp) priceInp.value = price.toFixed(2);
+                if(basePriceInp) basePriceInp.value = newBase.toFixed(2);
                 
                 const priceDiff = newPrice - oldPrice;
                 totalAmt += (rowQty * priceDiff);

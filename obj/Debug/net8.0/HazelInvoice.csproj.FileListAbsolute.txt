@@ -22,8 +22,6 @@ C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\Microsoft.EntityFrame
 C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
 C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\Microsoft.Extensions.DependencyModel.dll
 C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\Mono.TextTemplating.dll
-C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\MySqlConnector.dll
-C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\Pomelo.EntityFrameworkCore.MySql.dll
 C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\System.CodeDom.dll
 C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\System.Composition.AttributedModel.dll
 C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\System.Composition.Convention.dll
@@ -109,3 +107,5 @@ C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\HazelInvoice.pdb
 C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\HazelInvoice.genruntimeconfig.cache
 C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\ref\HazelInvoice.dll
 C:\Users\John Lester\Desktop\HazelInvoice\obj\Debug\net8.0\HazelInvoice.sourcelink.json
+C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\Npgsql.dll
+C:\Users\John Lester\Desktop\HazelInvoice\bin\Debug\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll

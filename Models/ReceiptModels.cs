@@ -13,6 +13,9 @@ public class Receipt
 
     public DateTime Date { get; set; } = DateTime.Now;
 
+    public int? CustomerId { get; set; }
+    public Customer? Customer { get; set; }
+
     [StringLength(100)]
     public string CustomerName { get; set; } = string.Empty;
 

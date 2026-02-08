@@ -1,14 +1,14 @@
-# HazelInvoice Deployment Guide (Render + MySQL)
+# HazelInvoice Deployment Guide (Render + PostgreSQL)
 
-This guide walks you through deploying the **HazelInvoice** ASP.NET Core 8.0 application to **Render.com** (Free Tier) with a hosted MySQL database.
+This guide walks you through deploying the **HazelInvoice** ASP.NET Core 8.0 application to **Render.com** (Free Tier) with a hosted PostgreSQL database.
 
 ## Prerequisites
 1.  **GitHub Account**: You must have a GitHub repository for this project.
 2.  **Render Account**: Sign up at [dashboard.render.com](https://dashboard.render.com/).
-3.  **MySQL Database**: You need a hosted MySQL database.
-    *   **Option A (Recommended for Free)**: [Aiven.io](https://aiven.io/) (Free MySQL plan).
-    *   **Option B**: [PlanetScale](https://planetscale.com/) (If available).
-    *   **Option C**: [Clever Cloud](https://www.clever-cloud.com/) (Free MySQL tier).
+3.  **PostgreSQL Database**: You need a hosted PostgreSQL database.
+    *   **Option A (Recommended for Free)**: Aiven (Free PostgreSQL plan).
+    *   **Option B**: Render PostgreSQL (if available).
+    *   **Option C**: Supabase or Neon (free tiers).
 
 ---
 
@@ -29,13 +29,13 @@ This guide walks you through deploying the **HazelInvoice** ASP.NET Core 8.0 app
 
 ---
 
-## Step 2: Create MySQL Database
+## Step 2: Create PostgreSQL Database
 1.  Go to your chosen database provider (e.g., Aiven or Clever Cloud).
-2.  Create a new **MySQL** service (select the Free tier).
+2.  Create a new **PostgreSQL** service (select the Free tier).
 3.  Copy the **Connection String** (Service URI). It usually looks like:
-    `mysql://user:password@host:port/defaultdb?ssl-mode=REQUIRED`
+    `postgresql://user:password@host:port/defaultdb?sslmode=require`
 4.  **Important**: Convert this into a standard .NET Connection String format if needed, or use the URI directly if compatible. .NET format:
-    `Server=HOST;Port=PORT;Database=DB_NAME;User=USERNAME;Password=PASSWORD;`
+    `Host=HOST;Port=PORT;Database=DB_NAME;Username=USERNAME;Password=PASSWORD;`
 
 ---
 
@@ -54,7 +54,7 @@ This guide walks you through deploying the **HazelInvoice** ASP.NET Core 8.0 app
     | Key | Value |
     | --- | --- |
     | `ASPNETCORE_ENVIRONMENT` | `Production` |
-    | `ConnectionStrings__DefaultConnection` | `Server=YOUR_HOST;Port=YOUR_PORT;Database=YOUR_DB;User=YOUR_USER;Password=YOUR_PASSWORD;` |
+    | `ConnectionStrings__DefaultConnection` | `Host=YOUR_HOST;Port=YOUR_PORT;Database=YOUR_DB;Username=YOUR_USER;Password=YOUR_PASSWORD;` |
     
     *Note: `ConnectionStrings__DefaultConnection` (double underscore) overrides dependencies in `appsettings.json`.*
 

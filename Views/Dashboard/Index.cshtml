@@ -3,39 +3,42 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="container-fluid pb-5">
-    <!-- DASHBOARD TOOLBAR (Sticky) -->
-    <div class="dashboard-toolbar">
-        <div class="d-flex align-items-center gap-3">
-            <h4 class="mb-0 text-uppercase fw-black" style="letter-spacing:1px"><i class="bi bi-speedometer2 text-primary me-2"></i> HazelInvoice</h4>
-            <div class="vr mx-2"></div>
-            <div class="d-flex align-items-center bg-light rounded px-2 py-1 border">
-                <i class="bi bi-calendar-event text-secondary me-2"></i>
-                <small class="fw-bold text-dark">@DateTime.Now.ToString("dddd, MMM dd, yyyy")</small>
+<div class="container-fluid pb-5 dashboard-shell">
+    <!-- DASHBOARD HEADER -->
+    <div class="dashboard-header reveal" style="animation-delay: 40ms;">
+        <div class="title-block">
+            <div class="title-chip"><i class="bi bi-stars me-1"></i> Live</div>
+            <h2 class="dashboard-title">Operations Dashboard</h2>
+            <div class="dashboard-meta">
+                <span><i class="bi bi-calendar-week me-1"></i>@DateTime.Now.ToString("dddd, MMM dd, yyyy")</span>
+                <span class="meta-dot">•</span>
+                <span><i class="bi bi-clock me-1"></i>Updated @DateTime.Now.ToString("h:mm tt")</span>
             </div>
-             <small class="text-muted ms-2" style="font-size:0.7rem">Updated: @DateTime.Now.ToString("h:mm tt")</small>
         </div>
-        <div class="d-flex gap-2">
-            <a href="/Orders/VegetableMatrix" class="btn btn-quick btn-sm"><i class="bi bi-grid-3x3"></i> Matrix</a>
-            <a href="/Orders/VegetableOutletOrder" class="btn btn-quick btn-sm"><i class="bi bi-cart"></i> Order</a>
-            <a href="/Orders/PriceVersus" class="btn btn-quick btn-sm"><i class="bi bi-arrow-left-right"></i> Price Vs</a>
-            <div class="vr mx-1"></div>
-            <a href="/ProfitReport" class="btn btn-primary btn-sm fw-bold px-3 shadow-sm"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Reports</a>
+        <div class="dashboard-actions">
+            <a href="/ProfitReport" class="btn btn-primary btn-sm fw-bold px-3 shadow-sm">
+                <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Reports
+            </a>
+            <div class="quick-actions">
+                <a href="/Orders/VegetableMatrix" class="quick-action"><i class="bi bi-grid-3x3-gap"></i> Matrix</a>
+                <a href="/Orders/VegetableOutletOrder" class="quick-action"><i class="bi bi-basket2"></i> Order</a>
+                <a href="/WeeklyPrices/PriceVersus" class="quick-action"><i class="bi bi-sliders"></i> Price Setup</a>
+            </div>
         </div>
     </div>
 
     <!-- KPI ROW -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 reveal" style="animation-delay: 120ms;">
         <!-- Sales Today -->
         <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="card h-100 border-left-success shadow-sm">
+            <div class="card h-100 border-left-success shadow-sm kpi-card hover-lift">
                 <div class="kpi-stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="kpi-label text-success">Sales Today</div>
-                            <div class="kpi-value text-dark">@Model.SalesToday.ToString("N0")</div>
+                            <div class="kpi-value text-dark">₱@Model.SalesToday.ToString("N0")</div>
                         </div>
-                        <i class="bi bi-currency-dollar kpi-icon"></i>
+                        <div class="stat-icon text-success"><i class="bi bi-cash-stack"></i></div>
                     </div>
                 </div>
             </div>
@@ -43,14 +46,14 @@
         
         <!-- Sales Paid Total -->
         <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="card h-100 border-left-primary shadow-sm">
+            <div class="card h-100 border-left-primary shadow-sm kpi-card hover-lift">
                  <div class="kpi-stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="kpi-label text-primary">Paid Sales</div>
                             <div class="kpi-value">₱@Model.TotalSalesAllTime.ToString("N0")</div>
                         </div>
-                         <i class="bi bi-check-circle kpi-icon"></i>
+                         <div class="stat-icon text-primary"><i class="bi bi-bag-check"></i></div>
                     </div>
                 </div>
             </div>
@@ -58,14 +61,14 @@
 
         <!-- Unpaid Total -->
         <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="card h-100 border-left-danger shadow-sm">
+            <div class="card h-100 border-left-danger shadow-sm kpi-card hover-lift">
                  <div class="kpi-stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="kpi-label text-danger">Unpaid</div>
                             <div class="kpi-value">₱@Model.UnpaidAmount.ToString("N0")</div>
                         </div>
-                         <i class="bi bi-exclamation-circle kpi-icon"></i>
+                         <div class="stat-icon text-danger"><i class="bi bi-exclamation-triangle"></i></div>
                     </div>
                 </div>
             </div>
@@ -73,14 +76,14 @@
 
          <!-- Items Sold Today -->
         <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="card h-100 border-left-info shadow-sm">
+            <div class="card h-100 border-left-info shadow-sm kpi-card hover-lift">
                  <div class="kpi-stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="kpi-label text-info">Items (Today)</div>
                             <div class="kpi-value">@Model.ItemsSoldToday.ToString("N0")</div>
                         </div>
-                         <i class="bi bi-box-seam kpi-icon"></i>
+                         <div class="stat-icon text-info"><i class="bi bi-box2"></i></div>
                     </div>
                 </div>
             </div>
@@ -88,14 +91,14 @@
 
         <!-- Gross Profit -->
          <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="card h-100 border-left-warning shadow-sm">
+            <div class="card h-100 border-left-warning shadow-sm kpi-card hover-lift">
                  <div class="kpi-stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="kpi-label text-warning">Gross Profit</div>
                             <div class="kpi-value">₱@Model.GrossProfit.ToString("N0")</div>
                         </div>
-                         <i class="bi bi-graph-up-arrow kpi-icon"></i>
+                         <div class="stat-icon text-warning"><i class="bi bi-graph-up"></i></div>
                     </div>
                 </div>
             </div>
@@ -103,14 +106,14 @@
         
           <!-- Cash Balance -->
          <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="card h-100 border-left-success shadow-sm">
+            <div class="card h-100 border-left-success shadow-sm kpi-card hover-lift">
                  <div class="kpi-stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="kpi-label text-success">Cash On Hand</div>
                             <div class="kpi-value">₱@Model.CashBalance.ToString("N0")</div>
                         </div>
-                         <i class="bi bi-wallet2 kpi-icon"></i>
+                         <div class="stat-icon text-success"><i class="bi bi-wallet2"></i></div>
                     </div>
                 </div>
             </div>
@@ -118,7 +121,7 @@
     </div>
 
     <!-- ANALYTICS CHARTS SECTION -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-4 reveal" style="animation-delay: 180ms;">
         <!-- Sales Trend Chart -->
         <div class="col-lg-8">
             <div class="card shadow h-100">
@@ -147,7 +150,7 @@
     </div>
 
     <!-- MIDDLE SECTION: ORDER LISTS -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-4 reveal" style="animation-delay: 240ms;">
         <!-- Recent Unpaid -->
         <div class="col-lg-6">
             <div class="card shadow h-100">
@@ -168,7 +171,7 @@
                         <tbody>
                             @if(Model.RecentUnpaidOrders != null && Model.RecentUnpaidOrders.Any()) {
                                 @foreach(var order in Model.RecentUnpaidOrders) {
-                                    <tr onclick="window.location='/Orders/VegetableOutletOrder?id=@order.Id'" style="cursor:pointer">
+                                    <tr class="table-row-link" onclick="window.location='/Orders/VegetableOutletOrder?id=@order.Id'">
                                         <td>
                                             <div class="d-flex align-items-center">
                                                  <div class="avatar-initial bg-danger text-white me-2 small" style="width:25px;height:25px;font-size:0.7rem">@order.CustomerName.Substring(0,1)</div>
@@ -209,7 +212,7 @@
                         <tbody>
                              @if(Model.RecentPaidOrders != null && Model.RecentPaidOrders.Any()) {
                                 @foreach(var order in Model.RecentPaidOrders) {
-                                    <tr onclick="window.location='/Orders/VegetableOutletOrder?id=@order.Id'" style="cursor:pointer">
+                                    <tr class="table-row-link" onclick="window.location='/Orders/VegetableOutletOrder?id=@order.Id'">
                                         <td>
                                             <div class="d-flex align-items-center">
                                                  <div class="avatar-initial bg-success text-white me-2 small" style="width:25px;height:25px;font-size:0.7rem">@order.CustomerName.Substring(0,1)</div>
@@ -232,7 +235,7 @@
     </div>
 
     <!-- BOTTOM SECTIONS -->
-    <div class="row g-4">
+    <div class="row g-4 reveal" style="animation-delay: 300ms;">
         <!-- Top Products -->
         <div class="col-lg-6">
             <div class="card shadow h-100">
@@ -296,8 +299,8 @@
         var salesValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DailySales.Select(d => d.Value)));
 
         var gradient = saleCtx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(78, 115, 223, 0.1)');
-        gradient.addColorStop(1, 'rgba(78, 115, 223, 0)');
+        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.18)');
+        gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
 
         new Chart(saleCtx, {
             type: 'line',
@@ -307,9 +310,9 @@
                     label: 'Sales (₱)',
                     data: salesValues,
                     backgroundColor: gradient,
-                    borderColor: '#4e73df',
+                    borderColor: '#2563eb',
                     pointBackgroundColor: '#fff',
-                    pointBorderColor: '#4e73df',
+                    pointBorderColor: '#2563eb',
                     fill: true,
                     tension: 0.3
                 }]
@@ -324,16 +327,16 @@
                     }
                 },
                 scales: {
-                    x: { grid: { display: false }, ticks: { color: '#858796' } },
-                    y: { grid: { borderDash: [2, 2] }, ticks: { callback: function(value) { return '₱' + value.toLocaleString(); } } }
+                    x: { grid: { display: false }, ticks: { color: '#64748b' } },
+                    y: { grid: { borderDash: [2, 2] }, ticks: { color: '#64748b', callback: function(value) { return '₱' + value.toLocaleString(); } } }
                 }
             }
         });
 
         // -- TOP ITEMS CHART --
         var itemCtx = document.getElementById("itemsChart").getContext("2d");
-        var itemNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TopItems.Take(5).Select(i => i.Category)));
-        var itemValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TopItems.Take(5).Select(i => i.Value)));
+        var itemNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model?.TopItems ?? new List<HazelInvoice.ViewModels.CategoryValuePoint>()).Take(5).Select(i => i.Category)));
+        var itemValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model?.TopItems ?? new List<HazelInvoice.ViewModels.CategoryValuePoint>()).Take(5).Select(i => i.Value)));
 
         new Chart(itemCtx, {
             type: 'doughnut',
@@ -341,7 +344,7 @@
                 labels: itemNames,
                 datasets: [{
                     data: itemValues,
-                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+                    backgroundColor: ['#2563eb', '#06b6d4', '#f97316', '#16a34a', '#ef4444'],
                     hoverBorderColor: "rgba(234, 236, 244, 1)",
                     borderWidth: 2
                 }]
