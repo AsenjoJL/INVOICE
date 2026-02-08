@@ -4,32 +4,89 @@
 }
 
 <style>
+    @@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
     :root {
-        --excel-border: 1px solid #7f8c8d;
-        --excel-header-bg: #ecf0f1;
-        --excel-header-text: #2c3e50;
-        --excel-footer-bg: #f8f9fa;
+        --ink: #111827;
+        --muted: #6b7280;
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --line: #e5e7eb;
+        --accent: #2563eb;
+        --accent-2: #0ea5e9;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --warn: #f59e0b;
+        --excel-border: 1px solid #d7dbe2;
+        --excel-header-bg: #eef2f7;
+        --excel-header-text: #111827;
+        --excel-footer-bg: #f8fafc;
     }
     
     .excel-font {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+        color: var(--ink);
+    }
+
+    .report-shell {
+        background: radial-gradient(1200px 500px at 10% -10%, #e8f2ff 0%, var(--bg) 45%);
+        min-height: 100vh;
+    }
+
+    .report-title {
+        font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+    }
+
+    .group-title {
+        font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 1px;
+        margin-bottom: 0.5rem;
     }
 
     /* SECTION HEADERS */
     .section-header {
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
         font-weight: 700;
         text-transform: uppercase;
-        padding: 8px 12px;
-        letter-spacing: 0.5px;
-        border: 1px solid #333;
+        padding: 10px 14px;
+        letter-spacing: 0.6px;
+        border: 1px solid var(--line);
+        border-radius: 10px 10px 0 0;
         margin-bottom: 0;
+        background: var(--card);
+        color: var(--ink);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .header-sales { background: #2c3e50; color: #fff; border-color: #2c3e50; }
-    .header-profit { background: #198754; color: #fff; border-color: #198754; }
-    .header-deduct { background: #dc3545; color: #fff; border-color: #dc3545; }
-    .header-capital { background: #0dcaf0; color: #fff; border-color: #0dcaf0; }
-    .header-ledger { background: #6c757d; color: #fff; border-color: #6c757d; }
-    .header-main { background: #000; color: #fff; }
+    .section-header[aria-expanded="true"] .section-toggle {
+        transform: rotate(180deg);
+    }
+    .section-toggle {
+        transition: transform 0.2s ease;
+    }
+    .section-header:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }
+    .section-header .section-toggle {
+        color: var(--muted);
+        font-size: 0.9rem;
+    }
+    .header-sales { border-left: 6px solid #1f4ed8; }
+    .header-profit { border-left: 6px solid #16a34a; }
+    .header-deduct { border-left: 6px solid #dc2626; }
+    .header-capital { border-left: 6px solid #0ea5e9; }
+    .header-ledger { border-left: 6px solid #475569; }
+    .header-main { border-left: 6px solid #111827; }
 
     /* EXCEL TABLE */
     .table-excel {
@@ -40,7 +97,7 @@
     }
     .table-excel th, .table-excel td {
         border: var(--excel-border);
-        padding: 6px 10px;
+        padding: 7px 10px;
         vertical-align: middle;
     }
     .table-excel th {
@@ -53,7 +110,13 @@
         position: sticky;
         top: 0;
         z-index: 10;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .table-excel tbody tr:hover {
+        background: #f4f7ff;
+    }
+    .bg-profit-light {
+        background: #eef7f0;
     }
     /* Footer Row Emphasis */
     .table-excel tfoot td {
@@ -69,43 +132,67 @@
     .text-start { text-align: left; }
 
     /* COLORS */
-    .val-pos { color: #155724; } /* Dark Green */
-    .val-neg { color: #a91e2a; } /* Dark Red */
-    .val-warn { color: #856404; } /* Dark Yellow */
+    .val-pos { color: #166534; }
+    .val-neg { color: #b91c1c; }
+    .val-warn { color: #b45309; }
 
     /* SCROLL WRAPPERS */
     .excel-box {
-        border: 1px solid #333;
+        border: 1px solid var(--line);
         border-top: none;
         max-height: 400px;
         overflow-y: auto;
         background: #fff;
+        border-radius: 0 0 10px 10px;
     }
 
     /* KPI CARDS */
     .kpi-card {
-        border: 1px solid #ccc;
-        border-left: 5px solid #333;
+        border: 1px solid var(--line);
+        border-left: 6px solid var(--accent);
         background: #fff;
-        padding: 12px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 14px;
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
     }
     .kpi-title { font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 700; margin-bottom: 4px; }
     .kpi-value { font-size: 1.5rem; font-weight: 800; color: #333; font-family: 'Consolas', monospace; }
+
+    .action-btn {
+        border-radius: 999px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+    }
+
+    @@media print {
+        .report-shell {
+            background: #fff;
+        }
+        .kpi-card,
+        .excel-box,
+        .section-header {
+            box-shadow: none !important;
+        }
+    }
 </style>
 
-<div class="container-fluid p-4 excel-font bg-light min-vh-100">
+<div class="container-fluid p-4 excel-font report-shell">
     <!-- Header & Controls -->
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
         <div>
-            <h2 class="fw-black mb-0 text-uppercase" style="letter-spacing:1px"><i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Profit & Sales Summary</h2>
+            <h2 class="report-title mb-0 text-uppercase"><i class="bi bi-graph-up-arrow text-primary"></i> Profit & Sales Summary</h2>
             <div class="text-muted small">Financial Report: @Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#deductionModal">+ DEDUCTION</button>
-            <button class="btn btn-outline-info btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#capitalModal">+ CAPITAL FUND</button>
-            <button class="btn btn-outline-secondary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#purchaseModal">+ PURCHASE</button>
-            <a href="javascript:window.print()" class="btn btn-dark btn-sm fw-bold"><i class="bi bi-printer"></i> PRINT</a>
+            <button class="btn btn-outline-danger btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#deductionModal"><i class="bi bi-dash-circle"></i> Deduction</button>
+            <button class="btn btn-outline-info btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#capitalModal"><i class="bi bi-cash-stack"></i> Capital</button>
+            <button class="btn btn-outline-secondary btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#purchaseModal"><i class="bi bi-bag-plus"></i> Purchase</button>
+            <a href="javascript:window.print()" class="btn btn-dark btn-sm action-btn"><i class="bi bi-printer"></i> Print</a>
         </div>
     </div>
 
@@ -141,6 +228,7 @@
     </form>
 
     <!-- KPI Summary Row -->
+    <div class="group-title"><i class="bi bi-stars text-primary"></i> Overview</div>
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="kpi-card" style="border-left-color: #0d6efd;">
@@ -164,20 +252,24 @@
         <div class="col-md-3">
              <div class="kpi-card" style="border-left-color: #0dcaf0;">
                  <div class="kpi-title">ITEMS SOLD</div>
-                 <div class="kpi-value text-info">@Model.TotalItemsSold.ToString("N0") <span class="fs-6 text-muted">pcs</span></div>
+                 <div class="kpi-value text-info">@Model.TotalItemsSold.ToString("N0") <span class="fs-6 text-muted">units</span></div>
             </div>
         </div>
     </div>
 
     <!-- MAIN GRID -->
+    <div class="group-title"><i class="bi bi-diagram-3 text-primary"></i> Operations</div>
     <div class="row g-4">
         <!-- LEFT: Breakdowns -->
         <div class="col-lg-8">
             <!-- Row: Sales & Profit Tables -->
             <div class="row g-0">
                 <div class="col-md-6 pe-md-2">
-                    <div class="section-header header-sales">A. SALES & FEES (@Model.PercentFee%)</div>
-                    <div class="excel-box">
+                    <button class="section-header header-sales" type="button" data-bs-toggle="collapse" data-bs-target="#salesSection">
+                        <span><i class="bi bi-receipt-cutoff me-2"></i> A. Sales & Fees (@Model.PercentFee%)</span>
+                        <span class="section-toggle"><i class="bi bi-chevron-down"></i></span>
+                    </button>
+                    <div id="salesSection" class="collapse show excel-box">
                         <table class="table-excel">
                             <thead>
                                 <tr><th>DATE</th><th>SALES</th><th>FEE</th></tr>
@@ -202,8 +294,11 @@
                     </div>
                 </div>
                 <div class="col-md-6 ps-md-2 mt-3 mt-md-0">
-                    <div class="section-header header-profit">B. GROSS PROFIT</div>
-                     <div class="excel-box">
+                    <button class="section-header header-profit" type="button" data-bs-toggle="collapse" data-bs-target="#profitSection">
+                        <span><i class="bi bi-graph-up-arrow me-2"></i> B. Gross Profit</span>
+                        <span class="section-toggle"><i class="bi bi-chevron-down"></i></span>
+                    </button>
+                     <div id="profitSection" class="collapse show excel-box">
                         <table class="table-excel">
                             <thead>
                                 <tr><th>DATE</th><th class="bg-profit-light">PROFIT</th></tr>
@@ -230,8 +325,11 @@
             <!-- Row: Deductions & Capital -->
             <div class="row g-0 mt-4">
                 <div class="col-md-6 pe-md-2">
-                    <div class="section-header header-deduct">C. DEDUCTIONS</div>
-                     <div class="excel-box">
+                    <button class="section-header header-deduct" type="button" data-bs-toggle="collapse" data-bs-target="#deductionSection">
+                        <span><i class="bi bi-x-circle me-2"></i> C. Deductions</span>
+                        <span class="section-toggle"><i class="bi bi-chevron-down"></i></span>
+                    </button>
+                     <div id="deductionSection" class="collapse show excel-box">
                         <table class="table-excel">
                             <thead>
                                 <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
@@ -255,8 +353,11 @@
                     </div>
                 </div>
                 <div class="col-md-6 ps-md-2 mt-3 mt-md-0">
-                    <div class="section-header header-capital">D. CAPITAL FUNDS</div>
-                     <div class="excel-box">
+                    <button class="section-header header-capital" type="button" data-bs-toggle="collapse" data-bs-target="#capitalSection">
+                        <span><i class="bi bi-safe2 me-2"></i> D. Capital Funds</span>
+                        <span class="section-toggle"><i class="bi bi-chevron-down"></i></span>
+                    </button>
+                     <div id="capitalSection" class="collapse show excel-box">
                         <table class="table-excel">
                             <thead>
                                 <tr><th>FUND NAME</th><th>AMOUNT</th></tr>
@@ -282,8 +383,8 @@
             </div>
 
             <!-- NET PROFIT CALCULATION BOX -->
-            <div class="mt-4 p-3 bg-white border border-dark border-2 shadow-sm">
-                 <h5 class="fw-bold border-bottom pb-2 mb-3 text-center bg-light">NET PROFIT CALCULATION</h5>
+            <div class="mt-4 p-3 bg-white border border-dark border-2 shadow-sm rounded-3">
+                 <h5 class="fw-bold border-bottom pb-2 mb-3 text-center bg-light"><i class="bi bi-calculator"></i> Net Profit Calculation</h5>
                  <div class="row text-center align-items-center g-2">
                      <div class="col">
                          <div class="text-muted small fw-bold text-uppercase">Gross Profit</div>
@@ -310,6 +411,7 @@
             </div>
             
             <!-- PARTNERS SPLIT -->
+            <div class="group-title mt-4"><i class="bi bi-people text-primary"></i> Partner Distribution</div>
             <div class="row g-3 mt-2">
                 <!-- Partner 1 -->
                 <div class="col-md-6">
@@ -376,8 +478,11 @@
 
         <!-- RIGHT: LEDGER -->
         <div class="col-lg-4">
-            <div class="section-header header-ledger">F. ACCOUNT LEDGER</div>
-            <div class="excel-box" style="max-height: 800px;">
+            <button class="section-header header-ledger" type="button" data-bs-toggle="collapse" data-bs-target="#ledgerSection">
+                <span><i class="bi bi-journal-text me-2"></i> F. Account Ledger</span>
+                <span class="section-toggle"><i class="bi bi-chevron-down"></i></span>
+            </button>
+            <div id="ledgerSection" class="collapse show excel-box" style="max-height: 800px;">
                 <table class="table-excel table-striped">
                     <thead>
                          <tr><th colspan="3" class="bg-light text-start border-bottom-2">OPENING BALANCE: <span class="float-end fw-bold">₱@Model.Partner1OpeningBalance.ToString("N2")</span></th></tr>
@@ -406,10 +511,14 @@
     
     <!-- DETAILED ANALYTICS FOOTER -->
     <div class="mt-5 pt-3 border-top border-3">
-        <h4 class="fw-black text-uppercase text-secondary mb-3"><i class="bi bi-bar-chart-fill"></i> Detailed Analytics</h4>
-        <div class="row g-4">
+        <button class="section-header header-main w-100" type="button" data-bs-toggle="collapse" data-bs-target="#analyticsSection">
+            <span><i class="bi bi-bar-chart-fill me-2"></i> Detailed Analytics</span>
+            <span class="section-toggle text-white"><i class="bi bi-chevron-down"></i></span>
+        </button>
+        <div id="analyticsSection" class="collapse show">
+        <div class="row g-4 mt-2">
             <div class="col-lg-6">
-                <div class="section-header header-main">TOP SELLING ITEMS</div>
+                <div class="section-header header-main"><span><i class="bi bi-award me-2"></i> Top Selling Items</span><span class="section-toggle"><i class="bi bi-chevron-down"></i></span></div>
                 <div class="excel-box">
                     <table class="table-excel">
                         <thead><tr><th>ITEM NAME</th><th>QTY</th><th>TOTAL</th></tr></thead>
@@ -426,7 +535,7 @@
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="section-header header-main">OUTLET PERFORMANCE</div>
+                <div class="section-header header-main"><span><i class="bi bi-shop me-2"></i> Outlet Performance</span><span class="section-toggle"><i class="bi bi-chevron-down"></i></span></div>
                 <div class="excel-box">
                      <table class="table-excel">
                         <thead><tr><th>OUTLET</th><th>PAID</th><th>UNPAID</th><th>TOTAL</th></tr></thead>
@@ -443,6 +552,7 @@
                     </table>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 </div>

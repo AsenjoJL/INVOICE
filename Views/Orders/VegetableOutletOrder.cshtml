@@ -5,154 +5,201 @@
     decimal grandTotalAmt = 0;
     decimal grandTotalQ = 0;
     var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var isAllOutlets = Model.ShowAllOutlets;
+    foreach (var product in Model.Products)
+    {
+        var price = Model.ProductPrices.TryGetValue(product.Id, out var pr) ? pr : 0m;
+        var qty = Model.Quantities.TryGetValue(product.Id, out var q) ? q : 0m;
+        grandTotalQ += qty;
+        grandTotalAmt += qty * price;
+    }
 }
 
-<div class="container-fluid p-0">
-    <div class="d-flex justify-content-between align-items-center p-3 bg-white shadow-sm mb-3 sticky-top" style="z-index: 1000; top:0;">
-        <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-shop"></i> PER OUTLET ORDER</h4>
+<div class="order-shell">
+    <div class="order-hero">
+        <div class="order-hero-content">
+            <span class="order-chip"><i class="bi bi-basket2-fill"></i> Outlet Orders</span>
+            <h2 class="order-title">Per Outlet Order</h2>
+            <p class="order-sub">Track daily vegetable pricing and quantities with fast inline updates.</p>
+        </div>
+        <div class="order-actions">
+            <a asp-controller="ProfitReport" asp-action="Index" class="btn btn-light btn-hero" target="_blank">
+                <i class="bi bi-bar-chart-line"></i> Profit &amp; Sales
+            </a>
+            <button type="submit" form="orderForm" class="btn btn-dark btn-hero-primary" @((Model.SelectedCustomerId == 0) ? "disabled" : "")>
+                <i class="bi bi-save"></i> Save Order
+            </button>
+        </div>
+    </div>
 
-        <form method="get" class="d-flex gap-2 align-items-center flex-grow-1 mx-4">
-            <div class="input-group" style="max-width: 250px;">
-                <span class="input-group-text fw-bold">Date</span>
-                <input type="date" name="date" class="form-control"
-                       value="@Model.Date.ToString("yyyy-MM-dd")"
-                       onchange="this.form.submit()" />
+    <div class="order-toolbar">
+        <form method="get" class="order-filters">
+            <div class="order-field">
+                <label class="form-label">Date</label>
+                <div class="input-group">
+                    <span class="input-group-text fw-bold"><i class="bi bi-calendar-event"></i></span>
+                    <input type="date" name="date" class="form-control"
+                           value="@Model.Date.ToString("yyyy-MM-dd")"
+                           onchange="this.form.submit()" />
+                </div>
             </div>
 
-            <div class="input-group" style="max-width: 400px;">
-                <span class="input-group-text fw-bold">Outlet</span>
-                <select name="customerId" class="form-select" onchange="this.form.submit()">
-                    @if (!Model.Customers.Any())
-                    {
-                        <option value="">No Active Outlets</option>
-                    }
-                    @foreach (var c in Model.Customers)
-                    {
-                        <option value="@c.Id" selected="@(c.Id == Model.SelectedCustomerId)">@c.Name</option>
-                    }
-                </select>
+            <div class="order-field">
+                <label class="form-label">Outlet</label>
+                <div class="input-group">
+                    <span class="input-group-text fw-bold"><i class="bi bi-shop"></i></span>
+                    <select name="customerId" class="form-select" onchange="this.form.submit()">
+                        @if (!Model.Customers.Any())
+                        {
+                            <option value="">No Active Outlets</option>
+                        }
+                        @foreach (var c in Model.Customers)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == Model.SelectedCustomerId)">@c.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="order-field">
+                <label class="form-label">All Outlets</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="allOutlets" value="true"
+                           id="allOutletsToggle" @(isAllOutlets ? "checked" : "")
+                           onchange="this.form.submit()" />
+                    <label class="form-check-label small" for="allOutletsToggle">
+                        All Outlets / Total Qty
+                    </label>
+                </div>
+            </div>
+
+            <div class="order-field">
+                <label class="form-label">Search</label>
+                <div class="input-icon">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="productSearch" class="form-control" placeholder="Search vegetables..." />
+                </div>
             </div>
         </form>
 
-        <a asp-controller="ProfitReport" asp-action="Index" class="btn btn-info text-white me-3" target="_blank"><i class="bi bi-bar-chart-fill"></i> Profit & Sales</a>
-        <button type="submit" form="orderForm" class="btn btn-primary btn-lg px-4">
-            <i class="bi bi-save"></i> Save Order
-        </button>
+        <div class="order-summary">
+            <div class="summary-card">
+                <span>Total Qty</span>
+                <strong id="grandTotalQtyTop">@grandTotalQ.ToString("0.##")</strong>
+            </div>
+            <div class="summary-card">
+                <span>Total Amount</span>
+                <strong id="grandTotalAmtTop">@grandTotalAmt.ToString("N2")</strong>
+            </div>
+            <div class="summary-note">
+                <i class="bi bi-lightning-charge"></i>
+                @(isAllOutlets ? "Viewing total quantities across all outlets. Edit price to update weekly pricing." : "Tip: use comma or dot for decimals.")
+            </div>
+        </div>
     </div>
 
     @if (Model.SelectedCustomerId == 0)
     {
-        <div class="alert alert-info m-3">Please add customers to start ordering.</div>
+        <div class="alert alert-info order-alert">Please add customers to start ordering.</div>
     }
     else
     {
-        <div asp-validation-summary="All" class="alert alert-danger mx-3 my-2"></div>
-         <form asp-action="SaveOutletOrder" method="post" id="orderForm">
-
+        <div asp-validation-summary="All" class="alert alert-danger order-alert"></div>
+        <form asp-action="SaveOutletOrder" method="post" id="orderForm">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Date" />
             <input type="hidden" asp-for="SelectedCustomerId" />
+            <input type="hidden" asp-for="ShowAllOutlets" />
 
-            <div class="table-responsive" style="height: 75vh; overflow: auto; position: relative;">
-                <table class="table table-bordered table-hover table-sm align-middle mb-0" id="orderTable">
-                    <thead class="bg-light sticky-top" style="top: 0; z-index: 10;">
-                        <tr class="text-center">
-                            <th class="bg-light" style="width: 40%;">VEGETABLE</th>
-                            <th style="width: 15%;">PRICE</th>
-                            <th style="width: 15%;">QTY</th>
-                            <th style="width: 20%;">AMOUNT</th>
-                            <th style="width: 10%;">UOM</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var product in Model.Products)
-                        {
-                            decimal price = Model.ProductPrices.TryGetValue(product.Id, out var pr) ? pr : 0m;
-                            decimal qty = Model.Quantities.TryGetValue(product.Id, out var q) ? q : 0m;
-                            decimal amount = qty * price;
-
-                            grandTotalQ += qty;
-                            grandTotalAmt += amount;
-
-                            <tr data-qty="@qty.ToString("0.##", inv)" data-price="@price.ToString("0.00", inv)">
-                                <td class="fw-bold px-3">@product.Name</td>
-
-                                <td class="p-0">
-                                    <input asp-for="ProductPrices[product.Id]"
-                                           type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
-                                           value="@price.ToString("0.00")"
-                                           class="table-input price-input text-end pe-2"
-                                           autocomplete="off" spellcheck="false" />
-                                </td>
-
-                                <td class="p-0">
-                                    <input asp-for="Quantities[product.Id]"
-                                           type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
-                                           value="@(qty > 0 ? qty.ToString("0.##") : "")"
-                                           class="table-input qty-input text-center fw-bold"
-                                           autocomplete="off" spellcheck="false" />
-                                </td>
-
-                                <td class="text-end px-3 fw-bold text-primary amount-cell">
-                                    @(amount > 0 ? amount.ToString("N2") : "-")
-                                </td>
-
-                                <td class="text-center text-muted small">@product.Unit</td>
+            <div class="order-table-card">
+                <div class="table-responsive order-table-scroll">
+                    <table class="table order-table align-middle mb-0" id="orderTable">
+                        <thead>
+                            <tr class="text-center">
+                                <th class="text-start">Vegetable</th>
+                                <th>Price</th>
+                                <th>Qty</th>
+                                <th>Amount</th>
+                                <th>UOM</th>
                             </tr>
-                        }
-                    </tbody>
-                    <tfoot class="sticky-bottom bg-light fw-bold" style="bottom: 0; z-index: 10;">
-                        <tr class="fs-5">
-                            <td class="text-end px-3">GRAND TOTAL:</td>
-                            <td></td>
-                            <td class="text-center text-danger" id="grandTotalQty">@grandTotalQ.ToString("0.##")</td>
-                            <td class="text-end px-3 text-primary" id="grandTotalAmt">@grandTotalAmt.ToString("N2")</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var product in Model.Products)
+                            {
+                                decimal price = Model.ProductPrices.TryGetValue(product.Id, out var pr) ? pr : 0m;
+                                decimal qty = Model.Quantities.TryGetValue(product.Id, out var q) ? q : 0m;
+                                decimal amount = qty * price;
+
+                                <tr class="order-row"
+                                    data-name="@product.Name.ToLowerInvariant()"
+                                    data-qty="@qty.ToString("0.##", inv)"
+                                    data-price="@price.ToString("0.00", inv)"
+                                    data-initial-qty="@qty.ToString("0.##", inv)"
+                                    data-initial-price="@price.ToString("0.00", inv)">
+                                    <td class="fw-semibold px-3">
+                                        <div class="order-product">
+                                            <span class="order-product-name">@product.Name</span>
+                                            <span class="order-product-id">#@product.Id</span>
+                                        </div>
+                                    </td>
+
+                                    <td class="p-0">
+                                        <input name="ProductPrices[@product.Id]"
+                                               type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
+                                               value="@price.ToString("0.00")"
+                                               class="table-input price-input text-end pe-2"
+                                               autocomplete="off" spellcheck="false" />
+                                    </td>
+
+                                    <td class="p-0">
+                                        <input name="Quantities[@product.Id]"
+                                               type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
+                                               value="@(qty > 0 ? qty.ToString("0.##") : "")"
+                                               class="table-input qty-input text-center fw-bold"
+                                               autocomplete="off" spellcheck="false" @(isAllOutlets ? "readonly" : "") />
+                                    </td>
+
+                                    <td class="text-end px-3 fw-bold text-primary amount-cell">
+                                        @(amount > 0 ? amount.ToString("N2") : "-")
+                                    </td>
+
+                                    <td class="text-center text-muted small">@product.Unit</td>
+                                </tr>
+                            }
+                            <tr class="no-results-row d-none">
+                                <td colspan="5" class="text-center text-muted py-4">No vegetables match your search.</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="order-footer">
+                            <tr>
+                                <td class="text-end px-3">Grand Total</td>
+                                <td></td>
+                                <td class="text-center text-danger" id="grandTotalQty">@grandTotalQ.ToString("0.##")</td>
+                                <td class="text-end px-3 text-primary" id="grandTotalAmt">@grandTotalAmt.ToString("N2")</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </form>
     }
 </div>
 
-<style>
-    #orderTable { table-layout: fixed; }
-    .table-input {
-        width: 100%;
-        height: 100%;
-        border: none;
-        background: transparent;
-        padding: 8px;
-        font-size: 1rem;
-        outline: none;
-        font-variant-numeric: tabular-nums;
-    }
-    .table-input:focus {
-        background-color: #e8f0fe;
-        box-shadow: inset 0 0 0 2px #0d6efd;
-    }
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-    tbody tr:hover td { background-color: #f1f3f5; }
-</style>
-
 <script>
 (function () {
   'use strict';
 
-  // Efficient DOM elements
   const table = document.getElementById('orderTable');
   const gtQtyEl = document.getElementById('grandTotalQty');
   const gtAmtEl = document.getElementById('grandTotalAmt');
+  const gtQtyTopEl = document.getElementById('grandTotalQtyTop');
+  const gtAmtTopEl = document.getElementById('grandTotalAmtTop');
+  const searchInput = document.getElementById('productSearch');
   const fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   if (!table) return;
 
-  // Helper to parse numbers safely
   const num = (val) => {
       if (val == null) return 0;
       let s = ('' + val).trim();
@@ -189,6 +236,17 @@
   function updateTotalsDisplay() {
       if (gtQtyEl) gtQtyEl.textContent = totalQty !== 0 ? parseFloat(totalQty.toFixed(2)) : '0';
       if (gtAmtEl) gtAmtEl.textContent = fmt.format(totalAmt);
+      if (gtQtyTopEl) gtQtyTopEl.textContent = totalQty !== 0 ? parseFloat(totalQty.toFixed(2)) : '0';
+      if (gtAmtTopEl) gtAmtTopEl.textContent = fmt.format(totalAmt);
+  }
+
+  function updateRowState(row) {
+      const initialQty = num(row.dataset.initialQty);
+      const initialPrice = num(row.dataset.initialPrice);
+      const currentQty = num(row.dataset.qty);
+      const currentPrice = num(row.dataset.price);
+      const changed = (initialQty !== currentQty) || (initialPrice !== currentPrice);
+      row.classList.toggle('is-edited', changed);
   }
 
   function handle(input) {
@@ -221,10 +279,10 @@
 
       const rowAmt = rowQty * rowPrice;
       refs.amtCell.textContent = rowAmt > 0 ? fmt.format(rowAmt) : '-';
+      updateRowState(row);
       updateTotalsDisplay();
   }
 
-  // Event Delegation
   table.addEventListener('change', (e) => {
       if (e.target.classList.contains('table-input')) {
           handle(e.target);
@@ -236,8 +294,7 @@
           handle(e.target);
       }
   }, true);
-  
-  // Optional: Select text on focus for easier editing
+
   table.addEventListener('focusin', (e) => {
       if (e.target.classList.contains('table-input')) {
           if (!prevValues.has(e.target)) prevValues.set(e.target, num(e.target.value));
@@ -245,5 +302,22 @@
       }
   });
 
+  if (searchInput) {
+      const rows = Array.from(table.querySelectorAll('tbody .order-row'));
+      const noResultsRow = table.querySelector('.no-results-row');
+      searchInput.addEventListener('input', () => {
+          const term = searchInput.value.trim().toLowerCase();
+          let visibleCount = 0;
+          rows.forEach(row => {
+              const name = row.dataset.name || '';
+              const match = !term || name.includes(term);
+              row.classList.toggle('d-none', !match);
+              if (match) visibleCount += 1;
+          });
+          if (noResultsRow) {
+              noResultsRow.classList.toggle('d-none', visibleCount !== 0);
+          }
+      });
+  }
 })();
 </script>

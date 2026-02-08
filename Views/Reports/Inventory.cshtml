@@ -19,20 +19,18 @@
                         <th>Category</th>
                         <th class="text-center">Current Stock</th>
                         <th class="text-center">Unit</th>
-                        <th class="text-center">Reorder Level</th>
                         <th class="text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        var statusClass = item.Status == "Low Stock" ? "bg-danger" : "bg-success";
+                        var statusClass = item.Status == "Out of Stock" ? "bg-danger" : "bg-success";
                         <tr>
                             <td class="fw-bold">@item.Product.Name</td>
                             <td>@item.Product.Category</td>
                             <td class="text-center h5">@item.CurrentStock</td>
                             <td class="text-center">@item.Product.Unit</td>
-                            <td class="text-center">@item.Product.ReorderLevel</td>
                             <td class="text-center">
                                 <span class="badge @statusClass">@item.Status</span>
                             </td>

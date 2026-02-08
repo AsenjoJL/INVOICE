@@ -4,101 +4,296 @@
     bool isUnpaid = Model.Status == HazelInvoice.Models.PaymentStatus.Unpaid;
     ViewData["Title"] = isUnpaid ? "Unpaid Orders" : "Paid Orders";
     string grandTotalClass = isUnpaid ? "text-danger" : "text-success";
+    var receiptCount = Model.Receipts.Count;
+    var totalItems = Model.Receipts.Sum(r => r.Lines.Sum(l => l.Quantity));
+    var accentClass = isUnpaid ? "accent-danger" : "accent-success";
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>@ViewData["Title"]</h1>
-        <div class="d-flex gap-2">
-            <a asp-action="VegetableMatrix" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-outline-secondary">
-                <i class="bi bi-grid-3x3"></i> Back to Matrix
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    .receipt-shell {
+        font-family: "Manrope", "Segoe UI", sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+        min-height: 100vh;
+    }
+    .receipt-hero {
+        background: linear-gradient(120deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        color: #f8fafc;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+        margin-bottom: 24px;
+    }
+    .receipt-hero .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.15);
+        color: #e2e8f0;
+    }
+    .receipt-hero h1 {
+        font-size: 2.1rem;
+        font-weight: 800;
+        margin: 12px 0 6px;
+    }
+    .receipt-meta {
+        color: #cbd5f5;
+        font-size: 0.95rem;
+    }
+    .receipt-actions .btn {
+        border-radius: 999px;
+        font-weight: 700;
+        padding: 8px 16px;
+    }
+    .receipt-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .receipt-toolbar .search-input {
+        min-width: 220px;
+        border-radius: 12px;
+    }
+    .receipt-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .stat-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 14px 18px;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+        border: 1px solid #e2e8f0;
+    }
+    .stat-card .label {
+        font-size: 0.8rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 700;
+    }
+    .stat-card .value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-top: 6px;
+    }
+    .receipt-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 18px;
+    }
+    .receipt-card {
+        border-radius: 18px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        overflow: hidden;
+        position: relative;
+    }
+    .receipt-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    }
+    .receipt-card .card-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 16px;
+    }
+    .receipt-card .receipt-id {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+    .receipt-card .amount {
+        font-size: 1.35rem;
+        font-weight: 800;
+    }
+    .receipt-card .card-body {
+        padding: 0;
+    }
+    .receipt-card table {
+        margin-bottom: 0;
+    }
+    .receipt-card table thead {
+        background: #f1f5f9;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+    .receipt-card .card-footer {
+        background: #f8fafc;
+        font-size: 0.85rem;
+        color: #64748b;
+        padding: 12px 16px;
+        border-top: 1px solid #e2e8f0;
+    }
+    .accent-danger .amount { color: #dc2626; }
+    .accent-success .amount { color: #16a34a; }
+    .status-chip {
+        padding: 6px 10px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    .status-unpaid { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+    .status-paid { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
+    .mark-paid-btn {
+        border-radius: 999px;
+        font-weight: 700;
+    }
+</style>
+
+<div class="container-fluid p-4 receipt-shell">
+    <div class="receipt-hero d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <span class="status-pill">
+                <i class="bi @(isUnpaid ? "bi-exclamation-octagon" : "bi-check2-circle")"></i>
+                @(isUnpaid ? "Outstanding" : "Settled")
+            </span>
+            <h1>@ViewData["Title"]</h1>
+            <div class="receipt-meta">
+                <i class="bi bi-calendar-event me-1"></i>@Model.Date.ToString("dddd, MMM dd, yyyy")
+            </div>
+        </div>
+        <div class="receipt-actions d-flex flex-wrap gap-2 align-items-center">
+            <a asp-action="VegetableMatrix" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-outline-light">
+                <i class="bi bi-grid-3x3"></i> Matrix
             </a>
             @if(isUnpaid) {
-                <a asp-action="PaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-warning">View PAID</a>
+                <a asp-action="PaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-warning text-dark">
+                    <i class="bi bi-check2-circle"></i> Paid Orders
+                </a>
             } else {
-                <a asp-action="UnpaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-danger">View UNPAID</a>
+                <a asp-action="UnpaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-danger">
+                    <i class="bi bi-exclamation-octagon"></i> Unpaid Orders
+                </a>
             }
         </div>
     </div>
 
-    <!-- Date Filter -->
-    <form method="get" class="mb-4 d-flex align-items-center gap-2 bg-light p-2 rounded border" style="max-width: 400px;">
-        <label class="fw-bold">Date:</label>
-        <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" 
-               class="form-control" onchange="this.form.submit()" />
-    </form>
+    <div class="receipt-toolbar">
+        <form method="get" class="d-flex align-items-center gap-2 bg-white p-2 rounded-3 border shadow-sm">
+            <label class="fw-bold text-muted">Date</label>
+            <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")"
+                   class="form-control" onchange="this.form.submit()" />
+        </form>
+        <div class="input-group shadow-sm rounded-3 bg-white border" style="max-width: 340px;">
+            <span class="input-group-text bg-transparent border-0"><i class="bi bi-search"></i></span>
+            <input type="text" id="receiptSearch" class="form-control border-0 search-input" placeholder="Search customer or receipt #" />
+        </div>
+    </div>
+
+    <div class="receipt-stats">
+        <div class="stat-card">
+            <div class="label">Receipts</div>
+            <div class="value">@receiptCount</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Items Sold</div>
+            <div class="value">@totalItems.ToString("N0")</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Grand Total</div>
+            <div class="value @grandTotalClass">@Model.GrandTotal.ToString("N2")</div>
+        </div>
+    </div>
 
     @if (!Model.Receipts.Any())
     {
-        <div class="alert alert-info">No @Model.Status.ToString().ToLower() orders found for this date.</div>
+        <div class="alert alert-info shadow-sm border-0">No @Model.Status.ToString().ToLower() orders found for this date.</div>
     }
     else
     {
-        <div class="row">
+        <div class="receipt-grid">
             @foreach (var r in Model.Receipts)
             {
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card shadow-sm h-100 border-top-0 border-end-0 border-bottom-0 border-start border-4 @(isUnpaid ? "border-danger" : "border-success")">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-start">
-                            <div>
-                                <h5 class="fw-bold mb-0">@r.CustomerName</h5>
-                                <div class="small text-muted">@r.ReceiptNumber</div>
-                            </div>
-                            <div class="text-end">
-                                <div class="fw-bold fs-5 @(isUnpaid ? "text-danger" : "text-success")">
-                                    @r.TotalAmount.ToString("N2")
-                                </div>
-                                @if (isUnpaid)
-                                {
-                                    <form asp-action="MarkAsPaid" method="post" class="mt-1">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@r.Id" />
-                                        <input type="hidden" name="returnDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
-                                        <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Mark this receipt as PAID?');">
-                                            <i class="bi bi-check-lg"></i> Mark Paid
-                                        </button>
-                                    </form>
-                                }
-                            </div>
+                <div class="receipt-card @accentClass" data-receipt-card data-search="@(($"{r.CustomerName} {r.ReceiptNumber}").ToLower())">
+                    <div class="card-header d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="fw-bold mb-0">@r.CustomerName</h5>
+                            <div class="receipt-id">@r.ReceiptNumber</div>
                         </div>
-                        <div class="card-body p-0">
-                            <table class="table table-sm mb-0 small">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Item</th>
-                                        <th class="text-end">Price</th>
-                                        <th class="text-center">Qty</th>
-                                        <th class="text-end">Amt</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var line in r.Lines)
-                                    {
-                                        <tr>
-                                            <td>@line.ItemName</td>
-                                            <td class="text-end">@line.Price.ToString("N0")</td>
-                                            <td class="text-center">@line.Quantity @line.Unit</td>
-                                            <td class="text-end">@line.Amount.ToString("N2")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        @if (!string.IsNullOrEmpty(r.CustomerAddress))
-                        {
-                            <div class="card-footer bg-light small text-muted">
-                                @r.CustomerAddress
+                        <div class="text-end">
+                            <div class="amount">@r.TotalAmount.ToString("N2")</div>
+                            <div class="status-chip @(isUnpaid ? "status-unpaid" : "status-paid")">
+                                @(isUnpaid ? "Unpaid" : "Paid")
                             </div>
-                        }
+                            @if (isUnpaid)
+                            {
+                                <form asp-action="MarkAsPaid" method="post" class="mt-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <input type="hidden" name="returnDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success mark-paid-btn" onclick="return confirm('Mark this receipt as PAID?');">
+                                        <i class="bi bi-check-lg"></i> Mark Paid
+                                    </button>
+                                </form>
+                            }
+                        </div>
                     </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Amt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in r.Lines)
+                                {
+                                    <tr>
+                                        <td>@line.ItemName</td>
+                                        <td class="text-end">@line.Price.ToString("N0")</td>
+                                        <td class="text-center">@line.Quantity @line.Unit</td>
+                                        <td class="text-end">@line.Amount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (!string.IsNullOrEmpty(r.CustomerAddress))
+                    {
+                        <div class="card-footer">
+                            <i class="bi bi-geo-alt me-1"></i>@r.CustomerAddress
+                        </div>
+                    }
                 </div>
             }
         </div>
-
-        <div class="fixed-bottom bg-white border-top p-3 shadow-lg d-flex justify-content-between align-items-center">
-            <div class="fw-bold fs-5">Grand Total (@Model.Status):</div>
-            <div class="fw-bold fs-3 @grandTotalClass">@Model.GrandTotal.ToString("N2")</div>
-        </div>
-        <div style="height: 80px;"></div>
     }
 </div>
+
+<script>
+    (function () {
+        const searchInput = document.getElementById('receiptSearch');
+        if (!searchInput) return;
+        const cards = Array.from(document.querySelectorAll('[data-receipt-card]'));
+        searchInput.addEventListener('input', () => {
+            const term = searchInput.value.trim().toLowerCase();
+            let visible = 0;
+            cards.forEach(card => {
+                const hay = card.dataset.search || '';
+                const match = !term || hay.includes(term);
+                card.style.display = match ? '' : 'none';
+                if (match) visible += 1;
+            });
+        });
+    })();
+</script>

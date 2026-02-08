@@ -40,6 +40,12 @@ public class VegetableMatrixViewModel
     // ProductId -> Total Qty across ALL outlets in group (for visible rows)
     public Dictionary<int, decimal> ProductTotalQtyAllOutletsInGroup { get; set; } = new();
 
+    // OutletId -> Total Qty across all products for the day (visible outlets)
+    public Dictionary<int, decimal> OutletTotalQty { get; set; } = new();
+
+    // OutletId -> Has any order for the day (visible outlets)
+    public Dictionary<int, bool> OutletHasOrders { get; set; } = new();
+
     public decimal GrandTotalQty { get; set; }
     public decimal GrandTotalAmount { get; set; }
 

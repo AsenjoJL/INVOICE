@@ -44,6 +44,10 @@ public class DashboardController : Controller
             .Where(r => r.Date >= monthStart && r.Date < monthEnd && r.Status != Models.PaymentStatus.Void)
             .SumAsync(r => r.TotalAmount);
 
+        model.ExpenseMonthly = await _context.Expenses
+            .Where(e => e.Date >= monthStart && e.Date < monthEnd)
+            .SumAsync(e => e.Amount);
+
         // (New) Annual
         var yearStart = new DateTime(today.Year, 1, 1);
         var yearEnd = yearStart.AddYears(1);
@@ -57,6 +61,19 @@ public class DashboardController : Controller
                         l.Receipt.Date >= dayStart && l.Receipt.Date < dayEnd &&
                         l.Receipt.Status != Models.PaymentStatus.Void)
             .SumAsync(l => l.Quantity);
+
+        model.ItemsSoldTodayByUnit = await _context.ReceiptLines
+            .Where(l => l.Receipt != null &&
+                        l.Receipt.Date >= dayStart && l.Receipt.Date < dayEnd &&
+                        l.Receipt.Status != Models.PaymentStatus.Void)
+            .GroupBy(l => string.IsNullOrWhiteSpace(l.Unit) ? "unit" : l.Unit)
+            .Select(g => new CategoryValuePoint
+            {
+                Category = g.Key,
+                Value = g.Sum(l => (decimal)l.Quantity)
+            })
+            .OrderBy(g => g.Category)
+            .ToListAsync();
 
         // 3. Expense Today
         model.ExpenseToday = await _context.Expenses

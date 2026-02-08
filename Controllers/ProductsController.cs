@@ -23,15 +23,16 @@ public class ProductsController : Controller
     }
 
     // GET: Products/Create
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
+        ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         return View();
     }
 
     // POST: Products/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,ReorderLevel,IsActive")] Product product)
+    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,IsActive")] Product product)
     {
         // Auto-generate SKU if empty or default
         if (string.IsNullOrWhiteSpace(product.SKU) || product.SKU == "V-XXX")
@@ -60,6 +61,7 @@ public class ProductsController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         return View(product);
     }
 
@@ -70,13 +72,14 @@ public class ProductsController : Controller
 
         var product = await _context.Products.FindAsync(id);
         if (product == null) return NotFound();
+        ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         return View(product);
     }
 
     // POST: Products/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,ReorderLevel,IsActive")] Product product)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,IsActive")] Product product)
     {
         if (id != product.Id) return NotFound();
 
@@ -94,6 +97,7 @@ public class ProductsController : Controller
             }
             return RedirectToAction(nameof(Index));
         }
+        ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         return View(product);
     }
 
@@ -143,5 +147,16 @@ public class ProductsController : Controller
     private bool ProductExists(int id)
     {
         return _context.Products.Any(e => e.Id == id);
+    }
+
+    private async Task<List<string>> GetCategoryOptionsAsync()
+    {
+        return await _context.Products
+            .AsNoTracking()
+            .Where(p => !string.IsNullOrWhiteSpace(p.Category))
+            .Select(p => p.Category)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
     }
 }

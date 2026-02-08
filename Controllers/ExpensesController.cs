@@ -23,8 +23,9 @@ public class ExpensesController : Controller
     }
 
     // GET: Expenses/Create
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
+        await PopulateExpenseOptionsAsync();
         return View();
     }
 
@@ -40,6 +41,30 @@ public class ExpensesController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        await PopulateExpenseOptionsAsync();
         return View(expense);
+    }
+
+    private async Task PopulateExpenseOptionsAsync()
+    {
+        var categories = await _context.Expenses
+            .AsNoTracking()
+            .Where(e => !string.IsNullOrWhiteSpace(e.Category))
+            .Select(e => e.Category)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+
+        var vendors = await _context.Expenses
+            .AsNoTracking()
+            .Where(e => !string.IsNullOrWhiteSpace(e.Vendor))
+            .Select(e => e.Vendor!)
+            .Distinct()
+            .OrderBy(v => v)
+            .ToListAsync();
+
+        ViewBag.CategoryOptions = categories;
+        ViewBag.VendorOptions = vendors;
+        ViewBag.AmountOptions = new decimal[] { 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
     }
 }

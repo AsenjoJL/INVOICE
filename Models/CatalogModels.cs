@@ -30,8 +30,6 @@ public class Product
     [Column(TypeName = "decimal(18,2)")]
     public decimal DeliveryFee { get; set; }
 
-    public int ReorderLevel { get; set; } = 10;
-
     public bool IsActive { get; set; } = true;
 }
 

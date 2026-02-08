@@ -99,13 +99,16 @@
         height: 30px;
     }
 
-    .status-noorders { background-color: white; color: black; }
+    .status-noorders { background-color: #e5e7eb; color: #64748b; }
     .status-unpaid { background-color: #ff0000 !important; color: white !important; }
     .status-paid { background-color: #ffc000 !important; color: black !important; }
     .status-threeplus { background-color: black !important; color: white !important; }
 
-    .qty-positive { background-color: #fff3cd; }
-    .qty-3plus { font-weight: 900; color: #000; background-color: #ffecb5; border: 2px solid #ffc107; }
+    .qty-positive { background-color: #f7b267; } /* orange */
+    .qty-3plus { font-weight: 900; color: #fff; background-color: #2563eb; border: 2px solid #1d4ed8; } /* blue */
+    .qty-lowest { background-color: #86efac; color: #064e3b; font-weight: 700; }
+    .outlet-no-orders { background-color: #e5e7eb !important; color: #64748b !important; }
+    .cell-noorder { background-color: #e5e7eb; color: #64748b; }
 
     tfoot td {
         position: sticky;
@@ -121,10 +124,26 @@
     .cell-unpaid { background-color: #ff0000 !important; color: white !important; }
     .cell-unpaid input { color: white !important; }
     .cell-paid input { color: black !important; }
+
+    @@media print {
+        @@page { size: landscape; margin: 8mm; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .no-print { display: none !important; }
+        .matrix-container { height: auto; overflow: visible; border: none; }
+        .matrix-table { font-size: 9px; }
+        .matrix-table th, .matrix-table td { border-color: #999; padding: 2px; }
+        .sticky-h, .sticky-left-col { position: static !important; z-index: auto !important; }
+        thead { display: table-header-group; }
+        tfoot { display: table-footer-group; }
+        .outlet-no-orders { display: none !important; }
+        .no-print-row { display: none !important; }
+        .sticky-left-col { min-width: 140px; max-width: 140px; }
+        .matrix-container { zoom: 0.85; }
+    }
 </style>
 
 <div class="container-fluid p-0">
-    <div class="d-flex justify-content-between align-items-center mb-2 px-3 py-2 bg-light border-bottom">
+    <div class="d-flex justify-content-between align-items-center mb-2 px-3 py-2 bg-light border-bottom no-print">
         <div class="d-flex flex-column">
             <div class="fw-bold">Daily Order Matrix</div>
             <div class="small text-muted">
@@ -154,6 +173,10 @@
             </button>
 
             <button type="submit" form="matrixForm" class="btn btn-sm btn-success fw-bold ms-3 px-4">SAVE CHANGES</button>
+
+            <button type="button" class="btn btn-sm btn-outline-dark ms-2" onclick="window.print()">
+                <i class="bi bi-printer-fill"></i> Print
+            </button>
         
             <div class="vr mx-3"></div>
             <a asp-action="UnpaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-danger fw-bold">View UNPAID</a>
@@ -162,7 +185,7 @@
         </div>
     </div>
 
-    <div class="d-flex flex-wrap gap-3 align-items-center mb-2 px-3 py-2 bg-white border-bottom small">
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-2 px-3 py-2 bg-white border-bottom small no-print">
         <div class="fw-bold me-2">LEGEND:</div>
         
         <div class="d-flex align-items-center">
@@ -183,17 +206,27 @@
         <div class="border-start mx-2 h-50"></div>
 
         <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#fff3cd; border-radius:3px;"></span> 
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#f7b267; border-radius:3px;"></span> 
             <span>Item Ordered</span>
         </div>
         
         <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#ffecb5; border: 2px solid #ffc107; border-radius:3px;"></span> 
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#2563eb; border: 2px solid #1d4ed8; border-radius:3px;"></span> 
             <span>High Qty (≥ 3)</span>
+        </div>
+
+        <div class="d-flex align-items-center">
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#e5e7eb; border-radius:3px;"></span> 
+            <span>No Orders</span>
+        </div>
+
+        <div class="d-flex align-items-center">
+            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#86efac; border-radius:3px;"></span> 
+            <span>Lowest Qty</span>
         </div>
     </div>
 
-    <form id="filterForm" method="get">
+    <form id="filterForm" method="get" class="no-print">
         <input type="hidden" name="date" id="hiddenDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
         <input type="hidden" name="page" id="hiddenOutletPage" value="@Model.CurrentPage" />
         <input type="hidden" name="productPage" id="hiddenProductPage" value="@Model.ProductPage" />
@@ -208,7 +241,7 @@
 
         @{
             var isAdmin = User.IsInRole("Admin");
-            var preOutletCols = isAdmin ? 6 : 5; // Cost? + Markup + Base + Delivery + Total + UOM
+            var preOutletCols = isAdmin ? 4 : 3; // Cost? + Price + Total + UOM
             var headerSpan = preOutletCols + Model.VisibleOutlets.Count + 2;
         }
 
@@ -261,15 +294,14 @@
                     <tr>
                         <th class="sticky-left-col header-row-4-main sticky-h" style="top:105px;">VEGETABLES</th>
                         @if (User.IsInRole("Admin")) { <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Cost</th> }
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Markup</th>
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:80px;">Base</th>
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Delivery</th>
+                        <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Price</th>
                         <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Total</th>
                         <th class="header-row-4-main sticky-h" style="top:105px; width:50px;">UOM</th>
 
                         @foreach (var c in Model.VisibleOutlets)
                         {
-                            <th class="header-row-4-main sticky-h" style="top:105px; min-width:80px;">@c.Name</th>
+                            var noOrders = Model.OutletHasOrders.TryGetValue(c.Id, out var hasOrder) ? !hasOrder : false;
+                            <th class="header-row-4-main sticky-h @(noOrders ? "outlet-no-orders" : "")" style="top:105px; min-width:80px;">@c.Name</th>
                         }
 
                         <th class="header-row-4-main sticky-h" style="top:105px; width:80px;">Total Qty</th>
@@ -282,7 +314,8 @@
 
                         @foreach (var c in Model.VisibleOutlets)
                         {
-                            <th class="header-row-5-sub sticky-h text-center fst-italic" style="top:140px;">@c.SubLabel</th>
+                            var noOrders = Model.OutletHasOrders.TryGetValue(c.Id, out var hasOrder) ? !hasOrder : false;
+                            <th class="header-row-5-sub sticky-h text-center fst-italic @(noOrders ? "outlet-no-orders" : "")" style="top:140px;">@c.SubLabel</th>
                         }
 
                         <th class="header-row-5-sub sticky-h" style="top:140px;" colspan="2"></th>
@@ -294,12 +327,14 @@
                     {
                         decimal rowTotalQty = Model.ProductTotalQtyAllOutletsInGroup.TryGetValue(p.Id, out var tq) ? tq : 0m;
                         decimal cost = Model.ProductCosts.TryGetValue(p.Id, out var cCost) ? cCost : 0m;
-                        decimal markup = Model.ProductMarkups.TryGetValue(p.Id, out var m) ? m : 0m;
-                        decimal basePrice = cost + markup;
-                        decimal deliveryPrice = Model.ProductPrices.TryGetValue(p.Id, out var pr) ? pr : basePrice;
-                        decimal deliveryFee = deliveryPrice - basePrice;
-                        if (deliveryFee < 0) deliveryFee = 0;
-                        decimal rowTotalAmt = rowTotalQty * deliveryPrice;
+                        decimal price = Model.ProductPrices.TryGetValue(p.Id, out var pr) ? pr : 0m;
+                        decimal rowTotalAmt = rowTotalQty * price;
+
+                        var rowQtys = Model.VisibleOutlets
+                            .Select(o => Model.MatrixQuantities.TryGetValue($"{p.Id}_{o.Id}", out var v) ? v : 0m)
+                            .Where(v => v > 0)
+                            .ToList();
+                        decimal rowMinPositive = rowQtys.Any() ? rowQtys.Min() : 0m;
 
                         string status = Model.ProductStatuses.TryGetValue(p.Id, out var st) ? st : "NO_ORDERS";
                         string statusClass = status switch
@@ -310,32 +345,17 @@
                             _ => "status-noorders"
                         };
 
-                        <tr data-row-qty="@rowTotalQty" data-price="@deliveryPrice" data-cost="@cost" data-delivery-fee="@deliveryFee">
+                        <tr data-row-qty="@rowTotalQty" data-price="@price">
                             <td class="sticky-left-col fw-bold border-end vege-cell @statusClass">@p.Name</td>
 
                             @if (User.IsInRole("Admin")) { <td class="text-end pe-2 bg-light text-muted">@cost.ToString("N2")</td> }
 
                             <td style="background:#fff;">
                                 <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
-                                       class="excel-input markup-input no-spin text-end"
-                                       name="ProductMarkups[@p.Id]"
-                                       value="@markup.ToString("0.00")"
-                                       autocomplete="off" spellcheck="false" />
-                            </td>
-
-                            <td style="background:#fff;">
-                                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
-                                       class="excel-input base-price-input no-spin text-end"
-                                       value="@basePrice.ToString("0.00")"
-                                       readonly />
-                            </td>
-
-                            <td style="background:#fff;">
-                                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                        class="excel-input price-input no-spin text-end"
                                        name="ProductPrices[@p.Id]"
-                                       value="@deliveryPrice.ToString("0.00")"
-                                       readonly />
+                                       value="@price.ToString("0.00")"
+                                       autocomplete="off" spellcheck="false" />
                             </td>
 
                             <td class="text-end pe-2 row-amt-cell">@(rowTotalAmt > 0 ? rowTotalAmt.ToString("N2") : "-")</td>
@@ -346,14 +366,17 @@
                                 string key = $"{p.Id}_{c.Id}";
                                 decimal val = Model.MatrixQuantities.TryGetValue(key, out var v) ? v : 0m;
                                 string mSt = Model.MatrixStatuses.TryGetValue(key, out var s) ? s : "";
+                                var noOrders = Model.OutletHasOrders.TryGetValue(c.Id, out var hasOrder) ? !hasOrder : false;
                                 
                                 string qtyClass = "";
                                 if (mSt == "PAID") qtyClass = "cell-paid";
                                 else if (mSt == "UNPAID") qtyClass = "cell-unpaid";
                                 else if (val >= 3) qtyClass = "qty-3plus";
+                                else if (rowMinPositive > 0 && rowMinPositive < 3 && val == rowMinPositive) qtyClass = "qty-lowest";
                                 else if (val > 0) qtyClass = "qty-positive";
+                                else qtyClass = "cell-noorder";
 
-                                <td class="qty-td @qtyClass">
+                                <td class="qty-td @qtyClass @(noOrders ? "outlet-no-orders" : "")">
                                     <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                            class="excel-input qty-input no-spin"
                                            name="MatrixQuantities[@key]"
@@ -371,7 +394,11 @@
                 <tfoot>
                     <tr class="fw-bold">
                         <td class="sticky-left-col text-end pe-3 bg-light">GRAND TOTAL</td>
-                        <td></td><td></td><td></td>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <td></td>
+                        }
+                        <td></td>
                         <td class="text-end pe-2 text-primary" id="grandTotalAmt">@Model.GrandTotalAmount.ToString("N2")</td>
                         <td></td>
 
@@ -413,7 +440,6 @@
 
         const prevValues = new WeakMap();
         const rowRefs = new WeakMap();
-
         function num(v) {
             if (v == null) return 0;
             let s = ('' + v).trim();
@@ -451,14 +477,14 @@
         table.addEventListener('change', (e) => {
             const input = e.target;
             if (!(input instanceof HTMLInputElement)) return;
-            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input') && !input.classList.contains('markup-input')) return;
+            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input')) return;
             handle(input);
         });
 
         table.addEventListener('blur', (e) => {
             const input = e.target;
             if (!(input instanceof HTMLInputElement)) return;
-            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input') && !input.classList.contains('markup-input')) return;
+            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input')) return;
             handle(input);
         }, true);
 
@@ -473,14 +499,8 @@
 
             let rowQty = num(row.dataset.rowQty);
             let price = num(row.dataset.price);
-            let cost = num(row.dataset.cost);
-            let deliveryFee = num(row.dataset.deliveryFee);
 
             const refs = getRowRefs(row);
-
-            // Find Price Inp
-            const priceInp = row.querySelector('.price-input');
-            const basePriceInp = row.querySelector('.base-price-input');
 
             if (input.classList.contains('qty-input')) {
                 const diff = newVal - oldVal;
@@ -490,46 +510,44 @@
                 totalQty += diff;
                 totalAmt += (diff * price);
 
+                // Recompute lowest qty for this row
+                const qtyInputs = Array.from(row.querySelectorAll('.qty-input'));
+                let minPositive = Infinity;
+                qtyInputs.forEach(q => {
+                    const v = num(q.value);
+                    if (v > 0 && v < minPositive) minPositive = v;
+                });
+                if (!Number.isFinite(minPositive)) minPositive = 0;
+
+                qtyInputs.forEach(q => {
+                    const v = num(q.value);
+                    const td = q.closest('td');
+                    if (!td) return;
+                    td.classList.remove('qty-lowest');
+                    if (minPositive > 0 && minPositive < 3 && v === minPositive) {
+                        if (!td.classList.contains('cell-paid') && !td.classList.contains('cell-unpaid')) {
+                            td.classList.add('qty-lowest');
+                        }
+                    }
+                });
+
                 const td = input.closest('td');
-                if (td) {
-                    td.classList.remove('qty-positive', 'qty-3plus');
+                if (td && !td.classList.contains('cell-paid') && !td.classList.contains('cell-unpaid')) {
+                    td.classList.remove('qty-positive', 'qty-3plus', 'cell-noorder');
                     if (newVal >= 3) td.classList.add('qty-3plus');
                     else if (newVal > 0) td.classList.add('qty-positive');
+                    else td.classList.add('cell-noorder');
                 }
-            } else if (input.classList.contains('markup-input')) {
-                // Markup Changed -> Update Price
-                const newMarkup = newVal;
-                // Old Markup? We don't track old markup delta directly, we Re-calculate Price
-                // But we need to update TotalAmt based on Price delta.
-                
-                const oldPrice = price;
-                const newBase = cost + newMarkup;
-                const newPrice = newBase + deliveryFee;
-                
-                price = newPrice;
-                row.dataset.price = price;
-                if(priceInp) priceInp.value = price.toFixed(2);
-                if(basePriceInp) basePriceInp.value = newBase.toFixed(2);
-                
-                const priceDiff = newPrice - oldPrice;
-                totalAmt += (rowQty * priceDiff);
-            } 
-            // If we had Price input editable:
-            /*
-            else if (input.classList.contains('price-input')) {
+            } else if (input.classList.contains('price-input')) {
                 const diff = newVal - oldVal;
                 totalAmt += (rowQty * diff);
                 price = newVal;
                 row.dataset.price = price;
-                // Reverse calc markup? 
-                const markupInp = row.querySelector('.markup-input');
-                if(markupInp) markupInp.value = (price - cost).toFixed(2);
             }
-            */
 
             const rowAmt = rowQty * price;
             if (refs.amtCell) refs.amtCell.textContent = rowAmt !== 0 ? fmt.format(rowAmt) : '-';
-            if (refs.qtyCell) refs.qtyCell.textContent = rowQty !== 0 ? rowQty.toFixed(2).replace(/\.?0+$/, '') : '';
+            if (refs.qtyCell) refs.qtyCell.textContent = formatQty(rowQty);
             if (elGrandAmt) elGrandAmt.textContent = fmt.format(totalAmt);
             if (elGrandQty) elGrandQty.textContent = totalQty !== 0 ? totalQty.toFixed(2).replace(/\.?0+$/, '') : '0';
 
@@ -543,5 +561,19 @@
                 }
             }
         }
+
+        function applyPrintRowFilter() {
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            rows.forEach(row => {
+                const rowQty = num(row.dataset.rowQty);
+                row.classList.toggle('no-print-row', rowQty <= 0);
+            });
+        }
+
+        window.addEventListener('beforeprint', applyPrintRowFilter);
+        window.addEventListener('afterprint', () => {
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            rows.forEach(row => row.classList.remove('no-print-row'));
+        });
     })();
 </script>

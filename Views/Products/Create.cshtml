@@ -28,15 +28,45 @@
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">
                         <div class="form-floating">
-                            <input asp-for="Category" class="form-control" placeholder="Category" />
+                            @{
+                                var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
+                                var defaultCategories = new[] { "Vegetables", "Fruits", "Meat", "Seafood", "Dry Goods", "Beverages", "Others" };
+                                var currentCategory = Model?.Category ?? string.Empty;
+                                var allCategories = categoryOptions
+                                    .Concat(defaultCategories)
+                                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .ToList();
+                                if (!string.IsNullOrWhiteSpace(currentCategory) &&
+                                    !allCategories.Contains(currentCategory, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    allCategories.Add(currentCategory);
+                                }
+                                allCategories.Sort(StringComparer.OrdinalIgnoreCase);
+                            }
+                            <select asp-for="Category" class="form-select">
+                                <option value="">-- Select Category --</option>
+                                @foreach (var c in allCategories)
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                            </select>
                             <label asp-for="Category">Category</label>
                             <span asp-validation-for="Category" class="text-danger"></span>
                         </div>
                     </div>
                     <div class="col-md-6">
-                         <div class="form-floating">
-                            <input asp-for="Unit" class="form-control" placeholder="Unit" />
-                            <label asp-for="Unit">Unit (e.g. pc, kg)</label>
+                        <div class="form-floating">
+                            @{
+                                var unitOptions = new[] { "pc", "pcs", "kg", "pack", "bundle", "box", "sack", "tray" };
+                            }
+                            <select asp-for="Unit" class="form-select">
+                                @foreach (var u in unitOptions)
+                                {
+                                    <option value="@u">@u</option>
+                                }
+                            </select>
+                            <label asp-for="Unit">Unit</label>
                             <span asp-validation-for="Unit" class="text-danger"></span>
                         </div>
                     </div>
@@ -50,20 +80,13 @@
                             <span asp-validation-for="UnitCost" class="text-danger"></span>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                         <div class="form-floating">
-                            <input asp-for="ReorderLevel" class="form-control" placeholder="Reorder Level" />
-                            <label asp-for="ReorderLevel">Reorder Level</label>
-                            <span asp-validation-for="ReorderLevel" class="text-danger"></span>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">
                         <div class="form-floating">
                             <input asp-for="DeliveryFee" class="form-control" placeholder="Delivery Fee" />
-                            <label asp-for="DeliveryFee">Delivery Fee (Default)</label>
+                            <label asp-for="DeliveryFee">Delivery Fee (Default) <span class="text-muted">(Optional)</span></label>
                             <span asp-validation-for="DeliveryFee" class="text-danger"></span>
                         </div>
                     </div>

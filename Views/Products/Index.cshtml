@@ -32,8 +32,7 @@
                             <th>Category</th>
                             <th>Unit</th>
                             <th>Cost</th>
-                            <th>Delivery Fee</th>
-                            <th>Reorder Level</th>
+                            <th>Delivery Fee <span class="text-muted small">(Optional)</span></th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -48,12 +47,6 @@
                                 <td>@item.Unit</td>
                                 <td>@item.UnitCost.ToString("N2")</td>
                                 <td>@item.DeliveryFee.ToString("N2")</td>
-                                <td>
-                                    @if(item.ReorderLevel > 0) 
-                                    {
-                                        <span class="badge bg-warning text-dark">Lvl: @item.ReorderLevel</span> 
-                                    }
-                                </td>
                                 <td>
                                     @if (item.IsActive)
                                     {

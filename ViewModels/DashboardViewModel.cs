@@ -6,7 +6,9 @@ public class DashboardViewModel
     public decimal SalesWeekly { get; set; }
     public decimal SalesMonthly { get; set; }
     public decimal SalesYearly { get; set; }
+    public decimal ExpenseMonthly { get; set; }
     public int ItemsSoldToday { get; set; }
+    public List<CategoryValuePoint> ItemsSoldTodayByUnit { get; set; } = new();
     public decimal ExpenseToday { get; set; }
     public decimal TotalExpenseAllTime { get; set; }
     public decimal TotalSalesAllTime { get; set; }

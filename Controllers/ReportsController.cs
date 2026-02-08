@@ -101,7 +101,7 @@ public class ReportsController : Controller
             {
                 Product = p,
                 CurrentStock = movement, // Assuming stock started at 0 or adjustments included
-                Status = movement <= p.ReorderLevel ? "Low Stock" : "Good"
+                Status = movement <= 0 ? "Out of Stock" : "In Stock"
             };
         }).ToList();
 

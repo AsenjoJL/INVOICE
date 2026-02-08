@@ -74,16 +74,90 @@
             </div>
         </div>
 
-         <!-- Items Sold Today -->
+        <!-- Items Sold Today -->
         <div class="col-xl-2 col-md-4 col-sm-6">
             <div class="card h-100 border-left-info shadow-sm kpi-card hover-lift">
                  <div class="kpi-stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="kpi-label text-info">Items (Today)</div>
-                            <div class="kpi-value">@Model.ItemsSoldToday.ToString("N0")</div>
+                            @if (Model.ItemsSoldTodayByUnit != null && Model.ItemsSoldTodayByUnit.Any())
+                            {
+                                <div class="small text-muted mt-1 d-flex flex-wrap gap-2">
+                                    @foreach (var unit in Model.ItemsSoldTodayByUnit)
+                                    {
+                                        <span class="badge bg-light text-dark border">
+                                            @unit.Category: @unit.Value.ToString("N0")
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="kpi-value">0</div>
+                            }
                         </div>
                          <div class="stat-icon text-info"><i class="bi bi-box2"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense Today -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card h-100 border-left-danger shadow-sm kpi-card hover-lift">
+                <div class="kpi-stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-label text-danger">Expense Today</div>
+                            <div class="kpi-value">₱@Model.ExpenseToday.ToString("N0")</div>
+                        </div>
+                        <div class="stat-icon text-danger"><i class="bi bi-receipt-cutoff"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Expense -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card h-100 border-left-secondary shadow-sm kpi-card hover-lift">
+                <div class="kpi-stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-label text-secondary">Total Expense</div>
+                            <div class="kpi-value">₱@Model.TotalExpenseAllTime.ToString("N0")</div>
+                        </div>
+                        <div class="stat-icon text-secondary"><i class="bi bi-cash-coin"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales This Month -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card h-100 border-left-primary shadow-sm kpi-card hover-lift">
+                <div class="kpi-stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-label text-primary">Sales (Month)</div>
+                            <div class="kpi-value">₱@Model.SalesMonthly.ToString("N0")</div>
+                        </div>
+                        <div class="stat-icon text-primary"><i class="bi bi-calendar-month"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense This Month -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card h-100 border-left-danger shadow-sm kpi-card hover-lift">
+                <div class="kpi-stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-label text-danger">Expense (Month)</div>
+                            <div class="kpi-value">₱@Model.ExpenseMonthly.ToString("N0")</div>
+                        </div>
+                        <div class="stat-icon text-danger"><i class="bi bi-calendar2-minus"></i></div>
                     </div>
                 </div>
             </div>

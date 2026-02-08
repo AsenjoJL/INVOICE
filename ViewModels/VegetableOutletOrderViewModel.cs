@@ -6,6 +6,8 @@ public class VegetableOutletOrderViewModel
 {
     public DateTime Date { get; set; } = DateTime.Today;
     
+    public bool ShowAllOutlets { get; set; }
+
     // The currently selected outlet
     public int SelectedCustomerId { get; set; }
     

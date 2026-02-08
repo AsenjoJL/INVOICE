@@ -73,7 +73,6 @@ public static class DbInitializer
                 Unit = "pcs/kg", // Default unit 
                 UnitCost = 0,
                 IsActive = true,
-                ReorderLevel = 10,
                 Category = "General"
             }).ToList();
 

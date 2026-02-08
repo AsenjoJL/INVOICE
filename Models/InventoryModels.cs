@@ -14,8 +14,6 @@ public class Supply
     [StringLength(20)]
     public string Unit { get; set; } = "pc";
 
-    public int ReorderLevel { get; set; } = 5;
-
     public bool IsActive { get; set; } = true;
 }
 

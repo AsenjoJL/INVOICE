@@ -46,7 +46,7 @@ public class WeeklyPricesController : Controller
                 ModelState.AddModelError($"Items[{i}].Cost", "Cost cannot be negative.");
             if (model.Items[i].Markup < 0)
                 ModelState.AddModelError($"Items[{i}].Markup", "Markup cannot be negative.");
-            if (model.Items[i].DeliveryFee < 0)
+            if (model.Items[i].DeliveryFee.HasValue && model.Items[i].DeliveryFee.Value < 0)
                 ModelState.AddModelError($"Items[{i}].DeliveryFee", "Delivery fee cannot be negative.");
         }
 
@@ -68,7 +68,24 @@ public class WeeklyPricesController : Controller
                         w.EffectiveFrom <= model.TargetDate && w.EffectiveTo >= model.TargetDate)
             .ToListAsync();
 
-        var existingMap = existing.ToDictionary(w => w.ProductId, w => w);
+        var existingGroups = existing
+            .GroupBy(w => w.ProductId)
+            .ToList();
+
+        var existingMap = existingGroups.ToDictionary(
+            g => g.Key,
+            g => g.OrderByDescending(w => w.EffectiveFrom)
+                  .ThenByDescending(w => w.Id)
+                  .First());
+
+        var duplicateWeeklyPrices = existingGroups
+            .SelectMany(g => g.OrderByDescending(w => w.EffectiveFrom).ThenByDescending(w => w.Id).Skip(1))
+            .ToList();
+
+        if (duplicateWeeklyPrices.Count > 0)
+        {
+            _context.WeeklyPrices.RemoveRange(duplicateWeeklyPrices);
+        }
 
         foreach (var item in model.Items)
         {
@@ -80,7 +97,7 @@ public class WeeklyPricesController : Controller
 
             decimal cost = item.Cost;
             decimal markup = item.Markup;
-            decimal deliveryFee = item.DeliveryFee;
+            decimal deliveryFee = item.DeliveryFee ?? masterDeliveryFee;
 
             if (model.ApplyToMasterCost && masterCost != cost)
             {
@@ -95,7 +112,7 @@ public class WeeklyPricesController : Controller
             }
 
             decimal? deliveryFeeOverride = null;
-            if (deliveryFee != masterDeliveryFee)
+            if (item.DeliveryFee.HasValue && deliveryFee != masterDeliveryFee)
             {
                 deliveryFeeOverride = deliveryFee;
             }
@@ -368,9 +385,17 @@ public class WeeklyPricesController : Controller
 
         var weeklyMap = weeklyPrices
             .GroupBy(w => w.ProductId)
-            .ToDictionary(g => g.Key, g => g.First());
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
 
-        var postedMap = postedItems?.ToDictionary(i => i.ProductId) ?? new Dictionary<int, PriceVersusItem>();
+        var postedMap = postedItems?
+            .Where(i => i.ProductId > 0)
+            .GroupBy(i => i.ProductId)
+            .ToDictionary(g => g.Key, g => g.Last())
+            ?? new Dictionary<int, PriceVersusItem>();
 
         var items = new List<PriceVersusItem>(products.Count);
         foreach (var p in products)
@@ -402,7 +427,8 @@ public class WeeklyPricesController : Controller
             {
                 cost = posted.Cost;
                 markup = posted.Markup;
-                deliveryFee = posted.DeliveryFee;
+                if (posted.DeliveryFee.HasValue)
+                    deliveryFee = posted.DeliveryFee.Value;
             }
 
             items.Add(new PriceVersusItem
