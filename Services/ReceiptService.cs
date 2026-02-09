@@ -68,6 +68,6 @@ public class ReceiptService : IReceiptService
         sequence.LastNumber++;
         await _context.SaveChangesAsync();
 
-        return $"DR-{year}-{sequence.LastNumber:D6}";
+        return sequence.LastNumber.ToString();
     }
 }

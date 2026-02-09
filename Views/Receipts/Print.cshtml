@@ -195,7 +195,7 @@
         <div class="meta-row">
             <div class="dr-title">DELIVERY RECEIPT</div>
             <div class="dr-no-date">
-                <span style="font-weight: bold; margin-right: 5px;">No.</span> <span class="dr-number">@Model.ReceiptNumber.Replace("DR-", "").Substring(Math.Max(0, Model.ReceiptNumber.Length - 9))</span><br/>
+                <span style="font-weight: bold; margin-right: 5px;">No.</span> <span class="dr-number">@Model.ReceiptNumber</span><br/>
                 <span style="font-weight: bold; margin-right: 5px;">Date:</span> <span style="font-family: 'Courier New'; font-weight: bold; text-decoration: underline;">@Model.Date.ToString("MM/dd/yy")</span>
             </div>
         </div>

@@ -9,7 +9,7 @@ public class Receipt
 
     [Required]
     [StringLength(20)]
-    public string ReceiptNumber { get; set; } = string.Empty; // DR-2026-000001
+    public string ReceiptNumber { get; set; } = string.Empty; // 5001
 
     public DateTime Date { get; set; } = DateTime.Now;
 
