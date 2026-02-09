@@ -688,11 +688,16 @@ a {
 
 .content-area {
   padding: 1.5rem;
-  flex: 1;
+  flex: 1 0 auto;
 }
 
 .footer {
   margin-top: auto;
+  flex-shrink: 0;
+}
+
+footer.footer {
+  position: static !important;
 }
 
 @media (min-width: 992px) {
