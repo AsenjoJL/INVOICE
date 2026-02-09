@@ -164,4 +164,19 @@ public class ReceiptsController : Controller
 
         return View(receipt);
     }
+
+    // GET: Receipts/Details/5
+    public async Task<IActionResult> Details(int? id)
+    {
+        if (id == null) return NotFound();
+
+        var receipt = await _context.Receipts
+            .Include(r => r.Lines)
+            .Include(r => r.Payments)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (receipt == null) return NotFound();
+
+        return View(receipt);
+    }
 }

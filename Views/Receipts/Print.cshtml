@@ -159,10 +159,16 @@
         }
 
         @@media print {
+            @@page { size: letter; margin: 6mm; }
             body { padding: 0; margin: 0; }
             .receipt-container { width: 100%; max-width: 100%; }
             .no-print { display: none !important; }
             .items-table th { -webkit-print-color-adjust: exact; }
+            .items-table th, .items-table td { padding: 3px 6px; }
+            .items-table td { height: 18px; }
+            .empty-row { display: none; }
+            .footer-note { margin-top: 6px; font-size: 12px; }
+            .received-line { margin-top: 16px; }
         }
     </style>
 </head>
@@ -243,7 +249,7 @@
                 @* Fill empty rows *@
                 @for (int i = count; i < maxRows; i++)
                 {
-                    <tr>
+                    <tr class="empty-row">
                         <td class="col-qty">&nbsp;</td>
                         <td class="col-unit">&nbsp;</td>
                         <td class="col-part">&nbsp;</td>

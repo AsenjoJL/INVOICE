@@ -1,0 +1,82 @@
+@model HazelInvoice.Models.Receipt
+
+@{
+    ViewData["Title"] = "Receipt Details";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h1 class="mb-0">Receipt @Model.ReceiptNumber</h1>
+            <div class="text-muted small">Created @Model.Date.ToString("MMM dd, yyyy h:mm tt")</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Print" asp-route-id="@Model.Id" class="btn btn-outline-dark">
+                <i class="bi bi-printer"></i> Print
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="text-muted small">Customer</div>
+                    <div class="fw-bold">@Model.CustomerName</div>
+                    <div class="text-muted small">@Model.CustomerAddress</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Contact</div>
+                    <div class="fw-bold">@Model.ContactNumber</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Status</div>
+                    <span class="badge bg-dark">@Model.Status</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-center">Unit</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in Model.Lines)
+                        {
+                            <tr>
+                                <td class="fw-bold">@line.ItemName</td>
+                                <td class="text-center">@line.Quantity</td>
+                                <td class="text-center">@line.Unit</td>
+                                <td class="text-end">@line.Price.ToString("N2")</td>
+                                <td class="text-end fw-bold">@line.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Total</td>
+                            <td class="text-end fw-bold text-primary">@Model.TotalAmount.ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Paid</td>
+                            <td class="text-end fw-bold text-success">@Model.PaidAmount.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
