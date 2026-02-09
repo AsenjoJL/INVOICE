@@ -1,6 +1,8 @@
 @model HazelInvoice.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
+    ViewData["NotePurpose"] = "Quick overview of sales, expenses, and performance for today.";
+    ViewData["NoteInstructions"] = "Use the quick actions and charts to drill into orders, price setup, or reports.";
 }
 
 <div class="container-fluid pb-5 dashboard-shell">
@@ -26,6 +28,8 @@
             </div>
         </div>
     </div>
+
+    <partial name="_PageNote" />
 
     <!-- KPI ROW -->
     <div class="row g-3 mb-4 reveal" style="animation-delay: 120ms;">

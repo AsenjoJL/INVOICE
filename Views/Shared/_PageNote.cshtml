@@ -1,0 +1,25 @@
+@{
+    var purpose = ViewData["NotePurpose"] as string;
+    var instructions = ViewData["NoteInstructions"] as string;
+}
+
+@if (!string.IsNullOrWhiteSpace(purpose) || !string.IsNullOrWhiteSpace(instructions))
+{
+    <div class="page-note">
+        <div class="note-icon">
+            <i class="bi bi-info-circle-fill"></i>
+        </div>
+        <div>
+            @if (!string.IsNullOrWhiteSpace(purpose))
+            {
+                <div class="note-title">Purpose</div>
+                <div class="note-text">@purpose</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(instructions))
+            {
+                <div class="note-title mt-2">Instructions</div>
+                <div class="note-text">@instructions</div>
+            }
+        </div>
+    </div>
+}

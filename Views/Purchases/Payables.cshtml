@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Payables";
+    ViewData["NotePurpose"] = "Shows suppliers with unpaid or partial balances.";
+    ViewData["NoteInstructions"] = "Use this list to follow up and record payments in Purchases.";
 }
 
 <div class="container-fluid p-4">
@@ -15,6 +17,8 @@
             <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Purchase</a>
         </div>
     </div>
+
+    <partial name="_PageNote" />
 
     <form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-3">
         <div>

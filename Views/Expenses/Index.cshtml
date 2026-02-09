@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Expenses";
+    ViewData["NotePurpose"] = "Track operating expenses by category and vendor.";
+    ViewData["NoteInstructions"] = "Record new expenses to keep daily and monthly totals accurate.";
 }
 
 <div class="container-fluid p-4">
@@ -9,6 +11,8 @@
         <h1>Expenses</h1>
         <a asp-action="Create" class="btn btn-danger"><i class="bi bi-minus-circle"></i> Record Expense</a>
     </div>
+
+    <partial name="_PageNote" />
 
     <div class="card shadow border-0">
         <div class="card-body p-0">

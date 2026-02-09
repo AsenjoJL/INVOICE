@@ -3,6 +3,8 @@
 
 @{
     ViewData["Title"] = "New Receipt";
+    ViewData["NotePurpose"] = "Create a new sale receipt and capture items sold.";
+    ViewData["NoteInstructions"] = "Select the outlet, add items, then Save Only or Save & Print.";
     var products = ViewBag.Products as List<HazelInvoice.Models.Product> ?? new List<HazelInvoice.Models.Product>();
     var services = ViewBag.Services as List<HazelInvoice.Models.Service> ?? new List<HazelInvoice.Models.Service>();
     var priceList = ViewBag.PriceList as List<HazelInvoice.Models.WeeklyPrice> ?? new List<HazelInvoice.Models.WeeklyPrice>();
@@ -18,6 +20,8 @@
 }
 
 <div class="container-fluid p-4">
+    <partial name="_PageNote" />
+
     <div class="card shadow-lg border-0 rounded-4">
         <div class="card-header bg-primary text-white p-3 rounded-top-4">
             <h4 class="mb-0"><i class="bi bi-receipt"></i> Create New Receipt</h4>

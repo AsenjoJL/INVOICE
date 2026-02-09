@@ -1,6 +1,8 @@
 @model HazelInvoice.ViewModels.ProfitSummaryViewModel
 @{
     ViewData["Title"] = "Profit & Sales Summary";
+    ViewData["NotePurpose"] = "Summarizes sales, fees, deductions, capital, and profit distribution.";
+    ViewData["NoteInstructions"] = "Adjust the date range and fee inputs, then use the buttons to add deductions, capital, or purchases.";
 }
 
 <style>
@@ -195,6 +197,8 @@
             <a href="javascript:window.print()" class="btn btn-dark btn-sm action-btn"><i class="bi bi-printer"></i> Print</a>
         </div>
     </div>
+
+    <partial name="_PageNote" />
 
     <!-- Filters (Hidden on Print) -->
     <form method="get" class="card p-3 mb-4 shadow-sm border-0 d-print-none">

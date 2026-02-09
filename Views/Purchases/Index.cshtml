@@ -3,6 +3,8 @@
 
 @{
     ViewData["Title"] = "Purchases";
+    ViewData["NotePurpose"] = "Track supplier purchases and payment status.";
+    ViewData["NoteInstructions"] = "Filter by date/status, then open a purchase to review or mark as paid.";
     var statuses = new[] { "All", "Unpaid", "Partial", "Paid" };
 }
 
@@ -17,6 +19,8 @@
             <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Purchase</a>
         </div>
     </div>
+
+    <partial name="_PageNote" />
 
     <form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-3">
         <div>

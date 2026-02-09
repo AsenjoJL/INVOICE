@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Products";
+    ViewData["NotePurpose"] = "Manage the product catalog used in orders, price setup, and purchases.";
+    ViewData["NoteInstructions"] = "Add or edit products; inactive items are hidden from orders.";
 }
 
 <div class="container-fluid p-4">
@@ -16,6 +18,8 @@
             <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add New Product</a>
         </div>
     </div>
+
+    <partial name="_PageNote" />
 
     <div class="card shadow border-0">
         @if (TempData["Message"] != null)
@@ -32,7 +36,6 @@
                             <th>Category</th>
                             <th>Unit</th>
                             <th>Cost</th>
-                            <th>Delivery Fee <span class="text-muted small">(Optional)</span></th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -46,7 +49,6 @@
                                 <td>@item.Category</td>
                                 <td>@item.Unit</td>
                                 <td>@item.UnitCost.ToString("N2")</td>
-                                <td>@item.DeliveryFee.ToString("N2")</td>
                                 <td>
                                     @if (item.IsActive)
                                     {

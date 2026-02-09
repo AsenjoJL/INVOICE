@@ -21,6 +21,7 @@ public class PriceVersusItem
     
     public decimal Cost { get; set; } // Original / UnitCost
     public decimal Markup { get; set; }
+    public decimal BasePrice { get; set; }
     public decimal? DeliveryFee { get; set; }
 
     public decimal MasterCost { get; set; }

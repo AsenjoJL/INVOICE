@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Receipts";
+    ViewData["NotePurpose"] = "View all receipts and delivery records with payment status.";
+    ViewData["NoteInstructions"] = "Use View or Print for details, or click New Receipt to create a sale.";
     
     string GetRowColor(HazelInvoice.Models.PaymentStatus status)
     {
@@ -27,6 +29,8 @@
         <h1>@(ViewData["TitleHeader"] ?? "Receipts & Deliveries")</h1>
         <a asp-action="Create" class="btn btn-primary btn-lg"><i class="bi bi-plus-lg"></i> New Receipt</a>
     </div>
+
+    <partial name="_PageNote" />
 
     <div class="card shadow border-0">
         <div class="card-body p-0">

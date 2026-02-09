@@ -44,8 +44,10 @@ public class WeeklyPricesController : Controller
         {
             if (model.Items[i].Cost < 0)
                 ModelState.AddModelError($"Items[{i}].Cost", "Cost cannot be negative.");
-            if (model.Items[i].Markup < 0)
-                ModelState.AddModelError($"Items[{i}].Markup", "Markup cannot be negative.");
+            if (model.Items[i].BasePrice < 0)
+                ModelState.AddModelError($"Items[{i}].BasePrice", "Base price cannot be negative.");
+            if (model.Items[i].BasePrice < model.Items[i].Cost)
+                ModelState.AddModelError($"Items[{i}].BasePrice", "Base price cannot be lower than cost.");
             if (model.Items[i].DeliveryFee.HasValue && model.Items[i].DeliveryFee.Value < 0)
                 ModelState.AddModelError($"Items[{i}].DeliveryFee", "Delivery fee cannot be negative.");
         }
@@ -96,7 +98,7 @@ public class WeeklyPricesController : Controller
             var masterDeliveryFee = prod.DeliveryFee;
 
             decimal cost = item.Cost;
-            decimal markup = item.Markup;
+            decimal markup = item.BasePrice - cost;
             decimal deliveryFee = item.DeliveryFee ?? masterDeliveryFee;
 
             if (model.ApplyToMasterCost && masterCost != cost)
@@ -426,11 +428,12 @@ public class WeeklyPricesController : Controller
             if (postedMap.TryGetValue(p.Id, out var posted))
             {
                 cost = posted.Cost;
-                markup = posted.Markup;
+                markup = posted.BasePrice - posted.Cost;
                 if (posted.DeliveryFee.HasValue)
                     deliveryFee = posted.DeliveryFee.Value;
             }
 
+            var basePrice = cost + markup;
             items.Add(new PriceVersusItem
             {
                 ProductId = p.Id,
@@ -438,6 +441,7 @@ public class WeeklyPricesController : Controller
                 Unit = p.Unit,
                 Cost = cost,
                 Markup = markup,
+                BasePrice = basePrice,
                 DeliveryFee = deliveryFee,
                 MasterCost = masterCost,
                 MasterMarkup = masterMarkup,

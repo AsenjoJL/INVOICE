@@ -35,6 +35,45 @@ html, body {
   height: 100%;
 }
 
+.page-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 0.9rem;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 1.5rem;
+}
+
+.page-note .note-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-tight);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.page-note .note-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.page-note .note-text {
+  font-size: 0.92rem;
+  color: var(--slate);
+}
+
 /* Dashboard Enhancements */
 .dashboard-shell {
   display: flex;
