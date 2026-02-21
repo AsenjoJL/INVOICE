@@ -49,11 +49,16 @@
                 <a class="@NavClass("Purchases", "Index")" asp-area="" asp-controller="Purchases" asp-action="Index"><i class="bi bi-cart-check"></i> Purchases</a>
                 <a class="@NavClass("Purchases", "Create")" asp-area="" asp-controller="Purchases" asp-action="Create"><i class="bi bi-cart-plus"></i> New Purchase</a>
                 <a class="@NavClass("Purchases", "Payables")" asp-area="" asp-controller="Purchases" asp-action="Payables"><i class="bi bi-wallet2"></i> Payables</a>
+                <a class="@NavClass("Laborers", "Index")" asp-area="" asp-controller="Laborers" asp-action="Index"><i class="bi bi-people"></i> Laborers</a>
+                <a class="@NavClass("Attendance", "Daily")" asp-area="" asp-controller="Attendance" asp-action="Daily"><i class="bi bi-calendar-check"></i> Attendance</a>
+                <a class="@NavClass("Payroll", "Index")" asp-area="" asp-controller="Payroll" asp-action="Index"><i class="bi bi-cash-stack"></i> Payroll</a>
 
                 <div class="sidebar-section-title">Reports</div>
                 <a class="@NavClass("Reports", "IncomeStatement")" asp-controller="Reports" asp-action="IncomeStatement"><i class="bi bi-file-earmark-text"></i> Income Statement</a>
                 <a class="@NavClass("Reports", "Inventory")" asp-controller="Reports" asp-action="Inventory"><i class="bi bi-clipboard-data"></i> Inventory Status</a>
                 <a class="@NavClass("ProfitReport", "Index")" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Profit Summary</a>
+                <a class="@NavClass("PayrollReports", "Unpaid")" asp-controller="PayrollReports" asp-action="Unpaid"><i class="bi bi-exclamation-circle"></i> Unpaid Labor</a>
+                <a class="@NavClass("PayrollReports", "LaborCost")" asp-controller="PayrollReports" asp-action="LaborCost"><i class="bi bi-graph-down-arrow"></i> Labor Cost</a>
             </nav>
 
             <div class="sidebar-footer">

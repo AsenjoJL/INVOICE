@@ -2,49 +2,63 @@
 
 @{
     ViewData["Title"] = "Receipt Details";
+
+    string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
+    {
+        HazelInvoice.Models.PaymentStatus.Paid => "status-pill status-paid",
+        HazelInvoice.Models.PaymentStatus.Partial => "status-pill status-partial",
+        HazelInvoice.Models.PaymentStatus.Unpaid => "status-pill status-unpaid",
+        HazelInvoice.Models.PaymentStatus.Void => "status-pill status-void",
+        _ => "status-pill"
+    };
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="container-fluid p-4 invoice-ui">
+    <div class="invoice-hero">
         <div>
-            <h1 class="mb-0">Receipt @Model.ReceiptNumber</h1>
-            <div class="text-muted small">Created @Model.Date.ToString("MMM dd, yyyy h:mm tt")</div>
+            <div class="invoice-kicker"><i class="bi bi-receipt"></i> Receipt Details</div>
+            <h1 class="invoice-title">Receipt @Model.ReceiptNumber</h1>
+            <p class="invoice-sub">Created @Model.Date.ToString("MMM dd, yyyy h:mm tt")</p>
         </div>
-        <div class="d-flex gap-2">
-            <a asp-action="Print" asp-route-id="@Model.Id" class="btn btn-outline-dark">
-                <i class="bi bi-printer"></i> Print
-            </a>
-            <a asp-action="Index" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back
-            </a>
+        <div class="invoice-actions">
+            <a asp-action="Print" asp-route-id="@Model.Id" class="invoice-btn invoice-btn-primary"><i class="bi bi-printer"></i> Print</a>
+            <a asp-action="Index" class="invoice-btn invoice-btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
         </div>
     </div>
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
+    <div class="invoice-card mb-3">
+        <div class="invoice-card-header">
+            <h6 class="invoice-card-title">Customer Info</h6>
+            <span class="@StatusClass(Model.Status)">@Model.Status</span>
+        </div>
+        <div class="invoice-card-body">
             <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="text-muted small">Customer</div>
+                <div class="col-md-4 invoice-field">
+                    <div class="form-label">Customer</div>
                     <div class="fw-bold">@Model.CustomerName</div>
                     <div class="text-muted small">@Model.CustomerAddress</div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-muted small">Contact</div>
+                <div class="col-md-4 invoice-field">
+                    <div class="form-label">Contact</div>
                     <div class="fw-bold">@Model.ContactNumber</div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-muted small">Status</div>
-                    <span class="badge bg-dark">@Model.Status</span>
+                <div class="col-md-4 invoice-field">
+                    <div class="form-label">Receipt Type</div>
+                    <div class="fw-bold">@Model.Type</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
+    <div class="invoice-card">
+        <div class="invoice-card-header">
+            <h6 class="invoice-card-title">Line Items</h6>
+            <span class="invoice-tag"><i class="bi bi-box-seam"></i> @Model.Lines.Count Items</span>
+        </div>
+        <div class="invoice-card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="invoice-table mb-0">
+                    <thead>
                         <tr>
                             <th>Item</th>
                             <th class="text-center">Qty</th>
@@ -68,11 +82,11 @@
                     <tfoot>
                         <tr>
                             <td colspan="4" class="text-end fw-bold">Total</td>
-                            <td class="text-end fw-bold text-primary">@Model.TotalAmount.ToString("N2")</td>
+                            <td class="text-end fw-bold invoice-summary-total">₱@Model.TotalAmount.ToString("N2")</td>
                         </tr>
                         <tr>
                             <td colspan="4" class="text-end fw-bold">Paid</td>
-                            <td class="text-end fw-bold text-success">@Model.PaidAmount.ToString("N2")</td>
+                            <td class="text-end fw-bold text-success">₱@Model.PaidAmount.ToString("N2")</td>
                         </tr>
                     </tfoot>
                 </table>

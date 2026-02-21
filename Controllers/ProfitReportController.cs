@@ -70,6 +70,11 @@ public class ProfitReportController : Controller
             .Where(c => c.Date >= startDateOnly && c.Date < endExclusive)
             .ToListAsync();
 
+        var expenses = await _context.Expenses
+            .AsNoTracking()
+            .Where(e => e.Date >= startDateOnly && e.Date < endExclusive)
+            .ToListAsync();
+
         // 3. Opening Balances & Partner Names
         var balances = await _context.PartnerBalanceConfigs
             .AsNoTracking()
@@ -126,8 +131,11 @@ public class ProfitReportController : Controller
         vm.CapitalFunds = capitals;
         vm.TotalCapitalFund = capitals.Sum(c => c.Amount);
 
-        // Net Profit = Gross - Deductions - Capital Funds (Retained)
-        vm.NetProfit = vm.TotalGrossProfit - vm.TotalDeductions - vm.TotalCapitalFund;
+        vm.Expenses = expenses;
+        vm.TotalExpenses = expenses.Sum(e => e.Amount);
+
+        // Net Profit = Gross - Deductions - Expenses - Capital Funds (Retained)
+        vm.NetProfit = vm.TotalGrossProfit - vm.TotalDeductions - vm.TotalExpenses - vm.TotalCapitalFund;
 
         // Profit Sharing
         vm.Partner1ShareAmount = vm.NetProfit * (vm.Partner1SharePercent / 100m);
@@ -154,6 +162,13 @@ public class ProfitReportController : Controller
             Date = d.Date, 
             Description = d.Description, 
             Amount = -d.Amount 
+        }));
+
+        // Add Expenses (Outflow)
+        ledgerItems.AddRange(expenses.Select(e => new LedgerRow {
+            Date = e.Date,
+            Description = $"Expense: {e.Category} {e.Description}".Trim(),
+            Amount = -e.Amount
         }));
         
         // Add Purchases? (If paid from fund). Usually yes.

@@ -1,0 +1,102 @@
+@using HazelInvoice.Models
+@model IEnumerable<HazelInvoice.Models.PayrollPeriod>
+
+@{
+    ViewData["Title"] = "Payroll";
+    ViewData["NotePurpose"] = "Review payroll periods, balances, and payment status.";
+    ViewData["NoteInstructions"] = "Use Generate Payroll to create new periods from attendance records.";
+    var statusValue = ViewData["Status"]?.ToString() ?? "";
+    var startDate = ViewData["StartDate"] as DateTime?;
+    var endDate = ViewData["EndDate"] as DateTime?;
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Payroll</h1>
+        <a asp-action="Generate" class="btn btn-primary"><i class="bi bi-magic"></i> Generate Payroll</a>
+    </div>
+
+    <partial name="_PageNote" />
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-2">
+            <label class="form-label small fw-bold">Start Date</label>
+            <input type="date" name="startDate" class="form-control" value="@(startDate?.ToString("yyyy-MM-dd") ?? "")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold">End Date</label>
+            <input type="date" name="endDate" class="form-control" value="@(endDate?.ToString("yyyy-MM-dd") ?? "")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold">Status</label>
+            <select name="status" class="form-select">
+                <option value="">All</option>
+                @foreach (PaymentStatus s in Enum.GetValues(typeof(PaymentStatus)))
+                {
+                    <option value="@s" selected="@(statusValue == s.ToString())">@s</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+        </div>
+    </form>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Laborer</th>
+                            <th>Period</th>
+                            <th>Total Wage</th>
+                            <th>Paid</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var period in Model)
+                        {
+                            var balance = period.TotalWage - period.PaidAmount;
+                            <tr>
+                                <td class="fw-bold">@period.Laborer?.FullName</td>
+                                <td>@period.PeriodStart.ToString("MMM dd, yyyy") - @period.PeriodEnd.ToString("MMM dd, yyyy")</td>
+                                <td>₱@period.TotalWage.ToString("N2")</td>
+                                <td>₱@period.PaidAmount.ToString("N2")</td>
+                                <td>₱@balance.ToString("N2")</td>
+                                <td>
+                                    @if (period.Status == PaymentStatus.Paid)
+                                    {
+                                        <span class="badge bg-success">Paid</span>
+                                    }
+                                    else if (period.Status == PaymentStatus.Partial)
+                                    {
+                                        <span class="badge bg-warning text-dark">Partial</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Unpaid</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Details" asp-route-id="@period.Id" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">No payroll periods found.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

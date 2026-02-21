@@ -1,0 +1,96 @@
+@model IEnumerable<HazelInvoice.Models.Laborer>
+
+@{
+    ViewData["Title"] = "Laborers";
+    ViewData["NotePurpose"] = "Manage laborers and daily wage rates.";
+    ViewData["NoteInstructions"] = "Archive laborers instead of deleting to keep payroll history intact.";
+    var showArchived = (bool?)ViewData["ShowArchived"] ?? false;
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Laborers</h1>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Laborer</a>
+    </div>
+
+    <partial name="_PageNote" />
+
+    <form method="get" class="mb-3 d-flex align-items-center gap-2">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="showArchived" value="true" id="showArchived" @(showArchived ? "checked" : "") />
+            <label class="form-check-label" for="showArchived">Show Archived</label>
+        </div>
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Apply</button>
+    </form>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Daily Rate</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var laborer in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@laborer.FullName</td>
+                                <td>₱@laborer.DailyRate.ToString("N2")</td>
+                                <td>@laborer.Role</td>
+                                <td>
+                                    @if (laborer.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Archived</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@laborer.Id" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    @if (laborer.IsActive)
+                                    {
+                                        <form asp-action="Archive" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@laborer.Id" />
+                                            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger ms-1">
+                                                <i class="bi bi-archive"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Reactivate" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@laborer.Id" />
+                                            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                            <button type="submit" class="btn btn-sm btn-outline-success ms-1">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No laborers found.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

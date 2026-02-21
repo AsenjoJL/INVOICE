@@ -87,6 +87,7 @@
     .header-profit { border-left: 6px solid #16a34a; }
     .header-deduct { border-left: 6px solid #dc2626; }
     .header-capital { border-left: 6px solid #0ea5e9; }
+    .header-expense { border-left: 6px solid #f59e0b; }
     .header-ledger { border-left: 6px solid #475569; }
     .header-main { border-left: 6px solid #111827; }
 
@@ -386,6 +387,38 @@
                 </div>
             </div>
 
+            <!-- Row: Expenses -->
+            <div class="row g-0 mt-4">
+                <div class="col-12">
+                    <button class="section-header header-expense" type="button" data-bs-toggle="collapse" data-bs-target="#expenseSection">
+                        <span><i class="bi bi-receipt-cutoff me-2"></i> C2. Expenses</span>
+                        <span class="section-toggle"><i class="bi bi-chevron-down"></i></span>
+                    </button>
+                    <div id="expenseSection" class="collapse show excel-box">
+                        <table class="table-excel">
+                            <thead>
+                                <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var e in Model.Expenses) {
+                                    <tr>
+                                        <td>@e.Category @if(!string.IsNullOrEmpty(e.Description)){<span>- @e.Description</span>} <br><small class="text-muted">@e.Date.ToString("MM/dd")</small></td>
+                                        <td class="num-col val-neg">@e.Amount.ToString("N2")</td>
+                                    </tr>
+                                }
+                                @if(!Model.Expenses.Any()) { <tr><td colspan="2" class="text-center text-muted fst-italic py-3">No expenses recorded</td></tr>}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>TOTAL EXPENSES</td>
+                                    <td class="num-col val-neg">₱@Model.TotalExpenses.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- NET PROFIT CALCULATION BOX -->
             <div class="mt-4 p-3 bg-white border border-dark border-2 shadow-sm rounded-3">
                  <h5 class="fw-bold border-bottom pb-2 mb-3 text-center bg-light"><i class="bi bi-calculator"></i> Net Profit Calculation</h5>
@@ -398,6 +431,11 @@
                      <div class="col">
                          <div class="text-muted small fw-bold text-uppercase">Deductions</div>
                          <div class="fs-4 fw-bold val-neg">₱@Model.TotalDeductions.ToString("N0")</div>
+                     </div>
+                     <div class="col-auto fs-4 text-muted">-</div>
+                     <div class="col">
+                         <div class="text-muted small fw-bold text-uppercase">Expenses</div>
+                         <div class="fs-4 fw-bold val-neg">₱@Model.TotalExpenses.ToString("N0")</div>
                      </div>
                      <div class="col-auto fs-4 text-muted">-</div>
                      <div class="col">

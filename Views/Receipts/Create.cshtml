@@ -19,100 +19,131 @@
     }).ToList();
 }
 
-<div class="container-fluid p-4">
+<div class="container-fluid p-4 invoice-ui">
+    <div class="invoice-hero">
+        <div>
+            <div class="invoice-kicker"><i class="bi bi-pencil-square"></i> New Invoice</div>
+            <h1 class="invoice-title">Create Receipt</h1>
+            <p class="invoice-sub">Capture customer details, add items, and finalize totals in one place.</p>
+        </div>
+        <div class="invoice-actions">
+            <a asp-action="Index" class="invoice-btn invoice-btn-ghost"><i class="bi bi-arrow-left"></i> Back to List</a>
+        </div>
+    </div>
+
     <partial name="_PageNote" />
 
-    <div class="card shadow-lg border-0 rounded-4">
-        <div class="card-header bg-primary text-white p-3 rounded-top-4">
-            <h4 class="mb-0"><i class="bi bi-receipt"></i> Create New Receipt</h4>
-        </div>
-        <div class="card-body bg-light">
-            <form asp-action="Create" method="post" id="receiptForm">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <form asp-action="Create" method="post" id="receiptForm">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                <!-- Customer Info -->
-                <!-- Customer Info -->
-                <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <label asp-for="CustomerId" class="form-label fw-bold">Customer Name (Delivered To)</label>
-                        <select asp-for="CustomerId" class="form-select" required>
-                            <option value="">-- Select Customer --</option>
-                            @foreach (var customer in ViewBag.Customers as List<HazelInvoice.Models.Customer> ?? new List<HazelInvoice.Models.Customer>())
-                            {
-                                <option value="@customer.Id">@customer.Name</option>
-                            }
-                        </select>
-                        <span asp-validation-for="CustomerId" class="text-danger"></span>
+        <div class="invoice-grid">
+            <div class="d-flex flex-column gap-3">
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <h6 class="invoice-card-title">Customer Details</h6>
+                        <span class="invoice-tag"><i class="bi bi-truck"></i> Delivery</span>
                     </div>
-                    <div class="col-md-4">
-                        <label asp-for="ContactNumber" class="form-label fw-bold">Contact Number <span class="text-muted fw-normal">(Optional)</span></label>
-                        <input asp-for="ContactNumber" class="form-control" placeholder="Mobile / Tel" />
-                    </div>
-                    <div class="col-md-4">
-                        <!-- Defaulting to Delivery type, hidden from user -->
-                        <input type="hidden" asp-for="Type" id="orderType" value="Delivery" />
-                        <label asp-for="CustomerAddress" class="form-label fw-bold">Address <span class="text-muted fw-normal">(Optional)</span></label>
-                        <input asp-for="CustomerAddress" class="form-control" placeholder="Complete address" />
-                    </div>
-                    <!-- Removed separate Address row to compact layout since Type is hidden -->
-                </div>
-
-                <!-- Items Table -->
-                <div class="table-responsive mb-4 bg-white p-3 rounded-3 shadow-sm">
-                    <table class="table table-hover align-middle" id="itemsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 40%">Item / Particulars</th>
-                                <th style="width: 15%">Quantity</th>
-                                <th style="width: 10%">Unit</th>
-                                <th style="width: 15%">Price</th>
-                                <th style="width: 15%">Amount</th>
-                                <th style="width: 5%"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="itemsBody">
-                            <!-- Rows will be added here -->
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="6">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addItemRow()">
-                                        <i class="bi bi-plus-lg"></i> Add Item
-                                    </button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                <!-- Footer / Totals -->
-                <div class="row g-3 justify-content-end">
-                    <div class="col-md-4">
-                        <div class="card bg-white shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="fw-bold">Total Amount:</span>
-                                    <h4 class="text-primary mb-0" id="totalAmountDisplay">0.00</h4>
-                                    <input type="hidden" asp-for="TotalAmount" id="totalAmountInput" />
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-bold">Paid:</span>
-                                    <input asp-for="PaidAmount" class="form-control form-control-sm text-end w-50" value="0.00" />
-                                </div>
+                    <div class="invoice-card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4 invoice-field">
+                                <label asp-for="CustomerId" class="form-label">Customer Name (Delivered To)</label>
+                                <select asp-for="CustomerId" class="form-select" required>
+                                    <option value="">-- Select Customer --</option>
+                                    @foreach (var customer in ViewBag.Customers as List<HazelInvoice.Models.Customer> ?? new List<HazelInvoice.Models.Customer>())
+                                    {
+                                        <option value="@customer.Id">@customer.Name</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="CustomerId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4 invoice-field">
+                                <label asp-for="ContactNumber" class="form-label">Contact Number <span class="text-muted fw-normal">(Optional)</span></label>
+                                <input asp-for="ContactNumber" class="form-control" placeholder="Mobile / Tel" />
+                            </div>
+                            <div class="col-md-4 invoice-field">
+                                <input type="hidden" asp-for="Type" id="orderType" value="Delivery" />
+                                <label asp-for="CustomerAddress" class="form-label">Address <span class="text-muted fw-normal">(Optional)</span></label>
+                                <input asp-for="CustomerAddress" class="form-control" placeholder="Complete address" />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-4 text-end">
-                    <button type="submit" name="action" value="Save" class="btn btn-secondary me-2">Save Only</button>
-                    <button type="submit" name="action" value="Print" class="btn btn-success btn-lg">
-                        <i class="bi bi-printer"></i> Save & Print
-                    </button>
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <h6 class="invoice-card-title">Line Items</h6>
+                        <button type="button" class="invoice-btn invoice-btn-outline" onclick="addItemRow()">
+                            <i class="bi bi-plus-lg"></i> Add Item
+                        </button>
+                    </div>
+                    <div class="invoice-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="invoice-table mb-0" id="itemsTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%">Item / Particulars</th>
+                                        <th style="width: 15%">Quantity</th>
+                                        <th style="width: 10%">Unit</th>
+                                        <th style="width: 15%">Price</th>
+                                        <th style="width: 15%">Amount</th>
+                                        <th style="width: 5%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsBody">
+                                    <!-- Rows will be added here -->
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="6" class="text-end text-muted small">Use “Add Item” to insert new rows.</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-            </form>
+            </div>
+
+            <div class="invoice-summary">
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <h6 class="invoice-card-title">Invoice Totals</h6>
+                        <span class="invoice-tag"><i class="bi bi-cash-coin"></i> Summary</span>
+                    </div>
+                    <div class="invoice-card-body">
+                        <div class="invoice-summary-line">
+                            <span>Total Amount</span>
+                            <span class="invoice-summary-total" id="totalAmountDisplay">0.00</span>
+                            <input type="hidden" asp-for="TotalAmount" id="totalAmountInput" />
+                        </div>
+                        <div class="invoice-summary-line">
+                            <span>Paid</span>
+                            <input asp-for="PaidAmount" id="paidAmountInput" class="form-control form-control-sm text-end w-50" value="0.00" />
+                        </div>
+                        <div class="invoice-summary-line">
+                            <span>Balance</span>
+                            <span class="fw-bold text-danger" id="balanceAmountDisplay">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="invoice-card">
+                    <div class="invoice-card-header">
+                        <h6 class="invoice-card-title">Actions</h6>
+                    </div>
+                    <div class="invoice-card-body">
+                        <div class="invoice-actions-bar">
+                            <button type="submit" name="action" value="Save" class="invoice-btn invoice-btn-outline">
+                                <i class="bi bi-check2-circle"></i> Save Only
+                            </button>
+                            <button type="submit" name="action" value="Print" class="invoice-btn invoice-btn-solid">
+                                <i class="bi bi-printer"></i> Save & Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </form>
 </div>
 
 <script>
@@ -263,6 +294,14 @@
         });
         document.getElementById('totalAmountDisplay').innerText = total.toFixed(2);
         document.getElementById('totalAmountInput').value = total.toFixed(2);
+        updateBalance();
+    }
+
+    function updateBalance() {
+        var total = parseFloat(document.getElementById('totalAmountInput').value) || 0;
+        var paid = parseFloat(document.getElementById('paidAmountInput').value) || 0;
+        var balance = total - paid;
+        document.getElementById('balanceAmountDisplay').innerText = balance.toFixed(2);
     }
 
     function updatePrices() {
@@ -295,5 +334,12 @@
     
     window.onload = function() {
         addItemRow();
+        updateBalance();
     }
+
+    document.addEventListener('input', function (event) {
+        if (event.target && event.target.id === 'paidAmountInput') {
+            updateBalance();
+        }
+    });
 </script>

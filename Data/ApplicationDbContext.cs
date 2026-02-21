@@ -33,6 +33,10 @@ public class ApplicationDbContext : IdentityDbContext
     public DbSet<PartnerPurchase> PartnerPurchases { get; set; }
     public DbSet<PartnerBalanceConfig> PartnerBalanceConfigs { get; set; }
     public DbSet<PartnerCapital> PartnerCapitals { get; set; }
+    public DbSet<Laborer> Laborers { get; set; }
+    public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
+    public DbSet<PayrollPeriod> PayrollPeriods { get; set; }
+    public DbSet<PayrollPayment> PayrollPayments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -72,6 +76,14 @@ public class ApplicationDbContext : IdentityDbContext
         builder.Entity<WeeklyPrice>().HasIndex(w => new { w.ProductId, w.EffectiveFrom, w.EffectiveTo });
         builder.Entity<ReceiptSequence>().HasIndex(s => s.Year);
         builder.Entity<PurchaseSequence>().HasIndex(s => s.Year);
+
+        builder.Entity<AttendanceRecord>()
+            .HasIndex(a => new { a.LaborerId, a.WorkDate })
+            .IsUnique();
+        builder.Entity<AttendanceRecord>().HasIndex(a => a.WorkDate);
+        builder.Entity<PayrollPeriod>().HasIndex(p => p.LaborerId);
+        builder.Entity<PayrollPeriod>().HasIndex(p => p.PeriodStart);
+        builder.Entity<PayrollPeriod>().HasIndex(p => p.Status);
     }
 
 }

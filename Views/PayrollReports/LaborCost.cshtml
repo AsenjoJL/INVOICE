@@ -1,0 +1,81 @@
+@model HazelInvoice.ViewModels.LaborCostReportViewModel
+
+@{
+    ViewData["Title"] = "Labor Cost Report";
+    ViewData["NotePurpose"] = "Summarizes labor cost for a date range.";
+    ViewData["NoteInstructions"] = "Costs are based on attendance wages (rate × multiplier).";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Labor Cost Report</h1>
+        <a asp-controller="Payroll" asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Payroll</a>
+    </div>
+
+    <partial name="_PageNote" />
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">Start Date</label>
+            <input type="date" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">End Date</label>
+            <input type="date" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+        </div>
+    </form>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted small fw-bold">TOTAL LABOR COST</div>
+                    <div class="fs-4 fw-bold">₱@Model.TotalCost.ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="text-muted small fw-bold">DATE RANGE</div>
+                    <div class="fw-bold">@Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Laborer</th>
+                            <th>Total Days</th>
+                            <th>Total Wage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td class="fw-bold">@row.LaborerName</td>
+                                <td>@row.TotalDays</td>
+                                <td>₱@row.TotalWage.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (!Model.Rows.Any())
+                        {
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">No attendance records found for this range.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

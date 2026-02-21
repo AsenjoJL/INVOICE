@@ -21,3 +21,11 @@ public enum PaymentMethod
     BankTransfer,
     Check
 }
+
+public enum AttendanceStatus
+{
+    Present,
+    Absent,
+    Late,
+    HalfDay
+}

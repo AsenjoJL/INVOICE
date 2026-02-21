@@ -5,71 +5,70 @@
     ViewData["NotePurpose"] = "View all receipts and delivery records with payment status.";
     ViewData["NoteInstructions"] = "Use View or Print for details, or click New Receipt to create a sale.";
     
-    string GetRowColor(HazelInvoice.Models.PaymentStatus status)
+    string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
     {
-        return status switch
-        {
-            HazelInvoice.Models.PaymentStatus.Unpaid => "table-danger", // Redish
-            HazelInvoice.Models.PaymentStatus.Partial => "table-warning", // Yellowish
-            HazelInvoice.Models.PaymentStatus.Paid => "table-warning", // Bootstrap 'warning' is yellow/orange. User wants Orange. style="background-color: orange" maybe?
-            HazelInvoice.Models.PaymentStatus.Void => "table-secondary", // Gray
-            _ => ""
-        };
-    }
-
-    string GetCustomStyle(HazelInvoice.Models.PaymentStatus status)
-    {
-        if (status == HazelInvoice.Models.PaymentStatus.Paid) return "background-color: #fdcb6e !important;"; // Orange-ish
-        return "";
-    }
+        HazelInvoice.Models.PaymentStatus.Paid => "status-pill status-paid",
+        HazelInvoice.Models.PaymentStatus.Partial => "status-pill status-partial",
+        HazelInvoice.Models.PaymentStatus.Unpaid => "status-pill status-unpaid",
+        HazelInvoice.Models.PaymentStatus.Void => "status-pill status-void",
+        _ => "status-pill"
+    };
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>@(ViewData["TitleHeader"] ?? "Receipts & Deliveries")</h1>
-        <a asp-action="Create" class="btn btn-primary btn-lg"><i class="bi bi-plus-lg"></i> New Receipt</a>
+<div class="container-fluid p-4 invoice-ui">
+    <div class="invoice-hero">
+        <div>
+            <div class="invoice-kicker"><i class="bi bi-receipt"></i> Restaurant Invoices</div>
+            <h1 class="invoice-title">Receipts & Deliveries</h1>
+            <p class="invoice-sub">Track delivery receipts, payment status, and totals at a glance.</p>
+        </div>
+        <div class="invoice-actions">
+            <a asp-action="Create" class="invoice-btn invoice-btn-primary"><i class="bi bi-plus-lg"></i> New Receipt</a>
+            <a asp-controller="Orders" asp-action="ReceiptList" class="invoice-btn invoice-btn-ghost"><i class="bi bi-list-check"></i> Receipt List</a>
+        </div>
     </div>
 
     <partial name="_PageNote" />
 
-    <div class="card shadow border-0">
-        <div class="card-body p-0">
+    <div class="invoice-card">
+        <div class="invoice-card-header">
+            <h6 class="invoice-card-title">All Receipts</h6>
+            <span class="invoice-tag"><i class="bi bi-calendar3"></i> Latest</span>
+        </div>
+        <div class="invoice-card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="invoice-table mb-0">
+                    <thead>
                         <tr>
                             <th>Receipt #</th>
                             <th>Date</th>
                             <th>Customer</th>
                             <th>Type</th>
-                            <th>Total</th>
-                            <th>Paid</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Paid</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            var rowClass = GetRowColor(item.Status);
-                            var rowStyle = GetCustomStyle(item.Status);
-                            
-                            <tr class="@rowClass" style="@rowStyle">
+                            <tr>
                                 <td class="fw-bold">@item.ReceiptNumber</td>
                                 <td>@item.Date.ToString("MMM dd, yyyy")</td>
                                 <td>@item.CustomerName</td>
                                 <td>
-                                    <span class="badge bg-info text-dark">@item.Type</span>
+                                    <span class="invoice-tag">@item.Type</span>
                                 </td>
-                                <td class="fw-bold">@item.TotalAmount.ToString("N2")</td>
-                                <td>@item.PaidAmount.ToString("N2")</td>
+                                <td class="fw-bold text-end">@item.TotalAmount.ToString("N2")</td>
+                                <td class="text-end">@item.PaidAmount.ToString("N2")</td>
                                 <td>
-                                    <span class="badge bg-dark">@item.Status</span>
+                                    <span class="@StatusClass(item.Status)">@item.Status</span>
                                 </td>
-                                <td>
+                                <td class="text-end">
                                     <div class="btn-group">
-                                        <a asp-action="Print" asp-route-id="@item.Id" class="btn btn-sm btn-light" title="Print"><i class="bi bi-printer"></i></a>
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-light" title="View"><i class="bi bi-eye"></i></a>
+                                        <a asp-action="Print" asp-route-id="@item.Id" class="invoice-icon-btn" title="Print"><i class="bi bi-printer"></i></a>
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="invoice-icon-btn" title="View"><i class="bi bi-eye"></i></a>
                                     </div>
                                 </td>
                             </tr>

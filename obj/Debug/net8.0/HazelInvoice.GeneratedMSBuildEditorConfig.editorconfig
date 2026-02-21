@@ -36,6 +36,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = QXJlYXNcSWRlbnRpdHlcUGFnZXNcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Attendance/Daily.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXR0ZW5kYW5jZVxEYWlseS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Customers/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ3VzdG9tZXJzXENyZWF0ZS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -72,6 +76,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Laborers/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFib3JlcnNcQ3JlYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Laborers/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFib3JlcnNcRWRpdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Laborers/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFib3JlcnNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Orders/ReceiptList.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJzXFJlY2VpcHRMaXN0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -86,6 +102,26 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Orders/VegetableOutletOrder.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJzXFZlZ2V0YWJsZU91dGxldE9yZGVyLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/PayrollReports/LaborCost.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5cm9sbFJlcG9ydHNcTGFib3JDb3N0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/PayrollReports/Unpaid.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5cm9sbFJlcG9ydHNcVW5wYWlkLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Payroll/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5cm9sbFxEZXRhaWxzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Payroll/Generate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5cm9sbFxHZW5lcmF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Payroll/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5cm9sbFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Products/Create.cshtml]

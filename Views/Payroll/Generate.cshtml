@@ -1,0 +1,77 @@
+@model HazelInvoice.ViewModels.PayrollGenerateViewModel
+
+@{
+    ViewData["Title"] = "Generate Payroll";
+    ViewData["NotePurpose"] = "Create payroll periods from attendance records not yet assigned to payroll.";
+    ViewData["NoteInstructions"] = "Only attendance without a payroll period will be included.";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Generate Payroll</h1>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Payroll</a>
+    </div>
+
+    <partial name="_PageNote" />
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">Start Date</label>
+            <input type="date" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">End Date</label>
+            <input type="date" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">Refresh</button>
+        </div>
+    </form>
+
+    <form asp-action="Generate" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="StartDate" />
+        <input type="hidden" asp-for="EndDate" />
+
+        <div class="card shadow border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th></th>
+                                <th>Laborer</th>
+                                <th>Total Days</th>
+                                <th>Total Wage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < Model.Rows.Count; i++)
+                            {
+                                var row = Model.Rows[i];
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="SelectedLaborerIds" value="@row.LaborerId" @(Model.SelectedLaborerIds.Contains(row.LaborerId) ? "checked" : "") />
+                                    </td>
+                                    <td class="fw-bold">@row.LaborerName</td>
+                                    <td>@row.TotalDays</td>
+                                    <td>₱@row.TotalWage.ToString("N2")</td>
+                                </tr>
+                            }
+                            @if (!Model.Rows.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No attendance records available for payroll generation.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <div class="text-muted">Period: @Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
+                <button type="submit" class="btn btn-primary">Create Payroll Periods</button>
+            </div>
+        </div>
+    </form>
+</div>

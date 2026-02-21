@@ -22,6 +22,10 @@ public class ProfitSummaryViewModel
     // C: Deductions
     public List<Deduction> Deductions { get; set; } = new();
     public decimal TotalDeductions { get; set; }
+    
+    // C2: Expenses (includes payroll expenses)
+    public List<Expense> Expenses { get; set; } = new();
+    public decimal TotalExpenses { get; set; }
     public decimal NetProfit { get; set; } // GrossProfit - Deductions
 
     // D: Profit Sharing
