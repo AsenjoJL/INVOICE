@@ -6,22 +6,27 @@
     ViewData["NoteInstructions"] = "Use Copy Last Week or Set Price to add a new week.";
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Weekly Price List</h1>
+<partial name="_WeeklyPriceStyles" />
+
+<div class="container-fluid p-4 weekly-page">
+    <div class="weekly-header">
         <div>
-            <a asp-action="CloneLastWeek" class="btn btn-outline-secondary me-2"><i class="bi bi-copy"></i> Copy Last Week</a>
-            <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Set Price</a>
+            <h1>Weekly Price List</h1>
+            <p class="weekly-sub">Review weekly price records and effective dates.</p>
+        </div>
+        <div>
+            <a asp-action="CloneLastWeek" class="btn weekly-btn weekly-btn-neutral me-2"><i class="bi bi-copy"></i> Copy Last Week</a>
+            <a asp-action="Create" class="btn weekly-btn weekly-btn-primary"><i class="bi bi-plus-lg"></i> Set Price</a>
         </div>
     </div>
 
     <partial name="_PageNote" />
 
-    <div class="card shadow border-0">
+    <div class="card weekly-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle weekly-table">
+                    <thead>
                         <tr>
                             <th>Product</th>
                             <th>Effective Date</th>
@@ -35,20 +40,20 @@
                         @foreach (var item in Model)
                         {
                             var isActive = DateTime.Now >= item.EffectiveFrom && DateTime.Now <= item.EffectiveTo;
-                            <tr class="@(isActive ? "table-success" : "")">
-                                <td class="fw-bold">@item.Product?.Name</td>
+                            <tr class="@(isActive ? "weekly-row-active" : "")">
+                                <td class="weekly-name">@item.Product?.Name</td>
                                 <td>
                                     @item.EffectiveFrom.ToString("MMM dd") - @item.EffectiveTo.ToString("MMM dd, yyyy")
                                 </td>
-                                <td>@item.BasePrice.ToString("C")</td>
-                                <td>@item.DeliveryPrice.ToString("C")</td>
+                                <td class="weekly-money">@item.BasePrice.ToString("C")</td>
+                                <td class="weekly-money">@item.DeliveryPrice.ToString("C")</td>
                                 <td>
-                                    @if(isActive) { <span class="badge bg-success">Active</span> }
-                                    else if(DateTime.Now > item.EffectiveTo) { <span class="badge bg-secondary">Expired</span> }
-                                    else { <span class="badge bg-info">Upcoming</span> }
+                                    @if(isActive) { <span class="weekly-status weekly-status-active">Active</span> }
+                                    else if(DateTime.Now > item.EffectiveTo) { <span class="weekly-status weekly-status-expired">Expired</span> }
+                                    else { <span class="weekly-status weekly-status-upcoming">Upcoming</span> }
                                 </td>
                                 <td>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm weekly-btn weekly-btn-neutral"><i class="bi bi-pencil"></i></a>
                                 </td>
                             </tr>
                         }

@@ -4,18 +4,20 @@
     ViewData["Title"] = "Deactivate Outlet";
 }
 
-<div class="container p-4">
-    <div class="card shadow border-0" style="max-width: 700px; margin: 0 auto;">
-        <div class="card-header bg-danger text-white">
+<partial name="_OutletStyles" />
+
+<div class="container p-4 outlet-page">
+    <div class="card outlet-delete-card">
+        <div class="card-header outlet-delete-header">
             <h4 class="mb-0">Deactivate Outlet</h4>
         </div>
-        <div class="card-body">
+        <div class="card-body outlet-delete-body">
             <p class="mb-3">
                 This will <strong>deactivate</strong> the outlet so it no longer appears in orders.
                 Existing receipts will remain intact.
             </p>
 
-            <dl class="row">
+            <dl class="row outlet-delete-meta">
                 <dt class="col-sm-4">Name</dt>
                 <dd class="col-sm-8">@Model.Name</dd>
 
@@ -29,8 +31,8 @@
             <form asp-action="Delete">
                 <input type="hidden" asp-for="Id" />
                 <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-danger">Deactivate</button>
-                    <a asp-action="Index" class="btn btn-light">Cancel</a>
+                    <button type="submit" class="btn outlet-btn-danger">Deactivate</button>
+                    <a asp-action="Index" class="btn outlet-btn-neutral">Cancel</a>
                 </div>
             </form>
         </div>

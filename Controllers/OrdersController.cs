@@ -1,9 +1,13 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
 using HazelInvoice.Services;
+using HazelInvoice.Services.Orders;
+using HazelInvoice.Services.Printing;
+using HazelInvoice.Services.Settings;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace HazelInvoice.Controllers;
 
@@ -11,6 +15,10 @@ public class OrdersController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IReceiptService _receiptService;
+    private readonly IInvoicePrintManager _invoicePrintManager;
+    private readonly IVegetableMatrixService _vegetableMatrixService;
+    private readonly IVegetableMatrixTemplateService _vegetableMatrixTemplateService;
+    private readonly IAppSettingStore _appSettings;
 
     private static readonly string[] OutletOrderTokens = new[]
     {
@@ -19,397 +27,105 @@ public class OrdersController : Controller
         "bakery", "wlahug", "mitsumi", "feeder", "mphokim", "phokim"
     };
 
-    public OrdersController(ApplicationDbContext context, IReceiptService receiptService)
+    private static readonly HashSet<string> NonOutletHeaderKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "vegetables", "price", "total", "uom", "unit", "ponumber"
+    };
+
+    // Excel header aliases -> canonical outlet key used in Customers.Name
+    private static readonly Dictionary<string, string> OutletImportAliasMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["cebukit"] = "cebukitchen",
+        ["cebu"] = "cebukitchen",
+        ["mphokim"] = "mpt",
+        ["phokim"] = "mpt",
+        ["jpkitchen"] = "jpmorgan",
+        ["jpebloc"] = "jpmorgan",
+        ["jpcbloc"] = "jpmorgan"
+    };
+
+    public OrdersController(
+        ApplicationDbContext context,
+        IReceiptService receiptService,
+        IInvoicePrintManager invoicePrintManager,
+        IVegetableMatrixService vegetableMatrixService,
+        IVegetableMatrixTemplateService vegetableMatrixTemplateService,
+        IAppSettingStore appSettings)
     {
         _context = context;
         _receiptService = receiptService;
+        _invoicePrintManager = invoicePrintManager;
+        _vegetableMatrixService = vegetableMatrixService;
+        _vegetableMatrixTemplateService = vegetableMatrixTemplateService;
+        _appSettings = appSettings;
     }
 
-    // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1
-    public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1)
+    // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1&print=false&details=false
+    public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1, bool print = false, bool details = false)
     {
         var targetDate = (date ?? DateTime.Today).Date;
-        var dayStart = targetDate;
-        var dayEnd = targetDate.AddDays(1);
 
-        int outletPageSize = 12;
-        int productPageSize = 25;
-
-        if (page < 1) page = 1;
-        if (productPage < 1) productPage = 1;
-
-        // 1) OUTLETS (base query)
-        var outletsBaseQuery = _context.Customers
-            .AsNoTracking()
-            .Where(c => c.IsActive &&
-                        (c.GroupName == "EIGHT2EIGHT OUTLETS" || c.GroupName == "Taste 8 outlets"))
-            .ToListAsync();
-
-        var outletsAll = await outletsBaseQuery;
-        int totalOutlets = outletsAll.Count;
-
-        // Optional "self heal" (keep your behavior)
-        if (totalOutlets == 0)
+        if (print)
         {
-            var fix = await _context.Customers
-                .Where(c => c.IsActive && (c.GroupName == null || c.GroupName == ""))
-                .ToListAsync();
-
-            if (fix.Any())
+            var prep = await _invoicePrintManager.PrepareForInvoicePrintAsync();
+            if (!prep.IsOk)
             {
-                foreach (var c in fix) c.GroupName = "EIGHT2EIGHT OUTLETS";
-                await _context.SaveChangesAsync();
-
-                outletsAll = await _context.Customers
-                    .AsNoTracking()
-                    .Where(c => c.IsActive &&
-                                (c.GroupName == "EIGHT2EIGHT OUTLETS" || c.GroupName == "Taste 8 outlets"))
-                    .ToListAsync();
-                totalOutlets = outletsAll.Count;
-            }
-        }
-
-        // Filter outlets to only those with orders for the day
-        var outletNameToIdAll = outletsAll.ToDictionary(o => o.Name, o => o.Id, StringComparer.OrdinalIgnoreCase);
-        var allOutletIdsPre = outletsAll.Select(o => o.Id).ToList();
-        var allOutletNamesPre = outletsAll.Select(o => o.Name).ToList();
-        var outletHasOrdersAll = outletsAll.ToDictionary(o => o.Id, _ => false);
-
-        var outletOrderRowsAll = await _context.Receipts
-            .AsNoTracking()
-            .Where(r => r.Date >= dayStart && r.Date < dayEnd &&
-                        r.Status != PaymentStatus.Void &&
-                        ((r.CustomerId.HasValue && allOutletIdsPre.Contains(r.CustomerId.Value)) ||
-                         (!r.CustomerId.HasValue && allOutletNamesPre.Contains(r.CustomerName))))
-            .Select(r => new { r.CustomerId, r.CustomerName })
-            .Distinct()
-            .ToListAsync();
-
-        foreach (var row in outletOrderRowsAll)
-        {
-            int? cid = null;
-            if (row.CustomerId.HasValue && outletHasOrdersAll.ContainsKey(row.CustomerId.Value))
-                cid = row.CustomerId.Value;
-            else if (!string.IsNullOrWhiteSpace(row.CustomerName) && outletNameToIdAll.TryGetValue(row.CustomerName, out int nameCid))
-                cid = nameCid;
-
-            if (cid == null) continue;
-            outletHasOrdersAll[cid.Value] = true;
-        }
-
-        outletsAll = outletsAll.Where(o => outletHasOrdersAll.TryGetValue(o.Id, out var hasOrder) && hasOrder).ToList();
-        totalOutlets = outletsAll.Count;
-
-        // Force all outlets into one page for printing
-        if (totalOutlets > 0)
-            outletPageSize = totalOutlets;
-
-        int totalPages = (int)Math.Ceiling(totalOutlets / (double)outletPageSize);
-        if (totalPages < 1) totalPages = 1;
-        if (page > totalPages) page = totalPages;
-
-        var orderedOutlets = outletsAll
-            .OrderBy(c => GetOutletOrderIndex(c.Name))
-            .ThenBy(c => c.Name)
-            .ToList();
-
-        var visibleOutlets = orderedOutlets
-            .Skip((page - 1) * outletPageSize)
-            .Take(outletPageSize)
-            .ToList();
-
-        // Needed for filtering receipts (all outlets in allowed groups)
-        var allOutletList = orderedOutlets.Select(c => new { c.Id, c.Name }).ToList();
-        var allOutletIds = allOutletList.Select(c => c.Id).ToList();
-        var allOutletNames = allOutletList.Select(c => c.Name).ToList();
-
-        // 2) PRODUCTS (paged)
-        var productsBaseQuery = _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.Name);
-
-        int totalProducts = await productsBaseQuery.CountAsync();
-
-        int totalProductPages = (int)Math.Ceiling(totalProducts / (double)productPageSize);
-        if (totalProductPages < 1) totalProductPages = 1;
-        if (productPage > totalProductPages) productPage = totalProductPages;
-
-        var visibleProducts = await productsBaseQuery
-            .Skip((productPage - 1) * productPageSize)
-            .Take(productPageSize)
-            .ToListAsync();
-
-        var visibleProductIds = visibleProducts.Select(p => p.Id).ToList();
-        var visibleOutletIds = visibleOutlets.Select(o => o.Id).ToList();
-        var visibleOutletNameSet = visibleOutlets.Select(o => o.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        // 3) TOTAL QTY PER PRODUCT (ALL outlets in groups) – FAST SQL GROUP BY
-        var qtyByProduct = await _context.ReceiptLines
-            .AsNoTracking()
-            .Where(l => l.ProductId != null)
-            .Join(_context.Receipts.AsNoTracking(),
-                l => l.ReceiptId,
-                r => r.Id,
-                (l, r) => new { l, r })
-            .Where(x => x.r.Date >= dayStart && x.r.Date < dayEnd &&
-                        x.r.Status != PaymentStatus.Void &&
-                        ((x.r.CustomerId.HasValue && allOutletIds.Contains(x.r.CustomerId.Value)) ||
-                         (!x.r.CustomerId.HasValue && allOutletNames.Contains(x.r.CustomerName))))
-            .GroupBy(x => x.l.ProductId!.Value)
-            .Select(g => new
-            {
-                ProductId = g.Key,
-                Qty = g.Sum(z => (decimal)z.l.Quantity)
-            })
-            .ToListAsync();
-
-        var productTotalQtyInGroup = qtyByProduct.ToDictionary(x => x.ProductId, x => x.Qty);
-
-        // For grand totals, only products that appear today
-        var productIdsInDay = qtyByProduct.Select(x => x.ProductId).ToList();
-
-        // 4) PRICES: only for visible + products-in-day
-        // 4) PRICES: only for visible + products-in-day
-        var priceProductIds = visibleProductIds
-            .Union(productIdsInDay)
-            .Distinct()
-            .ToList();
-
-        var productsData = await _context.Products
-            .AsNoTracking()
-            .Where(p => priceProductIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.UnitCost, p.Markup, p.DeliveryFee })
-            .ToDictionaryAsync(x => x.Id, x => x);
-
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart)
-            .Where(w => priceProductIds.Contains(w.ProductId))
-            .ToListAsync();
-
-        var weeklyPriceMap = weeklyPrices
-            .GroupBy(x => x.ProductId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(x => x.EffectiveFrom)
-                      .ThenByDescending(x => x.Id)
-                      .First());
-
-        var productPrices = new Dictionary<int, decimal>(priceProductIds.Count);
-        var productCosts = new Dictionary<int, decimal>(priceProductIds.Count);
-        var productMarkups = new Dictionary<int, decimal>(priceProductIds.Count);
-
-        foreach (var pid in priceProductIds)
-        {
-            decimal cost = 0m;
-            decimal markup = 0m;
-            decimal deliveryFee = 0m;
-
-            if (productsData.TryGetValue(pid, out var pData))
-            {
-                cost = pData.UnitCost;
-                markup = pData.Markup;
-                deliveryFee = pData.DeliveryFee;
-            }
-
-            if (weeklyPriceMap.TryGetValue(pid, out var wp))
-            {
-                if (wp.CostOverride.HasValue)
-                    cost = wp.CostOverride.Value;
-
-                // Override with WeeklyPrice logic if present
-                if (wp.Markup != 0)
+                TempData["ErrorMessage"] = prep.Message ?? "Selected printer not found. Please update printer settings.";
+                return RedirectToAction("Index", "PrinterSettings", new
                 {
-                    markup = wp.Markup;
-                }
-                else if (wp.BasePrice > 0 && cost > 0)
-                {
-                    // Fallback for legacy records without stored Markup
-                    markup = wp.BasePrice - cost;
-                }
-
-                if (wp.DeliveryFee.HasValue)
-                {
-                    deliveryFee = wp.DeliveryFee.Value;
-                }
-
-                // Prefer stored delivery price when available
-                if (wp.DeliveryPrice > 0)
-                {
-                    productPrices[pid] = wp.DeliveryPrice;
-                }
-                else
-                {
-                    productPrices[pid] = cost + markup + deliveryFee;
-                }
-            }
-            else
-            {
-                productPrices[pid] = cost + markup + deliveryFee;
+                    returnUrl = Url.Action(nameof(VegetableMatrix), new
+                    {
+                        date = targetDate.ToString("yyyy-MM-dd"),
+                        page = 1,
+                        productPage = 1,
+                        print = true
+                    })
+                });
             }
 
-            productCosts[pid] = cost;
-            productMarkups[pid] = markup;
+            page = 1;
+            productPage = 1;
         }
 
-        // 5) MATRIX QUANTITIES (VISIBLE only) – FAST SQL GROUP BY
-        var matrixRows = await _context.ReceiptLines
-            .AsNoTracking()
-            .Where(l => l.ProductId != null && visibleProductIds.Contains(l.ProductId.Value))
-            .Join(_context.Receipts.AsNoTracking(),
-                l => l.ReceiptId,
-                r => r.Id,
-                (l, r) => new { l, r })
-            .Where(x => x.r.Date >= dayStart && x.r.Date < dayEnd &&
-                        x.r.Status != PaymentStatus.Void &&
-                        ((x.r.CustomerId.HasValue && visibleOutletIds.Contains(x.r.CustomerId.Value)) ||
-                         (!x.r.CustomerId.HasValue && visibleOutletNameSet.Contains(x.r.CustomerName))))
-            .GroupBy(x => new { ProductId = x.l.ProductId!.Value, x.r.CustomerId, x.r.CustomerName })
-            .Select(g => new
-            {
-                g.Key.ProductId,
-                g.Key.CustomerId,
-                g.Key.CustomerName,
-                Qty = g.Sum(z => (decimal)z.l.Quantity),
-                Status = g.Min(z => z.r.Status) // Prioritize Unpaid(0) over Paid(2)
-            })
-            .ToListAsync();
-
-        var visibleNameToId = visibleOutlets.ToDictionary(o => o.Name, o => o.Id, StringComparer.OrdinalIgnoreCase);
-
-        var matrixQuantities = new Dictionary<string, decimal>(matrixRows.Count);
-        var matrixStatuses = new Dictionary<string, string>(matrixRows.Count);
-
-        var visibleOutletIdSet = visibleOutletIds.ToHashSet();
-
-        var outletHasOrders = visibleOutlets.ToDictionary(
-            o => o.Id,
-            o => outletHasOrdersAll.TryGetValue(o.Id, out var hasOrder) && hasOrder);
-
-        foreach (var row in matrixRows)
-        {
-            int? cid = null;
-            if (row.CustomerId.HasValue && visibleOutletIdSet.Contains(row.CustomerId.Value))
-                cid = row.CustomerId.Value;
-            else if (!string.IsNullOrWhiteSpace(row.CustomerName) && visibleNameToId.TryGetValue(row.CustomerName, out int nameCid))
-                cid = nameCid;
-
-            if (cid == null) continue;
-
-            string key = $"{row.ProductId}_{cid.Value}";
-            matrixQuantities[key] = row.Qty;
-            matrixStatuses[key] = row.Status.ToString().ToUpper();
-        }
-
-        // 6) STATUS FLAGS per product (PAID/UNPAID) – SQL aggregation
-        var statusAgg = await _context.ReceiptLines
-            .AsNoTracking()
-            .Where(l => l.ProductId != null)
-            .Join(_context.Receipts.AsNoTracking(),
-                l => l.ReceiptId,
-                r => r.Id,
-                (l, r) => new { l, r })
-            .Where(x => x.r.Date >= dayStart && x.r.Date < dayEnd &&
-                        x.r.Status != PaymentStatus.Void &&
-                        ((x.r.CustomerId.HasValue && allOutletIds.Contains(x.r.CustomerId.Value)) ||
-                         (!x.r.CustomerId.HasValue && allOutletNames.Contains(x.r.CustomerName))))
-            .GroupBy(x => x.l.ProductId!.Value)
-            .Select(g => new
-            {
-                ProductId = g.Key,
-                HasUnpaid = g.Any(z => z.r.Status == PaymentStatus.Unpaid),
-                HasPaid = g.Any(z => z.r.Status == PaymentStatus.Paid)
-            })
-            .ToListAsync();
-
-        var flagsMap = statusAgg.ToDictionary(x => x.ProductId, x => new { x.HasUnpaid, x.HasPaid });
-
-        // Status dictionary for visible rows only (what you render)
-        var productStatuses = new Dictionary<int, string>(visibleProducts.Count);
-        foreach (var vp in visibleProducts)
-        {
-            int pid = vp.Id;
-            decimal qty = productTotalQtyInGroup.TryGetValue(pid, out var q) ? q : 0m;
-
-            if (qty <= 0)
-            {
-                productStatuses[pid] = "NO_ORDERS";
-                continue;
-            }
-
-            if (flagsMap.TryGetValue(pid, out var fl))
-            {
-                if (fl.HasUnpaid) productStatuses[pid] = "UNPAID";
-                else if (fl.HasPaid) productStatuses[pid] = "PAID";
-                else if (qty >= 3) productStatuses[pid] = "THREE_PLUS";
-                else productStatuses[pid] = "NORMAL";
-            }
-            else
-            {
-                productStatuses[pid] = qty >= 3 ? "THREE_PLUS" : "NORMAL";
-            }
-        }
-
-        // 7) GRAND TOTALS
-        decimal grandTotalQty = 0m;
-        decimal grandTotalAmt = 0m;
-
-        foreach (var x in qtyByProduct)
-        {
-            var pid = x.ProductId;
-            var qty = x.Qty;
-            var price = productPrices.TryGetValue(pid, out var p) ? p : 0m;
-
-            grandTotalQty += qty;
-            grandTotalAmt += (qty * price);
-        }
-
-        var viewModel = new VegetableMatrixViewModel
+        var viewModel = await _vegetableMatrixService.GetAsync(new VegetableMatrixQueryOptions
         {
             Date = targetDate,
-
-            CurrentPage = page,
-            PageSize = outletPageSize,
-            TotalOutletsInGroup = totalOutlets,
-
+            OutletPage = page,
             ProductPage = productPage,
-            ProductPageSize = productPageSize,
-            TotalProducts = totalProducts,
+            Print = print,
+            Details = details
+        }, HttpContext.RequestAborted);
 
-            SelectedGroupName = "All",
-
-            VisibleOutlets = visibleOutlets,
-            VisibleProducts = visibleProducts,
-
-            ProductPrices = productPrices,
-            ProductCosts = productCosts,
-            ProductMarkups = productMarkups,
-            MatrixQuantities = matrixQuantities,
-            MatrixStatuses = matrixStatuses,
-            ProductTotalQtyAllOutletsInGroup = productTotalQtyInGroup,
-            OutletHasOrders = outletHasOrders,
-            ProductStatuses = productStatuses,
-
-            GrandTotalQty = grandTotalQty,
-            GrandTotalAmount = grandTotalAmt
-        };
+        var paperSize = (await _appSettings.GetAsync(PrinterSettingKeys.PaperSize, HttpContext.RequestAborted))?.Trim();
+        ViewBag.PaperSize = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "A4" : "Letter";
 
         return View(viewModel);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> DownloadVegetableMatrixTemplate(DateTime? date)
+    {
+        var targetDate = (date ?? DateTime.Today).Date;
+        var bytes = await _vegetableMatrixTemplateService.BuildTemplateAsync(targetDate, HttpContext.RequestAborted);
+
+        var fileName = $"VegetableOrderTemplate_{targetDate:yyyy-MM-dd}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveMatrix(VegetableMatrixViewModel model)
+    public async Task<IActionResult> SaveMatrix(VegetableMatrixViewModel model, bool doPrint = false)
     {
         if (model == null) return BadRequest("Model is null");
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
 
-        var affectedCustomerIds = model.MatrixQuantities.Keys
-            .Select(k => int.Parse(k.Split('_')[1]))
-            .Distinct()
-            .ToList();
+        var matrixByCustomer = BuildMatrixInputsByCustomer(
+            model.MatrixQuantities,
+            out var affectedProductIdsSet,
+            out var affectedCustomerIdsSet);
+
+        var affectedCustomerIds = affectedCustomerIdsSet.ToList();
 
         var customers = await _context.Customers
             .Where(c => affectedCustomerIds.Contains(c.Id))
@@ -417,10 +133,7 @@ public class OrdersController : Controller
         var customerIdSet = customers.Select(c => c.Id).ToHashSet();
         var customerNameSet = customers.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var affectedProductIds = model.MatrixQuantities.Keys
-            .Select(k => int.Parse(k.Split('_')[0]))
-            .Distinct()
-            .ToList();
+        var affectedProductIds = affectedProductIdsSet.ToList();
 
         if (model.ProductPrices != null && model.ProductPrices.Any())
         {
@@ -487,6 +200,10 @@ public class OrdersController : Controller
                     .Where(r => r.Date >= dayStart && r.Date < dayEnd && r.Status != PaymentStatus.Void)
                     .ToListAsync();
 
+                // Self-heal duplicates: keep at most one unpaid receipt per outlet/day and
+                // one unpaid line per product in that receipt.
+                MergeDuplicateUnpaidReceiptsAndLines(existingReceipts);
+
                 bool MatchesCustomer(Receipt r, Customer c) =>
                     (r.CustomerId.HasValue && r.CustomerId.Value == c.Id) ||
                     (!r.CustomerId.HasValue && r.CustomerName == c.Name);
@@ -504,9 +221,11 @@ public class OrdersController : Controller
                         .GroupBy(l => l.ProductId!.Value)
                         .ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
 
-                    var inputs = model.MatrixQuantities
-                        .Where(k => k.Key.EndsWith($"_{customer.Id}"))
-                        .ToDictionary(k => int.Parse(k.Key.Split('_')[0]), v => v.Value);
+                    if (!matrixByCustomer.TryGetValue(customer.Id, out var inputs))
+                    {
+                        // No posted rows for this outlet/customer
+                        continue;
+                    }
 
                     // 2) Find Existing UNPAID receipt or Create NEW
                     var unpaidReceipt = existingReceipts.FirstOrDefault(r => 
@@ -518,8 +237,8 @@ public class OrdersController : Controller
                         // Check if any input requires an unpaid delta
                         bool needsReceipt = inputs.Any(kvp => {
                             int pid = kvp.Key;
-                            int target = (int)Math.Round(kvp.Value, MidpointRounding.AwayFromZero);
-                            int paid = paidLines.TryGetValue(pid, out int p) ? p : 0;
+                            decimal target = kvp.Value;
+                            decimal paid = paidLines.TryGetValue(pid, out decimal p) ? p : 0m;
                             return (target - paid) > 0;
                         });
 
@@ -545,18 +264,15 @@ public class OrdersController : Controller
                     foreach (var kvp in inputs)
                     {
                         int pid = kvp.Key;
-                        decimal targetQtyDec = kvp.Value;
-                        if (targetQtyDec < 0) targetQtyDec = 0;
+                        decimal targetQty = kvp.Value;
+                        if (targetQty < 0) targetQty = 0m;
 
-                        // Target Total
-                        int targetQty = (int)Math.Round(targetQtyDec, MidpointRounding.AwayFromZero);
-                        
                         // Subtract Paid (Locked)
-                        int paidQty = paidLines.TryGetValue(pid, out int pq) ? pq : 0;
-                        int unpaidQty = targetQty - paidQty;
+                        decimal paidQty = paidLines.TryGetValue(pid, out decimal pq) ? pq : 0m;
+                        decimal unpaidQty = targetQty - paidQty;
 
                         // Cannot reduce below paid amount in this view (would require credit note or unpaying)
-                        if (unpaidQty < 0) unpaidQty = 0; 
+                        if (unpaidQty < 0) unpaidQty = 0m; 
 
                         decimal price = model.ProductPrices.TryGetValue(pid, out var pr) ? pr : 0m;
                         if (price <= 0)
@@ -600,6 +316,12 @@ public class OrdersController : Controller
                                 line.Quantity = unpaidQty;
                                 line.Price = price;
                                 line.Amount = unpaidQty * price;
+                                if (productMap.TryGetValue(pid, out var existingProduct) &&
+                                    !string.IsNullOrWhiteSpace(existingProduct.Unit))
+                                {
+                                    // Keep receipt line unit in sync with current product unit for editable (unpaid) orders.
+                                    line.Unit = existingProduct.Unit;
+                                }
                                 // Update snapshot for draft/unpaid
                                 line.CostPriceSnapshot = GetEffectiveCost(pid);
                             }
@@ -648,8 +370,185 @@ public class OrdersController : Controller
         {
             date = model.Date.ToString("yyyy-MM-dd"),
             page = model.CurrentPage,
-            productPage = model.ProductPage
+            productPage = model.ProductPage,
+            print = doPrint,
+            details = model.ShowDetails
         });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ImportVegetableMatrixExcel(IFormFile? importFile, DateTime date, int page = 1, int productPage = 1, bool details = false)
+    {
+        if (importFile == null || importFile.Length == 0)
+        {
+            TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) file.";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        if (importFile.Length > 20 * 1024 * 1024)
+        {
+            TempData["ErrorMessage"] = "File is too large. Maximum size is 20 MB.";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        await using var stream = new MemoryStream();
+        await importFile.CopyToAsync(stream);
+
+        SimpleXlsxSheet sheet;
+        try
+        {
+            sheet = SimpleXlsxReader.ReadFirstSheet(stream);
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        var headerRow = FindHeaderRow(sheet);
+        if (headerRow <= 0)
+        {
+            TempData["ErrorMessage"] = "Could not find header row. Expected a row containing 'Vegetables'.";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        var priceCol = FindColumnByHeader(sheet, headerRow, "price");
+        var productCol = FindColumnByHeader(sheet, headerRow, "vegetables");
+        if (productCol <= 0)
+            productCol = 1;
+
+        var outletColumns = new Dictionary<int, string>();
+        for (var c = 1; c <= sheet.MaxCol; c++)
+        {
+            var raw = sheet.GetCell(headerRow, c);
+            var key = NormalizeKey(raw);
+            if (string.IsNullOrWhiteSpace(key) || NonOutletHeaderKeys.Contains(key))
+                continue;
+
+            outletColumns[c] = raw.Trim();
+        }
+
+        if (outletColumns.Count == 0)
+        {
+            TempData["ErrorMessage"] = "No outlet columns found in the Excel file.";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        var customers = await _context.Customers
+            .AsNoTracking()
+            .Where(c => c.IsActive &&
+                        (c.GroupName == "EIGHT2EIGHT OUTLETS" || c.GroupName == "Taste 8 outlets"))
+            .ToListAsync();
+
+        var customerMap = customers
+            .GroupBy(c => NormalizeKey(c.Name))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var matchedOutletCols = new Dictionary<int, Customer>();
+        var unmatchedOutletHeaders = new List<string>();
+        foreach (var kvp in outletColumns)
+        {
+            if (TryResolveOutletByHeader(kvp.Value, customerMap, out var customer))
+                matchedOutletCols[kvp.Key] = customer;
+            else
+                unmatchedOutletHeaders.Add(kvp.Value);
+        }
+
+        if (matchedOutletCols.Count == 0)
+        {
+            TempData["ErrorMessage"] = "No Excel outlets matched your Outlet list.";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        var products = await _context.Products
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .ToListAsync();
+
+        var productMap = products
+            .GroupBy(p => NormalizeKey(p.Name))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var matrix = new Dictionary<string, decimal>();
+        var prices = new Dictionary<int, decimal>();
+        var matchedProductIds = new HashSet<int>();
+        var unmatchedProducts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var fractionalQtyCount = 0;
+
+        for (var r = headerRow + 1; r <= sheet.MaxRow; r++)
+        {
+            var productNameRaw = sheet.GetCell(r, productCol);
+            if (string.IsNullOrWhiteSpace(productNameRaw))
+                continue;
+
+            var nameKey = NormalizeKey(productNameRaw);
+            if (string.IsNullOrWhiteSpace(nameKey) || nameKey == "grandtotal")
+                continue;
+
+            if (!TryResolveProductByName(productNameRaw, productMap, out var product))
+            {
+                unmatchedProducts.Add(productNameRaw.Trim());
+                continue;
+            }
+
+            matchedProductIds.Add(product.Id);
+
+            if (priceCol > 0 && SimpleXlsxReader.TryParseDecimal(sheet.GetCell(r, priceCol), out var price) && price >= 0)
+                prices[product.Id] = price;
+
+            foreach (var oc in matchedOutletCols)
+            {
+                var qtyRaw = sheet.GetCell(r, oc.Key);
+                var qty = 0m;
+                if (SimpleXlsxReader.TryParseDecimal(qtyRaw, out var parsedQty))
+                {
+                    qty = parsedQty;
+                    if (qty != decimal.Truncate(qty))
+                        fractionalQtyCount++;
+                }
+                if (qty < 0) qty = 0m;
+
+                matrix[$"{product.Id}_{oc.Value.Id}"] = qty;
+            }
+        }
+
+        if (matrix.Count == 0)
+        {
+            TempData["ErrorMessage"] = "No matched product/outlet quantities were found to import.";
+            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+        }
+
+        var vm = new VegetableMatrixViewModel
+        {
+            Date = date.Date,
+            CurrentPage = page,
+            ProductPage = productPage,
+            ShowDetails = details,
+            MatrixQuantities = matrix,
+            ProductPrices = prices
+        };
+
+        var matchedOutletCount = matchedOutletCols.Values.Select(x => x.Id).Distinct().Count();
+        var matchedProductCount = matchedProductIds.Count;
+        var unmatchedNote = unmatchedOutletHeaders.Count > 0
+            ? $" Unmatched outlets: {string.Join(", ", unmatchedOutletHeaders.Take(8))}{(unmatchedOutletHeaders.Count > 8 ? "..." : "")}."
+            : string.Empty;
+        var unmatchedProductsNote = unmatchedProducts.Count > 0
+            ? $" Unmatched products: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
+            : string.Empty;
+        var fractionalNote = fractionalQtyCount > 0
+            ? $" Fractional quantities detected: {fractionalQtyCount} cells."
+            : string.Empty;
+        TempData["SuccessMessage"] = $"Excel imported: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{fractionalNote}";
+
+        return await SaveMatrix(vm, doPrint: false);
     }
 
     // OUTLET ORDER GET
@@ -842,6 +741,9 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                                 ((r.CustomerId.HasValue && r.CustomerId.Value == customer.Id) ||
                                  (!r.CustomerId.HasValue && r.CustomerName == customer.Name)))
                     .ToListAsync();
+
+                // Self-heal duplicates for this outlet/day before applying posted quantities.
+                MergeDuplicateUnpaidReceiptsAndLines(allReceipts);
                     
                 // Identify Locked Paid Qty
                 var paidLines = allReceipts
@@ -861,8 +763,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                 // Check if we need unpaid receipt (any input > paid)
                 bool needsReceipt = quantities.Any(kvp => {
                     int pid = kvp.Key;
-                    int target = (int)Math.Round(kvp.Value, MidpointRounding.AwayFromZero);
-                    int paid = paidLines.TryGetValue(pid, out int p) ? p : 0;
+                    decimal target = kvp.Value;
+                    decimal paid = paidLines.TryGetValue(pid, out decimal p) ? p : 0m;
                     return (target - paid) > 0;
                 });
 
@@ -926,14 +828,13 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                         foreach (var kvp in quantities)
                         {
                             int productId = kvp.Key;
-                            decimal targetQtyDec = kvp.Value;
-                            if (targetQtyDec < 0) targetQtyDec = 0;
-                            int targetQty = (int)Math.Round(targetQtyDec, MidpointRounding.AwayFromZero);
+                            decimal targetQty = kvp.Value;
+                            if (targetQty < 0) targetQty = 0m;
                             
                             // Delta
-                            int paidQty = paidLines.TryGetValue(productId, out int pq) ? pq : 0;
-                            int unpaidQty = targetQty - paidQty;
-                            if (unpaidQty < 0) unpaidQty = 0;
+                            decimal paidQty = paidLines.TryGetValue(productId, out decimal pq) ? pq : 0m;
+                            decimal unpaidQty = targetQty - paidQty;
+                            if (unpaidQty < 0) unpaidQty = 0m;
 
                             decimal price = model.ProductPrices.TryGetValue(productId, out var pr) ? pr : 0m;
                             if (price <= 0)
@@ -951,6 +852,12 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                                     existingLine.Quantity = unpaidQty;
                                     existingLine.Price = price;
                                     existingLine.Amount = unpaidQty * price;
+                                    if (prodMap.TryGetValue(productId, out var existingProduct) &&
+                                        !string.IsNullOrWhiteSpace(existingProduct.Unit))
+                                    {
+                                        // Keep receipt line unit in sync with current product unit for editable (unpaid) orders.
+                                        existingLine.Unit = existingProduct.Unit;
+                                    }
                                     // Update snapshot
                                     existingLine.CostPriceSnapshot = GetEffectiveCost(productId);
                                 }
@@ -1006,6 +913,23 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             date = model.Date.ToString("yyyy-MM-dd"),
             customerId = model.SelectedCustomerId
         });
+    }
+
+    // GET: Orders/ReceiptList
+    // Back-compat endpoint used by the Receipts page shortcut.
+    // Defaults to today's Unpaid receipts, with optional status switch via query string.
+    public async Task<IActionResult> ReceiptList(DateTime? date, string status = "Unpaid")
+    {
+        var targetDate = date ?? DateTime.Now.Date;
+
+        var normalized = (status ?? string.Empty).Trim();
+        var targetStatus = normalized.Equals("Paid", StringComparison.OrdinalIgnoreCase)
+            ? PaymentStatus.Paid
+            : normalized.Equals("Partial", StringComparison.OrdinalIgnoreCase)
+                ? PaymentStatus.Partial
+                : PaymentStatus.Unpaid;
+
+        return await GetOrdersByStatus(targetDate, targetStatus);
     }
 
     // GET: Orders/UnpaidOrders
@@ -1181,6 +1105,101 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         return View(vm);
     }
 
+    private static int FindHeaderRow(SimpleXlsxSheet sheet)
+    {
+        for (var r = 1; r <= Math.Min(sheet.MaxRow, 50); r++)
+        {
+            if (NormalizeKey(sheet.GetCell(r, 1)) == "vegetables")
+                return r;
+        }
+
+        return -1;
+    }
+
+    private static int FindColumnByHeader(SimpleXlsxSheet sheet, int headerRow, string header)
+    {
+        var key = NormalizeKey(header);
+        for (var c = 1; c <= sheet.MaxCol; c++)
+        {
+            if (NormalizeKey(sheet.GetCell(headerRow, c)) == key)
+                return c;
+        }
+
+        return -1;
+    }
+
+    private static string NormalizeKey(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        return Regex.Replace(raw.Trim().ToLowerInvariant(), @"[^a-z0-9]+", "");
+    }
+
+    private static bool TryResolveOutletByHeader(
+        string header,
+        Dictionary<string, Customer> customerMap,
+        out Customer customer)
+    {
+        customer = default!;
+        var key = NormalizeKey(header);
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        if (customerMap.TryGetValue(key, out customer))
+            return true;
+
+        if (OutletImportAliasMap.TryGetValue(key, out var aliasKey) &&
+            customerMap.TryGetValue(aliasKey, out customer))
+            return true;
+
+        // Fallback: unique contains-match (e.g., "cebukit" vs "cebukitchen")
+        var containMatches = customerMap
+            .Where(kvp => kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase) ||
+                          key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase))
+            .Select(kvp => kvp.Value)
+            .DistinctBy(c => c.Id)
+            .ToList();
+
+        if (containMatches.Count == 1)
+        {
+            customer = containMatches[0];
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveProductByName(
+        string productName,
+        Dictionary<string, Product> productMap,
+        out Product product)
+    {
+        product = default!;
+        var key = NormalizeKey(productName);
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        if (productMap.TryGetValue(key, out product))
+            return true;
+
+        // Fallback: unique contains-match for minor naming variants.
+        var containMatches = productMap
+            .Where(kvp => kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase) ||
+                          key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase))
+            .Select(kvp => kvp.Value)
+            .DistinctBy(p => p.Id)
+            .ToList();
+
+        if (containMatches.Count == 1)
+        {
+            product = containMatches[0];
+            return true;
+        }
+
+        return false;
+    }
+
     private static int GetOutletOrderIndex(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return int.MaxValue;
@@ -1285,5 +1304,146 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    private static Dictionary<int, Dictionary<int, decimal>> BuildMatrixInputsByCustomer(
+        Dictionary<string, decimal> rawMatrix,
+        out HashSet<int> productIds,
+        out HashSet<int> customerIds)
+    {
+        var byCustomer = new Dictionary<int, Dictionary<int, decimal>>();
+        productIds = new HashSet<int>();
+        customerIds = new HashSet<int>();
+
+        if (rawMatrix == null || rawMatrix.Count == 0)
+            return byCustomer;
+
+        foreach (var kvp in rawMatrix)
+        {
+            if (!TryParseMatrixKey(kvp.Key, out var productId, out var customerId))
+                continue;
+
+            productIds.Add(productId);
+            customerIds.Add(customerId);
+
+            if (!byCustomer.TryGetValue(customerId, out var productMap))
+            {
+                productMap = new Dictionary<int, decimal>();
+                byCustomer[customerId] = productMap;
+            }
+
+            // Last writer wins in case of duplicate keys from malformed post.
+            productMap[productId] = kvp.Value;
+        }
+
+        return byCustomer;
+    }
+
+    private static bool TryParseMatrixKey(string? key, out int productId, out int customerId)
+    {
+        productId = 0;
+        customerId = 0;
+
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        var sep = key.IndexOf('_');
+        if (sep <= 0 || sep >= key.Length - 1)
+            return false;
+
+        var left = key[..sep];
+        var right = key[(sep + 1)..];
+
+        return int.TryParse(left, out productId) && int.TryParse(right, out customerId);
+    }
+
+    private void MergeDuplicateUnpaidReceiptsAndLines(List<Receipt> receipts)
+    {
+        if (receipts.Count == 0) return;
+
+        static string CustomerKey(Receipt r)
+        {
+            if (r.CustomerId.HasValue) return $"ID:{r.CustomerId.Value}";
+            return $"NAME:{(r.CustomerName ?? string.Empty).Trim().ToLowerInvariant()}";
+        }
+
+        var unpaidGroups = receipts
+            .Where(r => r.Status == PaymentStatus.Unpaid)
+            .GroupBy(CustomerKey)
+            .ToList();
+
+        foreach (var group in unpaidGroups)
+        {
+            var ordered = group
+                .OrderBy(r => r.Id)
+                .ToList();
+
+            var keeper = ordered.First();
+
+            // Merge additional unpaid receipts (same outlet/day) into keeper.
+            foreach (var duplicateReceipt in ordered.Skip(1))
+            {
+                var duplicateLines = duplicateReceipt.Lines
+                    .Where(l => l.ProductId.HasValue)
+                    .ToList();
+
+                foreach (var dupLine in duplicateLines)
+                {
+                    var existingLine = keeper.Lines.FirstOrDefault(l => l.ProductId == dupLine.ProductId);
+                    if (existingLine == null)
+                    {
+                        keeper.Lines.Add(new ReceiptLine
+                        {
+                            ProductId = dupLine.ProductId,
+                            ItemName = dupLine.ItemName,
+                            Unit = dupLine.Unit,
+                            Quantity = dupLine.Quantity,
+                            Price = dupLine.Price,
+                            Amount = dupLine.Amount,
+                            CostPriceSnapshot = dupLine.CostPriceSnapshot
+                        });
+                    }
+                    else
+                    {
+                        existingLine.Quantity += dupLine.Quantity;
+                        existingLine.Amount += dupLine.Amount;
+                        if (existingLine.CostPriceSnapshot <= 0 && dupLine.CostPriceSnapshot > 0)
+                            existingLine.CostPriceSnapshot = dupLine.CostPriceSnapshot;
+                        if (existingLine.Quantity > 0)
+                            existingLine.Price = existingLine.Amount / existingLine.Quantity;
+                    }
+                }
+
+                _context.ReceiptLines.RemoveRange(duplicateReceipt.Lines);
+                _context.Receipts.Remove(duplicateReceipt);
+                receipts.Remove(duplicateReceipt);
+            }
+
+            // Within keeper, merge duplicate lines by product.
+            var duplicateLineGroups = keeper.Lines
+                .Where(l => l.ProductId.HasValue)
+                .GroupBy(l => l.ProductId!.Value)
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            foreach (var lineGroup in duplicateLineGroups)
+            {
+                var canonical = lineGroup.First();
+                foreach (var extra in lineGroup.Skip(1))
+                {
+                    canonical.Quantity += extra.Quantity;
+                    canonical.Amount += extra.Amount;
+                    if (canonical.CostPriceSnapshot <= 0 && extra.CostPriceSnapshot > 0)
+                        canonical.CostPriceSnapshot = extra.CostPriceSnapshot;
+                    _context.ReceiptLines.Remove(extra);
+                    keeper.Lines.Remove(extra);
+                }
+
+                if (canonical.Quantity > 0)
+                    canonical.Price = canonical.Amount / canonical.Quantity;
+            }
+
+            keeper.TotalAmount = keeper.Lines.Sum(l => l.Amount);
+        }
     }
 }

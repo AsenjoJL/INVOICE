@@ -1,0 +1,72 @@
+@model List<HazelInvoice.Models.PartnerBalanceConfig>
+@{
+    ViewData["Title"] = "Partners";
+}
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h1 class="h4 fw-bold mb-1">Partners</h1>
+            <div class="text-muted">Used for Profit &amp; Sales and Vegetable Order Details partner columns.</div>
+        </div>
+        <a asp-action="Create" class="btn btn-success" style="border-radius:0; font-weight:800;">
+            + Add Partner
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] is string msg && !string.IsNullOrWhiteSpace(msg))
+    {
+        <div class="alert alert-success" style="border-radius:0;">@msg</div>
+    }
+
+    <div class="card" style="border-radius:0;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="font-weight:900;">Name</th>
+                            <th style="font-weight:900;">Opening Balance</th>
+                            <th style="font-weight:900;">As Of Date</th>
+                            <th style="width:160px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    No partners yet. Add “Hazel” and “Troy” here.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var p in Model)
+                            {
+                                <tr>
+                                    <td class="fw-bold">@p.PartnerName</td>
+                                    <td>₱@p.OpeningBalance.ToString("N2")</td>
+                                    <td>@p.AsOfDate.ToString("MM/dd/yyyy")</td>
+                                    <td class="text-end">
+                                        <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-outline-primary btn-sm" style="border-radius:0; font-weight:800;">
+                                            Edit
+                                        </a>
+                                        <form asp-action="Delete" asp-route-id="@p.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" style="border-radius:0; font-weight:800;"
+                                                    onclick="return confirm('Remove this partner?');">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -6,20 +6,22 @@
     var balance = Model.TotalAmount - Model.PaidAmount;
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<partial name="_PurchaseStyles" />
+
+<div class="container-fluid p-4 purchase-page">
+    <div class="purchase-header">
         <div>
-            <h1 class="mb-0">Purchase Details</h1>
-            <div class="text-muted small">@Model.PurchaseNumber • @Model.Date.ToString("yyyy-MM-dd")</div>
+            <h1 class="purchase-title">Purchase Details</h1>
+            <div class="purchase-sub">@Model.PurchaseNumber • @Model.Date.ToString("yyyy-MM-dd")</div>
         </div>
-        <div class="d-flex gap-2">
-            <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+        <div class="purchase-actions">
+            <a asp-action="Index" class="btn purchase-btn purchase-btn-neutral"><i class="bi bi-arrow-left"></i> Back</a>
             @if (Model.Status != PaymentStatus.Paid)
             {
                 <form asp-action="MarkAsPaid" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-success" onclick="return confirm('Mark this purchase as paid?');">
+                    <button type="submit" class="btn purchase-btn purchase-btn-primary" onclick="return confirm('Mark this purchase as paid?');">
                         <i class="bi bi-check2-circle"></i> Mark Paid
                     </button>
                 </form>
@@ -29,7 +31,7 @@
 
     <div class="row g-3 mb-4">
         <div class="col-md-4">
-            <div class="card shadow-sm">
+            <div class="card purchase-kpi">
                 <div class="card-body">
                     <div class="text-muted small">Supplier</div>
                     <div class="fw-bold">@Model.SupplierName</div>
@@ -45,7 +47,7 @@
             </div>
         </div>
         <div class="col-md-8">
-            <div class="card shadow-sm">
+            <div class="card purchase-kpi">
                 <div class="card-body d-flex flex-wrap justify-content-between gap-3">
                     <div>
                         <div class="text-muted small">Total</div>
@@ -68,12 +70,12 @@
         </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
+    <div class="card purchase-card mb-4">
         <div class="card-header bg-white fw-bold">Items</div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle purchase-table">
+                    <thead>
                         <tr>
                             <th>Item</th>
                             <th class="text-center">Qty</th>
@@ -87,7 +89,7 @@
                         {
                             <tr>
                                 <td>@line.ItemName</td>
-                                <td class="text-center">@line.Quantity</td>
+                                <td class="text-center">@line.Quantity.ToString("0.###")</td>
                                 <td class="text-center">@line.Unit</td>
                                 <td class="text-end">@line.Cost.ToString("N2")</td>
                                 <td class="text-end">@line.Amount.ToString("N2")</td>
@@ -99,14 +101,14 @@
         </div>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card purchase-card">
         <div class="card-header bg-white fw-bold">Payments</div>
         <div class="card-body">
             @if (TempData["Error"] != null)
             {
                 <div class="alert alert-danger">@TempData["Error"]</div>
             }
-            <form asp-action="AddPayment" method="post" class="row g-2 align-items-end mb-3">
+            <form asp-action="AddPayment" method="post" class="row g-2 align-items-end mb-3 purchase-form">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.Id" />
                 <div class="col-md-4">
@@ -127,15 +129,15 @@
                     <input type="text" name="referenceNo" class="form-control" />
                 </div>
                 <div class="col-md-12">
-                    <button type="submit" class="btn btn-outline-primary mt-2">
+                    <button type="submit" class="btn purchase-btn purchase-btn-neutral mt-2">
                         <i class="bi bi-cash-coin"></i> Record Payment
                     </button>
                 </div>
             </form>
 
             <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-sm align-middle purchase-table">
+                    <thead>
                         <tr>
                             <th>Date</th>
                             <th>Method</th>

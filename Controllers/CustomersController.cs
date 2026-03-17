@@ -40,6 +40,17 @@ public class CustomersController : Controller
         if (string.IsNullOrWhiteSpace(customer.GroupName))
             customer.GroupName = OutletGroups[0];
 
+        customer.Name = customer.Name?.Trim();
+        if (!string.IsNullOrWhiteSpace(customer.Name))
+        {
+            var nameKey = customer.Name.ToLower();
+            var nameExists = await _context.Customers
+                .AsNoTracking()
+                .AnyAsync(c => c.Name != null && c.Name.ToLower() == nameKey);
+            if (nameExists)
+                ModelState.AddModelError(nameof(Customer.Name), "Outlet name already exists. Please use a unique name.");
+        }
+
         if (ModelState.IsValid)
         {
             _context.Add(customer);
@@ -70,6 +81,17 @@ public class CustomersController : Controller
 
         if (string.IsNullOrWhiteSpace(customer.GroupName))
             customer.GroupName = OutletGroups[0];
+
+        customer.Name = customer.Name?.Trim();
+        if (!string.IsNullOrWhiteSpace(customer.Name))
+        {
+            var nameKey = customer.Name.ToLower();
+            var nameExists = await _context.Customers
+                .AsNoTracking()
+                .AnyAsync(c => c.Id != customer.Id && c.Name != null && c.Name.ToLower() == nameKey);
+            if (nameExists)
+                ModelState.AddModelError(nameof(Customer.Name), "Outlet name already exists. Please use a unique name.");
+        }
 
         if (ModelState.IsValid)
         {

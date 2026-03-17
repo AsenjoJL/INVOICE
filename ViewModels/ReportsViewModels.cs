@@ -15,6 +15,6 @@ public class IncomeStatementViewModel
 public class InventoryReportItem
 {
     public Product Product { get; set; } = null!;
-    public int CurrentStock { get; set; }
+    public decimal CurrentStock { get; set; }
     public string Status { get; set; } = string.Empty;
 }

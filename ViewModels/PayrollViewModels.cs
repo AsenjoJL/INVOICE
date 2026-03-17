@@ -9,6 +9,8 @@ public class AttendanceDailyViewModel
     public DateTime WorkDate { get; set; } = DateTime.Today;
     public List<AttendanceEntryViewModel> Entries { get; set; } = new();
     public decimal TotalWage { get; set; }
+    public bool IsDateLocked { get; set; }
+    public string? DateLockReason { get; set; }
 }
 
 public class AttendanceEntryViewModel
@@ -19,6 +21,8 @@ public class AttendanceEntryViewModel
     public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
     public string? Notes { get; set; }
     public decimal WageAmount { get; set; }
+    public bool IsLocked { get; set; }
+    public string? LockReason { get; set; }
 }
 
 public class PayrollGenerateViewModel
@@ -27,6 +31,15 @@ public class PayrollGenerateViewModel
     public DateTime EndDate { get; set; } = DateTime.Today;
     public List<PayrollGenerateRow> Rows { get; set; } = new();
     public List<int> SelectedLaborerIds { get; set; } = new();
+    public int? CutoffId { get; set; }
+    public bool IsCutoffLocked { get; set; }
+    public bool HasOverlappingLockedCutoff { get; set; }
+    public string? CutoffMessage { get; set; }
+    public bool CanUnlockCutoff { get; set; }
+    public int? ExistingRunId { get; set; }
+    public PayrollRunStatus? ExistingRunStatus { get; set; }
+    public bool CanApproveRun { get; set; }
+    public bool CanCloseRun { get; set; }
 }
 
 public class PayrollGenerateRow
@@ -42,7 +55,9 @@ public class PayrollDetailsViewModel
     public PayrollPeriod Period { get; set; } = new();
     public List<AttendanceRecord> AttendanceRecords { get; set; } = new();
     public List<PayrollPayment> Payments { get; set; } = new();
+    public List<PayrollAdjustment> Adjustments { get; set; } = new();
     public decimal RemainingBalance { get; set; }
+    public decimal PayableTotal { get; set; }
     public PayrollPayment NewPayment { get; set; } = new();
 }
 

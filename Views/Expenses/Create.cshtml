@@ -5,99 +5,103 @@
     ViewData["Title"] = "Record Expense";
 }
 
-<div class="container p-4">
-    <div class="card shadow border-0" style="max-width: 600px; margin: 0 auto;">
-        <div class="card-header bg-danger text-white">
-            <h4 class="mb-0">Record Expense</h4>
-        </div>
-        <div class="card-body">
-            <form asp-action="Create">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                
-                @{
-                    var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
-                    var vendorOptions = (ViewBag.VendorOptions as List<string>) ?? new List<string>();
-                    var amountOptions = (ViewBag.AmountOptions as decimal[]) ?? Array.Empty<decimal>();
-                    var defaultCategories = new[] { "Rent", "Utilities", "Salaries", "Supplies", "Transportation", "Food & Meals", "Maintenance", "Other" };
-                    var allCategories = categoryOptions
-                        .Concat(defaultCategories)
-                        .Where(c => !string.IsNullOrWhiteSpace(c))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .OrderBy(c => c)
-                        .ToList();
-                }
+<partial name="_ExpenseStyles" />
 
-                <div class="row g-2 mb-3">
-                     <div class="col-md-6">
-                        <label asp-for="Date" class="form-label">Date</label>
-                        <input asp-for="Date" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
-                        <span asp-validation-for="Date" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Amount</label>
-                        <input type="hidden" asp-for="Amount" id="amountValue" />
-                        <select id="amountSelect" class="form-select">
-                            <option value="">-- Select Amount --</option>
-                            @foreach (var amt in amountOptions)
-                            {
-                                <option value="@amt">@amt.ToString("N2")</option>
-                            }
-                            <option value="__other__">Other...</option>
-                        </select>
-                        <input id="amountOther" type="number" step="0.01" class="form-control mt-2 d-none" placeholder="Enter amount" />
-                        <span asp-validation-for="Amount" class="text-danger"></span>
-                    </div>
-                </div>
+<div class="container p-4 expense-page">
+    <div class="expense-form-wrap">
+        <div class="card expense-form-card">
+            <div class="card-header expense-form-header">
+                <h4>Record Expense</h4>
+            </div>
+            <div class="card-body expense-form-body expense-form">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    
+                    @{
+                        var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
+                        var vendorOptions = (ViewBag.VendorOptions as List<string>) ?? new List<string>();
+                        var amountOptions = (ViewBag.AmountOptions as decimal[]) ?? Array.Empty<decimal>();
+                        var defaultCategories = new[] { "Rent", "Utilities", "Salaries", "Supplies", "Transportation", "Food & Meals", "Maintenance", "Other" };
+                        var allCategories = categoryOptions
+                            .Concat(defaultCategories)
+                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .OrderBy(c => c)
+                            .ToList();
+                    }
 
-                <div class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Category</label>
-                        <input type="hidden" asp-for="Category" id="categoryValue" />
-                        <select id="categorySelect" class="form-select">
-                            <option value="">-- Select Category --</option>
-                            @foreach (var c in allCategories)
-                            {
-                                <option value="@c">@c</option>
-                            }
-                            <option value="__other__">Other...</option>
-                        </select>
-                        <input id="categoryOther" class="form-control mt-2 d-none" placeholder="Enter category" />
-                        <span asp-validation-for="Category" class="text-danger"></span>
+                    <div class="row g-2 mb-3">
+                         <div class="col-md-6">
+                            <label asp-for="Date" class="form-label">Date</label>
+                            <input asp-for="Date" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="Date" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Amount</label>
+                            <input type="hidden" asp-for="Amount" id="amountValue" />
+                            <select id="amountSelect" class="form-select">
+                                <option value="">-- Select Amount --</option>
+                                @foreach (var amt in amountOptions)
+                                {
+                                    <option value="@amt">@amt.ToString("N2")</option>
+                                }
+                                <option value="__other__">Other...</option>
+                            </select>
+                            <input id="amountOther" type="number" step="0.01" class="form-control mt-2 d-none" placeholder="Enter amount" />
+                            <span asp-validation-for="Amount" class="text-danger"></span>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Payee / Vendor</label>
-                        <input type="hidden" asp-for="Vendor" id="vendorValue" />
-                        <select id="vendorSelect" class="form-select">
-                            <option value="">-- Select Vendor --</option>
-                            @foreach (var v in vendorOptions)
-                            {
-                                <option value="@v">@v</option>
-                            }
-                            <option value="__other__">Other...</option>
-                        </select>
-                        <input id="vendorOther" class="form-control mt-2 d-none" placeholder="Enter vendor" />
-                        <span asp-validation-for="Vendor" class="text-danger"></span>
-                    </div>
-                </div>
-                
-                <div class="row g-2 mb-3">
-                     <div class="col-md-6">
-                        <label asp-for="PaymentMethod" class="form-label">Payment Method</label>
-                        <select asp-for="PaymentMethod" class="form-select" asp-items="Html.GetEnumSelectList<PaymentMethod>()"></select>
-                        <span asp-validation-for="PaymentMethod" class="text-danger"></span>
-                    </div>
-                </div>
 
-                <div class="form-floating mb-3">
-                    <textarea asp-for="Description" class="form-control" placeholder="Description" style="height: 100px"></textarea>
-                    <label asp-for="Description">Notes / Description <span class="text-muted">(Optional)</span></label>
-                </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <input type="hidden" asp-for="Category" id="categoryValue" />
+                            <select id="categorySelect" class="form-select">
+                                <option value="">-- Select Category --</option>
+                                @foreach (var c in allCategories)
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                                <option value="__other__">Other...</option>
+                            </select>
+                            <input id="categoryOther" class="form-control mt-2 d-none" placeholder="Enter category" />
+                            <span asp-validation-for="Category" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Payee / Vendor</label>
+                            <input type="hidden" asp-for="Vendor" id="vendorValue" />
+                            <select id="vendorSelect" class="form-select">
+                                <option value="">-- Select Vendor --</option>
+                                @foreach (var v in vendorOptions)
+                                {
+                                    <option value="@v">@v</option>
+                                }
+                                <option value="__other__">Other...</option>
+                            </select>
+                            <input id="vendorOther" class="form-control mt-2 d-none" placeholder="Enter vendor" />
+                            <span asp-validation-for="Vendor" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mb-3">
+                         <div class="col-md-6">
+                            <label asp-for="PaymentMethod" class="form-label">Payment Method</label>
+                            <select asp-for="PaymentMethod" class="form-select" asp-items="Html.GetEnumSelectList<PaymentMethod>()"></select>
+                            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                        </div>
+                    </div>
 
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-danger btn-lg">Record Expense</button>
-                    <a asp-action="Index" class="btn btn-light">Cancel</a>
-                </div>
-            </form>
+                    <div class="form-floating mb-3">
+                        <textarea asp-for="Description" class="form-control" placeholder="Description" style="height: 100px"></textarea>
+                        <label asp-for="Description">Notes / Description <span class="text-muted">(Optional)</span></label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn expense-btn expense-btn-primary btn-lg">Record Expense</button>
+                        <a asp-action="Index" class="btn expense-btn expense-btn-neutral">Cancel</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

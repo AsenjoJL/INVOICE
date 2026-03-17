@@ -6,55 +6,70 @@
     ViewData["NoteInstructions"] = "Only outlets in the EIGHT2EIGHT OUTLETS or Taste 8 outlets groups appear in the vegetable order matrix.";
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Outlet List</h1>
-        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Outlet</a>
+<partial name="_OutletStyles" />
+
+<div class="container-fluid p-4 outlet-page">
+    <div class="outlet-header d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+        <div>
+            <h1>Outlet Directory</h1>
+            <div class="sub">Maintain outlet records used in vegetable orders and sales.</div>
+        </div>
+        <div class="outlet-actions">
+            <a asp-action="Create" class="btn btn-light text-dark"><i class="bi bi-plus-lg"></i> Add Outlet</a>
+        </div>
     </div>
 
     <partial name="_PageNote" />
 
-    <div class="card shadow border-0">
+    <div class="outlet-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table outlet-table table-hover align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th>Name</th>
+                            <th>Outlet</th>
                             <th>Group</th>
-                            <th>Sub Label</th>
-                            <th>Address</th>
                             <th>Contact</th>
+                            <th>Address</th>
                             <th>Status</th>
-                            <th></th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td class="fw-bold">@item.Name</td>
-                                <td>@item.GroupName</td>
-                                <td>@item.SubLabel</td>
-                                <td>@item.Address</td>
-                                <td>@item.ContactNumber</td>
+                                <td>
+                                    <div class="outlet-name">@item.Name</div>
+                                    <div class="outlet-meta">@(!string.IsNullOrWhiteSpace(item.SubLabel) ? item.SubLabel : "No sub label")</div>
+                                </td>
+                                <td>
+                                    <span class="group-pill"><i class="bi bi-diagram-3"></i> @item.GroupName</span>
+                                </td>
+                                <td>
+                                    <div class="outlet-meta">@(!string.IsNullOrWhiteSpace(item.ContactPerson) ? item.ContactPerson : "No contact person")</div>
+                                    <div class="outlet-meta">@(!string.IsNullOrWhiteSpace(item.ContactNumber) ? item.ContactNumber : "No contact number")</div>
+                                </td>
+                                <td class="outlet-meta">@(!string.IsNullOrWhiteSpace(item.Address) ? item.Address : "No address")</td>
                                 <td>
                                     @if (item.IsActive)
                                     {
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="status-pill status-active">Active</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="status-pill status-inactive">Inactive</span>
                                     }
                                 </td>
                                 <td>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger ms-1">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
+                                    <div class="outlet-actions-row d-flex gap-2">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         }

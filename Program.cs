@@ -1,5 +1,11 @@
 using HazelInvoice.Models;
 using HazelInvoice.Services;
+using HazelInvoice.Services.Dashboard;
+using HazelInvoice.Services.Orders;
+using HazelInvoice.Services.Printing;
+using HazelInvoice.Services.Receipts;
+using HazelInvoice.Services.Reports;
+using HazelInvoice.Services.Settings;
 using HazelInvoice.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +41,24 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddScoped<HazelInvoice.Services.IReceiptService, HazelInvoice.Services.ReceiptService>();
+builder.Services.AddScoped<IReceiptQueryService, ReceiptQueryService>();
+
+// Dashboard metrics (keep controllers thin / scalable)
+builder.Services.AddScoped<IDashboardMetricsService, DashboardMetricsService>();
+
+// Printer Settings + Print orchestration
+builder.Services.AddScoped<IAppSettingStore, DbAppSettingStore>();
+builder.Services.AddSingleton<IPrinterCatalog, WindowsPrinterCatalog>();
+builder.Services.AddSingleton<IPrinterSpooler, WindowsPrinterSpooler>();
+builder.Services.AddScoped<PrinterSettingsService>();
+builder.Services.AddScoped<IInvoicePrintManager, InvoicePrintManager>();
+
+// Orders / Vegetable matrix (keep controller thin / scalable)
+builder.Services.AddScoped<IVegetableMatrixService, VegetableMatrixService>();
+builder.Services.AddScoped<IVegetableMatrixTemplateService, VegetableMatrixTemplateService>();
+
+// Reports
+builder.Services.AddScoped<IProfitReportService, ProfitReportService>();
 
 builder.Services.AddControllersWithViews();
 

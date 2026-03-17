@@ -11,14 +11,16 @@
     var purchaseDate = (Model?.Date ?? DateTime.Today).ToString("yyyy-MM-dd");
 }
 
-<div class="container-fluid p-4">
+<partial name="_PurchaseStyles" />
+
+<div class="container-fluid p-4 purchase-page">
     <partial name="_PageNote" />
 
-    <div class="card shadow-lg border-0 rounded-4">
-        <div class="card-header bg-dark text-white p-3 rounded-top-4">
-            <h4 class="mb-0"><i class="bi bi-cart-plus"></i> New Purchase</h4>
+    <div class="card purchase-form-card">
+        <div class="card-header purchase-form-header">
+            <h4><i class="bi bi-cart-plus"></i> New Purchase</h4>
         </div>
-        <div class="card-body bg-light">
+        <div class="card-body purchase-form-body purchase-form">
             <form asp-action="Create" method="post" id="purchaseForm">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
@@ -55,9 +57,9 @@
                     </div>
                 </div>
 
-                <div class="table-responsive mb-4 bg-white p-3 rounded-3 shadow-sm">
-                    <table class="table table-hover align-middle" id="itemsTable">
-                        <thead class="table-light">
+                <div class="table-responsive mb-4 bg-white p-3">
+                    <table class="table table-hover align-middle purchase-table" id="itemsTable">
+                        <thead>
                             <tr>
                                 <th style="width: 36%">Item</th>
                                 <th style="width: 12%">Quantity</th>
@@ -72,7 +74,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="6">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addItemRow()">
+                                    <button type="button" class="btn purchase-btn purchase-btn-neutral btn-sm" onclick="addItemRow()">
                                         <i class="bi bi-plus-lg"></i> Add Item
                                     </button>
                                 </td>
@@ -83,7 +85,7 @@
 
                 <div class="row g-3 justify-content-end">
                     <div class="col-md-4">
-                        <div class="card bg-white shadow-sm">
+                        <div class="card purchase-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="fw-bold">Total Amount:</span>
@@ -105,10 +107,10 @@
                 </div>
 
                 <div class="mt-4 text-end">
-                    <button type="submit" class="btn btn-primary btn-lg">
+                    <button type="submit" class="btn purchase-btn purchase-btn-primary btn-lg">
                         <i class="bi bi-check2-circle"></i> Save Purchase
                     </button>
-                    <a asp-action="Index" class="btn btn-light ms-2">Cancel</a>
+                    <a asp-action="Index" class="btn purchase-btn purchase-btn-neutral ms-2">Cancel</a>
                 </div>
             </form>
         </div>
@@ -140,12 +142,16 @@
                     <input type="text" class="form-control mt-2 d-none" id="customName_${rowIndex}" placeholder="Enter item name" oninput="customNameChanged(${rowIndex})" />
                 </td>
                 <td>
-                    <input type="number" name="Lines[${rowIndex}].Quantity" class="form-control text-center" value="1" min="1" onchange="calculateRow(${rowIndex})" required />
+                    <input type="number" step="0.001" name="Lines[${rowIndex}].Quantity" class="form-control text-center" value="1" min="0.001" onchange="calculateRow(${rowIndex})" required />
                 </td>
                 <td>
                     <select name="Lines[${rowIndex}].Unit" id="unit_${rowIndex}" class="form-select text-center" required>
                         <option value="kg">kg</option>
                         <option value="pcs">pcs</option>
+                        <option value="liter">liter</option>
+                        <option value="liters">liters</option>
+                        <option value="gallon">gallon</option>
+                        <option value="bottle">bottle</option>
                         <option value="pack">pack</option>
                         <option value="bundle">bundle</option>
                         <option value="box">box</option>

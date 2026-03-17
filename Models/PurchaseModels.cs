@@ -76,7 +76,8 @@ public class PurchaseLine
     [StringLength(120)]
     public string ItemName { get; set; } = string.Empty;
 
-    public int Quantity { get; set; }
+    [Column(TypeName = "decimal(18,3)")]
+    public decimal Quantity { get; set; }
 
     [StringLength(20)]
     public string Unit { get; set; } = "pc";

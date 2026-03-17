@@ -49,6 +49,6 @@
     </div>
     
     <div class="text-center mt-4 no-print">
-        <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer"></i> Print Report</button>
+        <button onclick="return window.hazelPrint && window.hazelPrint.prepareAndPrint ? window.hazelPrint.prepareAndPrint() : (window.print(), false)" class="btn btn-outline-primary"><i class="bi bi-printer"></i> Print Report</button>
     </div>
 </div>

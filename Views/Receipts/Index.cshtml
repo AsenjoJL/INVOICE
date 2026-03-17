@@ -1,10 +1,17 @@
-@model IEnumerable<HazelInvoice.Models.Receipt>
+@model HazelInvoice.ViewModels.ReceiptsIndexViewModel
 
 @{
     ViewData["Title"] = "Receipts";
-    ViewData["NotePurpose"] = "View all receipts and delivery records with payment status.";
-    ViewData["NoteInstructions"] = "Use View or Print for details, or click New Receipt to create a sale.";
-    
+    var receiptCount = Model?.TotalCount ?? 0;
+    var currentPage = Model?.Page ?? 1;
+    var pageSize = Model?.PageSize ?? 50;
+    var query = Model?.Query ?? string.Empty;
+    var totalPages = pageSize <= 0 ? 1 : (int)Math.Ceiling(receiptCount / (double)pageSize);
+    if (totalPages < 1) totalPages = 1;
+    var startRow = receiptCount == 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+    var endRow = Math.Min(receiptCount, currentPage * pageSize);
+    var isUnpaid = Model?.UnpaidOnly ?? false;
+
     string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
     {
         HazelInvoice.Models.PaymentStatus.Paid => "status-pill status-paid",
@@ -15,12 +22,18 @@
     };
 }
 
-<div class="container-fluid p-4 invoice-ui">
-    <div class="invoice-hero">
+<div class="container-fluid p-4 invoice-ui invoice-ui-min">
+    <div class="invoice-hero invoice-hero-plain">
         <div>
-            <div class="invoice-kicker"><i class="bi bi-receipt"></i> Restaurant Invoices</div>
             <h1 class="invoice-title">Receipts & Deliveries</h1>
             <p class="invoice-sub">Track delivery receipts, payment status, and totals at a glance.</p>
+            <div class="small fw-bold mt-2">
+                Showing @startRow-@endRow of @receiptCount
+                @if (isUnpaid)
+                {
+                    <span>(Unpaid)</span>
+                }
+            </div>
         </div>
         <div class="invoice-actions">
             <a asp-action="Create" class="invoice-btn invoice-btn-primary"><i class="bi bi-plus-lg"></i> New Receipt</a>
@@ -28,12 +41,27 @@
         </div>
     </div>
 
-    <partial name="_PageNote" />
-
     <div class="invoice-card">
         <div class="invoice-card-header">
             <h6 class="invoice-card-title">All Receipts</h6>
-            <span class="invoice-tag"><i class="bi bi-calendar3"></i> Latest</span>
+            <form method="get" class="d-flex align-items-center gap-2">
+                <input class="form-control form-control-sm" name="q" id="q" value="@query" placeholder="Search receipt # or outlet" style="min-width: 240px;" />
+                <select class="form-select form-select-sm" name="pageSize" id="pageSize" style="width: 110px;">
+                    <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25</option>
+                    <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50</option>
+                    <option value="100" selected="@(pageSize == 100 ? "selected" : null)">100</option>
+                    <option value="200" selected="@(pageSize == 200 ? "selected" : null)">200</option>
+                </select>
+                <button type="submit" class="invoice-btn invoice-btn-ghost">Search</button>
+                @if (isUnpaid)
+                {
+                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Index", "Receipts", new { q = query, pageSize = pageSize })">All</a>
+                }
+                else
+                {
+                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Unpaid", "Receipts", new { q = query, pageSize = pageSize })">Unpaid</a>
+                }
+            </form>
         </div>
         <div class="invoice-card-body p-0">
             <div class="table-responsive">
@@ -51,7 +79,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model)
+                        @foreach (var item in Model?.Receipts ?? new List<HazelInvoice.ViewModels.ReceiptListItemViewModel>())
                         {
                             <tr>
                                 <td class="fw-bold">@item.ReceiptNumber</td>
@@ -76,6 +104,21 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="small fw-bold">Page @currentPage of @totalPages</div>
+        <div class="d-flex gap-2">
+            @{
+                var prevPage = Math.Max(1, currentPage - 1);
+                var nextPage = Math.Min(totalPages, currentPage + 1);
+                var action = isUnpaid ? "Unpaid" : "Index";
+            }
+            <a class="invoice-btn invoice-btn-ghost @(currentPage <= 1 ? "disabled" : "")"
+               href="@Url.Action(action, "Receipts", new { q = query, page = prevPage, pageSize = pageSize })">Prev</a>
+            <a class="invoice-btn invoice-btn-ghost @(currentPage >= totalPages ? "disabled" : "")"
+               href="@Url.Action(action, "Receipts", new { q = query, page = nextPage, pageSize = pageSize })">Next</a>
         </div>
     </div>
 </div>

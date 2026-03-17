@@ -17,22 +17,38 @@ public class ProductsController : Controller
     }
 
     // GET: Products
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q = null)
     {
-        return View(await _context.Products.OrderBy(p => p.SKU).ThenBy(p => p.Name).ToListAsync());
+        var query = _context.Products
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var term = q.Trim();
+            query = query.Where(p =>
+                p.Name.Contains(term) ||
+                p.SKU.Contains(term) ||
+                (p.Category != null && p.Category.Contains(term)) ||
+                p.Unit.Contains(term));
+        }
+
+        ViewBag.SearchTerm = q ?? string.Empty;
+        return View(await query.OrderBy(p => p.Name).ThenBy(p => p.SKU).ToListAsync());
     }
 
     // GET: Products/Create
     public async Task<IActionResult> Create()
     {
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
+        ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
         return View();
     }
 
     // POST: Products/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,IsActive")] Product product)
+    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,SupplierId,Unit,UnitCost,DeliveryFee,IsActive")] Product product)
     {
         // Auto-generate SKU if empty or default
         if (string.IsNullOrWhiteSpace(product.SKU) || product.SKU == "V-XXX")
@@ -62,24 +78,27 @@ public class ProductsController : Controller
             return RedirectToAction(nameof(Index));
         }
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
+        ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
         return View(product);
     }
 
     // GET: Products/Edit/5
-    public async Task<IActionResult> Edit(int? id)
+    public async Task<IActionResult> Edit(int? id, string? returnUrl = null)
     {
         if (id == null) return NotFound();
 
         var product = await _context.Products.FindAsync(id);
         if (product == null) return NotFound();
+        ViewBag.ReturnUrl = returnUrl;
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
+        ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
         return View(product);
     }
 
     // POST: Products/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,Unit,UnitCost,DeliveryFee,IsActive")] Product product)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,SupplierId,Unit,UnitCost,DeliveryFee,IsActive")] Product product, string? returnUrl = null)
     {
         if (id != product.Id) return NotFound();
 
@@ -95,9 +114,14 @@ public class ProductsController : Controller
                 if (!ProductExists(product.Id)) return NotFound();
                 else throw;
             }
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return LocalRedirect(returnUrl);
+
             return RedirectToAction(nameof(Index));
         }
+        ViewBag.ReturnUrl = returnUrl;
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
+        ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
         return View(product);
     }
 
@@ -157,6 +181,15 @@ public class ProductsController : Controller
             .Select(p => p.Category)
             .Distinct()
             .OrderBy(c => c)
+            .ToListAsync();
+    }
+
+    private async Task<List<Supplier>> GetSupplierOptionsAsync()
+    {
+        return await _context.Suppliers
+            .AsNoTracking()
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.Name)
             .ToListAsync();
     }
 }

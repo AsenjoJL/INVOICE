@@ -3,31 +3,64 @@
 
 @{
     ViewData["Title"] = "Payroll";
-    ViewData["NotePurpose"] = "Review payroll periods, balances, and payment status.";
-    ViewData["NoteInstructions"] = "Use Generate Payroll to create new periods from attendance records.";
     var statusValue = ViewData["Status"]?.ToString() ?? "";
     var startDate = ViewData["StartDate"] as DateTime?;
     var endDate = ViewData["EndDate"] as DateTime?;
+    var totalPeriods = Model.Count();
+    var unpaidCount = Model.Count(p => p.Status == PaymentStatus.Unpaid);
+    var totalBalance = Model.Sum(p => p.TotalWage - p.PaidAmount);
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Payroll</h1>
-        <a asp-action="Generate" class="btn btn-primary"><i class="bi bi-magic"></i> Generate Payroll</a>
+<link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
+
+<div class="container-fluid p-4 payroll-page">
+    <div class="payroll-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+            <h1>Payroll</h1>
+            <div class="sub">Simple flow: generate periods, review balances, then record payment.</div>
+            <div class="payroll-steps">
+                <span class="payroll-step">1. Generate</span>
+                <span class="payroll-step">2. Review</span>
+                <span class="payroll-step">3. Pay</span>
+            </div>
+        </div>
+        <a asp-action="Generate" class="btn btn-light text-dark fw-bold"><i class="bi bi-magic"></i> Generate Payroll</a>
     </div>
 
-    <partial name="_PageNote" />
+    @if (TempData["PayrollError"] is string payrollError && !string.IsNullOrWhiteSpace(payrollError))
+    {
+        <div class="alert alert-danger">@payrollError</div>
+    }
+    @if (TempData["PayrollSuccess"] is string payrollSuccess && !string.IsNullOrWhiteSpace(payrollSuccess))
+    {
+        <div class="alert alert-success">@payrollSuccess</div>
+    }
 
-    <form method="get" class="row g-2 align-items-end mb-3">
-        <div class="col-md-2">
+    <div class="payroll-summary">
+        <div class="payroll-kpi">
+            <div class="label">Payroll Periods</div>
+            <div class="value">@totalPeriods</div>
+        </div>
+        <div class="payroll-kpi warn">
+            <div class="label">Unpaid Periods</div>
+            <div class="value">@unpaidCount</div>
+        </div>
+        <div class="payroll-kpi danger">
+            <div class="label">Outstanding Balance</div>
+            <div class="value">₱@totalBalance.ToString("N2")</div>
+        </div>
+    </div>
+
+    <form method="get" class="row g-2 align-items-end payroll-filter" data-auto-submit="true">
+        <div class="col-md-3">
             <label class="form-label small fw-bold">Start Date</label>
             <input type="date" name="startDate" class="form-control" value="@(startDate?.ToString("yyyy-MM-dd") ?? "")" />
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <label class="form-label small fw-bold">End Date</label>
             <input type="date" name="endDate" class="form-control" value="@(endDate?.ToString("yyyy-MM-dd") ?? "")" />
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <label class="form-label small fw-bold">Status</label>
             <select name="status" class="form-select">
                 <option value="">All</option>
@@ -37,48 +70,72 @@
                 }
             </select>
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+        <div class="col-md-3 d-flex align-items-end">
+            @if (startDate.HasValue || endDate.HasValue || !string.IsNullOrWhiteSpace(statusValue))
+            {
+                <a asp-action="Index" class="btn btn-outline-secondary w-100">Reset Filters</a>
+            }
+            else
+            {
+                <div class="payroll-inline-note">Filters apply automatically when changed.</div>
+            }
         </div>
     </form>
 
-    <div class="card shadow border-0">
+    <div class="payroll-table-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 payroll-table">
                     <thead class="table-light">
                         <tr>
                             <th>Laborer</th>
                             <th>Period</th>
+                            <th>Run</th>
                             <th>Total Wage</th>
+                            <th>Adjustments</th>
+                            <th>Payable</th>
                             <th>Paid</th>
                             <th>Balance</th>
                             <th>Status</th>
-                            <th></th>
+                            <th class="text-end">Open</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var period in Model)
                         {
-                            var balance = period.TotalWage - period.PaidAmount;
-                            <tr>
+                            var payable = period.TotalWage + period.AdjustmentTotal;
+                            var balance = payable - period.PaidAmount;
+                            <tr data-row-link="@Url.Action("Details", new { id = period.Id })">
                                 <td class="fw-bold">@period.Laborer?.FullName</td>
                                 <td>@period.PeriodStart.ToString("MMM dd, yyyy") - @period.PeriodEnd.ToString("MMM dd, yyyy")</td>
-                                <td>₱@period.TotalWage.ToString("N2")</td>
-                                <td>₱@period.PaidAmount.ToString("N2")</td>
-                                <td>₱@balance.ToString("N2")</td>
                                 <td>
-                                    @if (period.Status == PaymentStatus.Paid)
+                                    @if (period.PayrollRunId.HasValue)
                                     {
-                                        <span class="badge bg-success">Paid</span>
-                                    }
-                                    else if (period.Status == PaymentStatus.Partial)
-                                    {
-                                        <span class="badge bg-warning text-dark">Partial</span>
+                                        <span class="badge bg-dark">#@period.PayrollRunId</span>
+                                        <span class="small text-muted ms-1">(@period.PayrollRun?.Status)</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger">Unpaid</span>
+                                        <span class="text-muted small">legacy</span>
+                                    }
+                                </td>
+                                <td class="payroll-money">₱@period.TotalWage.ToString("N2")</td>
+                                <td class="payroll-money">₱@period.AdjustmentTotal.ToString("+#,##0.00;-#,##0.00;0.00")</td>
+                                <td class="payroll-money">₱@payable.ToString("N2")</td>
+                                <td class="payroll-money text-success">₱@period.PaidAmount.ToString("N2")</td>
+                                <td class="payroll-money text-danger">₱@balance.ToString("N2")</td>
+                                <td>
+                                    @if (period.Status == PaymentStatus.Paid)
+                                    {
+                                        <span class="payroll-status paid">Paid</span>
+                                    }
+                                    else if (period.Status == PaymentStatus.Partial)
+                                    {
+                                        <span class="payroll-status partial">Partial</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="payroll-status unpaid">Unpaid</span>
                                     }
                                 </td>
                                 <td class="text-end">
@@ -91,7 +148,7 @@
                         @if (!Model.Any())
                         {
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No payroll periods found.</td>
+                                <td colspan="10" class="text-center text-muted py-4">No payroll periods found.</td>
                             </tr>
                         }
                     </tbody>
@@ -100,3 +157,5 @@
         </div>
     </div>
 </div>
+
+<script src="~/js/payroll.js" asp-append-version="true"></script>

@@ -4,96 +4,139 @@
     ViewData["Title"] = "Create Product";
 }
 
-<div class="container p-4">
-    <div class="card shadow border-0" style="max-width: 600px; margin: 0 auto;">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Add New Product</h4>
-        </div>
-        <div class="card-body">
-            <form asp-action="Create">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                
-                <div class="form-floating mb-3">
-                    <input asp-for="SKU" class="form-control bg-light" placeholder="SKU" value="V-XXX" readonly />
-                    <label asp-for="SKU">SKU (Auto-Generated)</label>
-                    <span asp-validation-for="SKU" class="text-danger"></span>
-                </div>
+<partial name="_ProductFormStyles" />
 
-                <div class="form-floating mb-3">
-                    <input asp-for="Name" class="form-control" placeholder="Product Name" />
-                    <label asp-for="Name">Product Name</label>
-                    <span asp-validation-for="Name" class="text-danger"></span>
+<div class="container product-form-page py-4">
+    <div class="product-form-shell">
+        <div class="product-form-card">
+            <div class="product-form-banner">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="product-form-kicker">Product Setup</div>
+                        <h4>Add New Product</h4>
+                        <p class="subtitle">Capture the essentials so pricing and orders stay consistent.</p>
+                    </div>
+                    <a asp-action="Index" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
                 </div>
+            </div>
 
-                <div class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <div class="form-floating">
+            <div class="product-form-body">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="text-danger product-form-alert"></div>
+
+                    <div class="product-form-section">
+                        <div class="section-title">Basics</div>
+                        <div class="row g-3 align-items-start">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="SKU" class="form-control" placeholder="SKU" value="V-XXX" readonly />
+                                    <label asp-for="SKU">SKU (Auto-Generated)</label>
+                                    <span asp-validation-for="SKU" class="text-danger"></span>
+                                </div>
+                                <div class="sku-help">SKU is generated automatically on save.</div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="sku-pill"><i class="bi bi-tag"></i> Auto SKU on save</div>
+                            </div>
+                        </div>
+
+                        <div class="form-floating mt-3">
+                            <input asp-for="Name" class="form-control" placeholder="Product Name" />
+                            <label asp-for="Name">Product Name</label>
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-floating mt-3">
                             @{
-                                var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
-                                var defaultCategories = new[] { "Vegetables", "Fruits", "Meat", "Seafood", "Dry Goods", "Beverages", "Others" };
-                                var currentCategory = Model?.Category ?? string.Empty;
-                                var allCategories = categoryOptions
-                                    .Concat(defaultCategories)
-                                    .Where(c => !string.IsNullOrWhiteSpace(c))
-                                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                                    .ToList();
-                                if (!string.IsNullOrWhiteSpace(currentCategory) &&
-                                    !allCategories.Contains(currentCategory, StringComparer.OrdinalIgnoreCase))
-                                {
-                                    allCategories.Add(currentCategory);
-                                }
-                                allCategories.Sort(StringComparer.OrdinalIgnoreCase);
+                                var supplierOptions = (ViewBag.SupplierOptions as List<HazelInvoice.Models.Supplier>) ?? new List<HazelInvoice.Models.Supplier>();
                             }
-                            <select asp-for="Category" class="form-select">
-                                <option value="">-- Select Category --</option>
-                                @foreach (var c in allCategories)
+                            <select asp-for="SupplierId" class="form-select">
+                                <option value="">-- Select Supplier (Owner) --</option>
+                                @foreach (var s in supplierOptions)
                                 {
-                                    <option value="@c">@c</option>
+                                    <option value="@s.Id">@s.Name</option>
                                 }
                             </select>
-                            <label asp-for="Category">Category</label>
-                            <span asp-validation-for="Category" class="text-danger"></span>
+                            <label asp-for="SupplierId">Supplier / Owner</label>
+                            <span asp-validation-for="SupplierId" class="text-danger"></span>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            @{
-                                var unitOptions = new[] { "pc", "pcs", "kg", "pack", "bundle", "box", "sack", "tray" };
-                            }
-                            <select asp-for="Unit" class="form-select">
-                                @foreach (var u in unitOptions)
-                                {
-                                    <option value="@u">@u</option>
-                                }
-                            </select>
-                            <label asp-for="Unit">Unit</label>
-                            <span asp-validation-for="Unit" class="text-danger"></span>
+
+                    <div class="product-form-section">
+                        <div class="section-title">Classification</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @{
+                                        var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
+                                        var defaultCategories = new[] { "Vegetables", "Fruits", "Meat", "Seafood", "Dry Goods", "Beverages", "Others" };
+                                        var currentCategory = Model?.Category ?? string.Empty;
+                                        var allCategories = categoryOptions
+                                            .Concat(defaultCategories)
+                                            .Where(c => !string.IsNullOrWhiteSpace(c))
+                                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                                            .ToList();
+                                        if (!string.IsNullOrWhiteSpace(currentCategory) &&
+                                            !allCategories.Contains(currentCategory, StringComparer.OrdinalIgnoreCase))
+                                        {
+                                            allCategories.Add(currentCategory);
+                                        }
+                                        allCategories.Sort(StringComparer.OrdinalIgnoreCase);
+                                    }
+                                    <select asp-for="Category" class="form-select">
+                                        <option value="">-- Select Category --</option>
+                                        @foreach (var c in allCategories)
+                                        {
+                                            <option value="@c">@c</option>
+                                        }
+                                    </select>
+                                    <label asp-for="Category">Category</label>
+                                    <span asp-validation-for="Category" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @{
+                                        var unitOptions = new[] { "pc", "pcs", "kg", "liter", "liters", "gallon", "bottle", "pack", "bundle", "box", "sack", "tray" };
+                                    }
+                                    <select asp-for="Unit" class="form-select">
+                                        @foreach (var u in unitOptions)
+                                        {
+                                            <option value="@u">@u</option>
+                                        }
+                                    </select>
+                                    <label asp-for="Unit">Unit</label>
+                                    <span asp-validation-for="Unit" class="text-danger"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="UnitCost" class="form-control" placeholder="Cost" />
-                            <label asp-for="UnitCost">Unit Cost</label>
-                            <span asp-validation-for="UnitCost" class="text-danger"></span>
+                    <div class="product-form-section">
+                        <div class="section-title">Pricing</div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="UnitCost" class="form-control" placeholder="Cost" />
+                                    <label asp-for="UnitCost">Unit Cost</label>
+                                    <span asp-validation-for="UnitCost" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" asp-for="IsActive" />
+                                    <label class="form-check-label" asp-for="IsActive">Active in orders</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-check mb-3">
-                    <input class="form-check-input" asp-for="IsActive" />
-                    <label class="form-check-label" asp-for="IsActive">
-                        Is Active?
-                    </label>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">Create Product</button>
-                    <a asp-action="Index" class="btn btn-light">Cancel</a>
-                </div>
-            </form>
+                    <div class="product-form-section product-form-actions">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-lg">Create Product</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

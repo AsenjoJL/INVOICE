@@ -2,44 +2,131 @@
 
 @{
     ViewData["Title"] = "Generate Payroll";
-    ViewData["NotePurpose"] = "Create payroll periods from attendance records not yet assigned to payroll.";
-    ViewData["NoteInstructions"] = "Only attendance without a payroll period will be included.";
+    var selectableCount = Model.Rows.Count;
+    var totalWage = Model.Rows.Sum(r => r.TotalWage);
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Generate Payroll</h1>
-        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Payroll</a>
+<link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
+
+<div class="container-fluid p-4 payroll-page">
+    <div class="payroll-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+            <h1>Generate Payroll</h1>
+            <div class="sub">Pick a date range, select laborers, then create payroll periods.</div>
+        </div>
+        <a asp-action="Index" class="btn btn-light text-dark fw-bold"><i class="bi bi-arrow-left"></i> Back to Payroll</a>
     </div>
 
-    <partial name="_PageNote" />
+    <div class="payroll-summary">
+        <div class="payroll-kpi">
+            <div class="label">Laborers Ready</div>
+            <div class="value">@selectableCount</div>
+        </div>
+        <div class="payroll-kpi">
+            <div class="label">Date Range</div>
+            <div class="value">@Model.StartDate.ToString("MMM dd") - @Model.EndDate.ToString("MMM dd")</div>
+        </div>
+        <div class="payroll-kpi warn">
+            <div class="label">Estimated Wage</div>
+            <div class="value">₱@totalWage.ToString("N2")</div>
+        </div>
+    </div>
 
-    <form method="get" class="row g-2 align-items-end mb-3">
-        <div class="col-md-3">
+    @if (TempData["PayrollError"] is string payrollError && !string.IsNullOrWhiteSpace(payrollError))
+    {
+        <div class="alert alert-danger">@payrollError</div>
+    }
+    @if (TempData["PayrollSuccess"] is string payrollSuccess && !string.IsNullOrWhiteSpace(payrollSuccess))
+    {
+        <div class="alert alert-success">@payrollSuccess</div>
+    }
+
+    <form method="get" class="row g-2 align-items-end payroll-filter" data-auto-submit="true">
+        <div class="col-md-4">
             <label class="form-label small fw-bold">Start Date</label>
             <input type="date" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label class="form-label small fw-bold">End Date</label>
             <input type="date" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-outline-primary w-100">Refresh</button>
+        <div class="col-md-4 d-flex align-items-end">
+            <a asp-action="Generate" class="btn btn-outline-secondary w-100">Reset to Default Range</a>
         </div>
     </form>
+
+    <div class="payroll-filter d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            @if (Model.IsCutoffLocked)
+            {
+                <span class="badge bg-success">Cutoff Locked</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">Cutoff Unlocked</span>
+            }
+            @if (Model.HasOverlappingLockedCutoff)
+            {
+                <span class="badge bg-danger">Overlapping Locked Cutoff</span>
+            }
+            <span class="payroll-inline-note">@Model.CutoffMessage</span>
+        </div>
+        <div class="d-flex gap-2">
+            @if (Model.ExistingRunId.HasValue && Model.ExistingRunStatus.HasValue)
+            {
+                <span class="badge bg-dark">Run #@Model.ExistingRunId · @Model.ExistingRunStatus</span>
+            }
+
+            @if (Model.IsCutoffLocked && Model.CutoffId.HasValue)
+            {
+                <form asp-action="UnlockCutoff" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="cutoffId" value="@Model.CutoffId.Value" />
+                    <button type="submit" class="btn btn-outline-warning" @(Model.CanUnlockCutoff ? null : "disabled")>Unlock Cutoff</button>
+                </form>
+            }
+            else
+            {
+                <form asp-action="LockCutoff" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+                    <button type="submit" class="btn btn-success">Lock Cutoff</button>
+                </form>
+            }
+            @if (Model.ExistingRunId.HasValue && Model.CanApproveRun)
+            {
+                <form asp-action="ApproveRun" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="runId" value="@Model.ExistingRunId.Value" />
+                    <button type="submit" class="btn btn-primary">Approve Run</button>
+                </form>
+            }
+            @if (Model.ExistingRunId.HasValue && Model.CanCloseRun)
+            {
+                <form asp-action="CloseRun" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="runId" value="@Model.ExistingRunId.Value" />
+                    <button type="submit" class="btn btn-dark">Close Run</button>
+                </form>
+            }
+        </div>
+    </div>
 
     <form asp-action="Generate" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="StartDate" />
         <input type="hidden" asp-for="EndDate" />
 
-        <div class="card shadow border-0">
+        <div class="payroll-table-card">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 payroll-table">
                         <thead class="table-light">
                             <tr>
-                                <th></th>
+                                <th style="width:48px;">
+                                    <input type="checkbox" id="selectAllLaborers" data-select-all-target=".laborer-check" />
+                                </th>
                                 <th>Laborer</th>
                                 <th>Total Days</th>
                                 <th>Total Wage</th>
@@ -51,11 +138,15 @@
                                 var row = Model.Rows[i];
                                 <tr>
                                     <td>
-                                        <input type="checkbox" name="SelectedLaborerIds" value="@row.LaborerId" @(Model.SelectedLaborerIds.Contains(row.LaborerId) ? "checked" : "") />
+                                        <input type="checkbox"
+                                               class="laborer-check"
+                                               name="SelectedLaborerIds"
+                                               value="@row.LaborerId"
+                                               @(Model.SelectedLaborerIds.Contains(row.LaborerId) ? "checked" : "") />
                                     </td>
                                     <td class="fw-bold">@row.LaborerName</td>
                                     <td>@row.TotalDays</td>
-                                    <td>₱@row.TotalWage.ToString("N2")</td>
+                                    <td class="payroll-money">₱@row.TotalWage.ToString("N2")</td>
                                 </tr>
                             }
                             @if (!Model.Rows.Any())
@@ -68,10 +159,16 @@
                     </table>
                 </div>
             </div>
-            <div class="card-footer d-flex justify-content-between align-items-center">
-                <div class="text-muted">Period: @Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
-                <button type="submit" class="btn btn-primary">Create Payroll Periods</button>
+            <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="payroll-inline-note">Period: @Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
+                <button type="submit"
+                        class="btn btn-primary"
+                        @((Model.IsCutoffLocked && !Model.HasOverlappingLockedCutoff && !Model.ExistingRunId.HasValue) ? null : "disabled")>
+                    Create Payroll Periods
+                </button>
             </div>
         </div>
     </form>
 </div>
+
+<script src="~/js/payroll.js" asp-append-version="true"></script>

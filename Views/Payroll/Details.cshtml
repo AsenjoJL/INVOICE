@@ -3,70 +3,65 @@
 
 @{
     ViewData["Title"] = "Payroll Details";
-    ViewData["NotePurpose"] = "Review payroll breakdown and record payments.";
-    ViewData["NoteInstructions"] = "Payments update status automatically: Unpaid, Partial, Paid.";
     var balance = Model.RemainingBalance;
+    var isRunClosed = Model.Period.PayrollRun?.Status == PayrollRunStatus.Closed;
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Payroll Details</h1>
-        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+<link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
+
+<div class="container-fluid p-4 payroll-page">
+    <div class="payroll-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+            <h1>Payroll Details</h1>
+            <div class="sub">@Model.Period.Laborer?.FullName · @Model.Period.PeriodStart.ToString("MMM dd, yyyy") - @Model.Period.PeriodEnd.ToString("MMM dd, yyyy")</div>
+            <div class="sub">Run: #@Model.Period.PayrollRunId · @Model.Period.PayrollRun?.Status</div>
+        </div>
+        <a asp-action="Index" class="btn btn-light text-dark fw-bold"><i class="bi bi-arrow-left"></i> Back</a>
     </div>
 
-    <partial name="_PageNote" />
+    @if (TempData["PayrollError"] is string payrollError && !string.IsNullOrWhiteSpace(payrollError))
+    {
+        <div class="alert alert-danger">@payrollError</div>
+    }
+    @if (TempData["PayrollSuccess"] is string payrollSuccess && !string.IsNullOrWhiteSpace(payrollSuccess))
+    {
+        <div class="alert alert-success">@payrollSuccess</div>
+    }
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="text-muted small fw-bold">LABORER</div>
-                    <div class="fs-4 fw-bold">@Model.Period.Laborer?.FullName</div>
-                    <div class="text-muted">@Model.Period.PeriodStart.ToString("MMM dd, yyyy") - @Model.Period.PeriodEnd.ToString("MMM dd, yyyy")</div>
-                </div>
-            </div>
+    <div class="payroll-summary">
+        <div class="payroll-kpi">
+            <div class="label">Total Wage</div>
+            <div class="value">₱@Model.Period.TotalWage.ToString("N2")</div>
         </div>
-        <div class="col-md-2">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="text-muted small fw-bold">TOTAL WAGE</div>
-                    <div class="fs-5 fw-bold">₱@Model.Period.TotalWage.ToString("N2")</div>
-                </div>
-            </div>
+        <div class="payroll-kpi">
+            <div class="label">Adjustments</div>
+            <div class="value">₱@Model.Period.AdjustmentTotal.ToString("+#,##0.00;-#,##0.00;0.00")</div>
         </div>
-        <div class="col-md-2">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="text-muted small fw-bold">PAID</div>
-                    <div class="fs-5 fw-bold text-success">₱@Model.Period.PaidAmount.ToString("N2")</div>
-                </div>
-            </div>
+        <div class="payroll-kpi">
+            <div class="label">Payable Total</div>
+            <div class="value">₱@Model.PayableTotal.ToString("N2")</div>
         </div>
-        <div class="col-md-2">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="text-muted small fw-bold">BALANCE</div>
-                    <div class="fs-5 fw-bold text-danger">₱@balance.ToString("N2")</div>
-                </div>
-            </div>
+        <div class="payroll-kpi">
+            <div class="label">Paid</div>
+            <div class="value text-success">₱@Model.Period.PaidAmount.ToString("N2")</div>
         </div>
-        <div class="col-md-2">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="text-muted small fw-bold">STATUS</div>
-                    <div class="fs-5 fw-bold">@Model.Period.Status</div>
-                </div>
-            </div>
+        <div class="payroll-kpi danger">
+            <div class="label">Balance</div>
+            <div class="value">₱@balance.ToString("N2")</div>
+        </div>
+        <div class="payroll-kpi">
+            <div class="label">Status</div>
+            <div class="value">@Model.Period.Status</div>
         </div>
     </div>
 
     <div class="row g-4">
         <div class="col-lg-7">
-            <div class="card shadow border-0">
+            <div class="payroll-panel">
                 <div class="card-header bg-light fw-bold">Attendance Breakdown</div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 payroll-table">
                             <thead class="table-light">
                                 <tr>
                                     <th>Date</th>
@@ -82,9 +77,9 @@
                                     <tr>
                                         <td>@record.WorkDate.ToString("MMM dd, yyyy")</td>
                                         <td>@record.Status</td>
-                                        <td>₱@record.RateSnapshot.ToString("N2")</td>
+                                        <td class="payroll-money">₱@record.RateSnapshot.ToString("N2")</td>
                                         <td>@record.Multiplier.ToString("0.00")</td>
-                                        <td>₱@record.WageAmount.ToString("N2")</td>
+                                        <td class="payroll-money">₱@record.WageAmount.ToString("N2")</td>
                                     </tr>
                                 }
                                 @if (!Model.AttendanceRecords.Any())
@@ -100,7 +95,7 @@
             </div>
         </div>
         <div class="col-lg-5">
-            <div class="card shadow border-0 mb-3">
+            <div class="payroll-panel mb-3">
                 <div class="card-header bg-light fw-bold">Record Payment</div>
                 <div class="card-body">
                     <form asp-action="AddPayment" method="post">
@@ -110,11 +105,23 @@
                             <label class="form-label small fw-bold">Date</label>
                             <input type="date" name="Date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
                         </div>
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <label class="form-label small fw-bold">Amount</label>
-                            <input type="number" step="0.01" name="Amount" class="form-control" required />
+                            <input type="number"
+                                   step="0.01"
+                                   name="Amount"
+                                   id="payrollAmount"
+                                   class="form-control"
+                                   required
+                                   placeholder="0.00" />
+                            <button type="button"
+                                    class="btn btn-link btn-sm p-0 mt-1"
+                                    data-fill-balance-target="#payrollAmount"
+                                    data-balance-value="@balance.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)">
+                                Use full balance (₱@balance.ToString("N2"))
+                            </button>
                         </div>
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <label class="form-label small fw-bold">Payment Method</label>
                             <select name="PaymentMethod" class="form-select">
                                 @foreach (PaymentMethod method in Enum.GetValues(typeof(PaymentMethod)))
@@ -127,16 +134,71 @@
                             <label class="form-label small fw-bold">Reference No</label>
                             <input type="text" name="ReferenceNo" class="form-control" placeholder="Optional" />
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Save Payment</button>
+                        <button type="submit" class="btn btn-primary w-100" @(isRunClosed ? "disabled" : null)>Save Payment</button>
                     </form>
+                    @if (isRunClosed)
+                    {
+                        <div class="small text-muted mt-2">This run is closed. Payment editing is disabled.</div>
+                    }
                 </div>
             </div>
 
-            <div class="card shadow border-0">
+            <div class="payroll-panel mb-3">
+                <div class="card-header bg-light fw-bold">Adjustments</div>
+                <div class="card-body">
+                    <form asp-action="AddAdjustment" method="post" class="mb-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="payrollPeriodId" value="@Model.Period.Id" />
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Date</label>
+                            <input type="date" name="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Amount (+/-)</label>
+                            <input type="number" step="0.01" name="amount" class="form-control" placeholder="0.00" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Reason</label>
+                            <input type="text" name="reason" class="form-control" placeholder="Why this adjustment?" />
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary w-100" @(isRunClosed ? "disabled" : null)>Save Adjustment</button>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0 payroll-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var adjustment in Model.Adjustments)
+                                {
+                                    <tr>
+                                        <td>@adjustment.Date.ToString("MMM dd")</td>
+                                        <td class="payroll-money">₱@adjustment.Amount.ToString("+#,##0.00;-#,##0.00;0.00")</td>
+                                        <td>@adjustment.Reason</td>
+                                    </tr>
+                                }
+                                @if (!Model.Adjustments.Any())
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-3">No adjustments yet.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payroll-panel">
                 <div class="card-header bg-light fw-bold">Payment History</div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover align-middle mb-0">
+                        <table class="table table-sm table-hover align-middle mb-0 payroll-table">
                             <thead class="table-light">
                                 <tr>
                                     <th>Date</th>
@@ -149,7 +211,7 @@
                                 {
                                     <tr>
                                         <td>@payment.Date.ToString("MMM dd")</td>
-                                        <td>₱@payment.Amount.ToString("N2")</td>
+                                        <td class="payroll-money">₱@payment.Amount.ToString("N2")</td>
                                         <td>@payment.PaymentMethod</td>
                                     </tr>
                                 }
@@ -167,3 +229,5 @@
         </div>
     </div>
 </div>
+
+<script src="~/js/payroll.js" asp-append-version="true"></script>

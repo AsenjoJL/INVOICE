@@ -4,60 +4,81 @@
     ViewData["Title"] = "Edit Supplier";
 }
 
-<div class="container p-4">
-    <div class="card shadow border-0" style="max-width: 700px; margin: 0 auto;">
-        <div class="card-header bg-warning text-dark">
-            <h4 class="mb-0">Edit Supplier</h4>
-        </div>
-        <div class="card-body">
-            <form asp-action="Edit">
-                <input type="hidden" asp-for="Id" />
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<partial name="_SupplierStyles" />
 
-                <div class="row g-2 mb-3">
-                    <div class="col-md-8">
-                        <div class="form-floating">
-                            <input asp-for="Name" class="form-control" placeholder="Supplier Name" />
-                            <label asp-for="Name">Supplier Name</label>
-                            <span asp-validation-for="Name" class="text-danger"></span>
+<div class="container supplier-page py-4">
+    <div class="supplier-form-shell">
+        <div class="supplier-form-card">
+            <div class="supplier-form-banner">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="supplier-form-kicker">Supplier Setup</div>
+                        <h4>Update Supplier</h4>
+                        <p class="subtitle">Keep supplier details accurate for purchases and reports.</p>
+                    </div>
+                    <a asp-action="Index" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
+                </div>
+            </div>
+
+            <div class="supplier-form-body">
+                <form asp-action="Edit">
+                    <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="supplier-form-section">
+                        <div class="section-title">Basics</div>
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <div class="form-floating">
+                                    <input asp-for="Name" class="form-control" placeholder="Supplier Name" />
+                                    <label asp-for="Name">Supplier Name</label>
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input asp-for="ContactPerson" class="form-control" placeholder="Contact Person" />
+                                    <label asp-for="ContactPerson">Contact Person (Optional)</label>
+                                    <span asp-validation-for="ContactPerson" class="text-danger"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="ContactPerson" class="form-control" placeholder="Contact Person" />
-                            <label asp-for="ContactPerson">Contact Person (Optional)</label>
-                            <span asp-validation-for="ContactPerson" class="text-danger"></span>
+
+                    <div class="supplier-form-section">
+                        <div class="section-title">Contact</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="ContactNumber" class="form-control" placeholder="Contact Number" />
+                                    <label asp-for="ContactNumber">Contact Number (Optional)</label>
+                                    <span asp-validation-for="ContactNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="Address" class="form-control" placeholder="Address" />
+                                    <label asp-for="Address">Address (Optional)</label>
+                                    <span asp-validation-for="Address" class="text-danger"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="ContactNumber" class="form-control" placeholder="Contact Number" />
-                            <label asp-for="ContactNumber">Contact Number (Optional)</label>
-                            <span asp-validation-for="ContactNumber" class="text-danger"></span>
+                    <div class="supplier-form-section">
+                        <div class="section-title">Status</div>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input" asp-for="IsActive" />
+                            <label class="form-check-label" asp-for="IsActive">Active supplier</label>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="Address" class="form-control" placeholder="Address" />
-                            <label asp-for="Address">Address (Optional)</label>
-                            <span asp-validation-for="Address" class="text-danger"></span>
-                        </div>
+
+                    <div class="supplier-form-section supplier-form-actions">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
                     </div>
-                </div>
-
-                <div class="form-check mb-3">
-                    <input class="form-check-input" asp-for="IsActive" />
-                    <label class="form-check-label" asp-for="IsActive">Is Active?</label>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
-                    <a asp-action="Index" class="btn btn-light">Cancel</a>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 </div>

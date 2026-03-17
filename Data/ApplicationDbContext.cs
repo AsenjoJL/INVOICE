@@ -33,10 +33,15 @@ public class ApplicationDbContext : IdentityDbContext
     public DbSet<PartnerPurchase> PartnerPurchases { get; set; }
     public DbSet<PartnerBalanceConfig> PartnerBalanceConfigs { get; set; }
     public DbSet<PartnerCapital> PartnerCapitals { get; set; }
+    public DbSet<CollectionReceivedOverride> CollectionReceivedOverrides { get; set; }
     public DbSet<Laborer> Laborers { get; set; }
     public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
     public DbSet<PayrollPeriod> PayrollPeriods { get; set; }
     public DbSet<PayrollPayment> PayrollPayments { get; set; }
+    public DbSet<PayrollRun> PayrollRuns { get; set; }
+    public DbSet<PayrollAdjustment> PayrollAdjustments { get; set; }
+    public DbSet<PayrollCutoff> PayrollCutoffs { get; set; }
+    public DbSet<AppSetting> AppSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -84,6 +89,21 @@ public class ApplicationDbContext : IdentityDbContext
         builder.Entity<PayrollPeriod>().HasIndex(p => p.LaborerId);
         builder.Entity<PayrollPeriod>().HasIndex(p => p.PeriodStart);
         builder.Entity<PayrollPeriod>().HasIndex(p => p.Status);
+        builder.Entity<PayrollPeriod>().HasIndex(p => p.PayrollRunId);
+        builder.Entity<PayrollRun>().HasIndex(r => new { r.PeriodStart, r.PeriodEnd });
+        builder.Entity<PayrollRun>().HasIndex(r => r.Status);
+        builder.Entity<PayrollAdjustment>().HasIndex(a => a.PayrollPeriodId);
+        builder.Entity<PayrollAdjustment>().HasIndex(a => a.Date);
+        builder.Entity<PayrollCutoff>().HasIndex(c => new { c.StartDate, c.EndDate });
+        builder.Entity<PayrollCutoff>().HasIndex(c => c.IsLocked);
+
+        builder.Entity<AppSetting>()
+            .Property(s => s.Key)
+            .HasMaxLength(120);
+
+        builder.Entity<AppSetting>()
+            .Property(s => s.Value)
+            .HasMaxLength(2048);
     }
 
 }

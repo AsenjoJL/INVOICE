@@ -2,72 +2,247 @@
 
 @{
     ViewData["Title"] = "Products";
-    ViewData["NotePurpose"] = "Manage the product catalog used in orders, price setup, and purchases.";
-    ViewData["NoteInstructions"] = "Add or edit products; inactive items are hidden from orders.";
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+    var searchTerm = (ViewBag.SearchTerm as string) ?? string.Empty;
+    var zeroPriceCount = Model.Count(p => p.UnitCost == 0m);
+    var categoryOptions = Model
+        .Select(p => string.IsNullOrWhiteSpace(p.Category) ? "Uncategorized" : p.Category.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(c => c)
+        .ToList();
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Product Listings</h1>
-        <div>
-            <form asp-action="GenerateSkus" method="post" class="d-inline me-2">
-                <button type="submit" class="btn btn-outline-warning text-dark fw-bold" onclick="return confirm('This will reset ALL product SKUs to V-001, V-002 sequence based on Name. Continue?');">
-                    <i class="bi bi-magic"></i> Set V-Series SKUs
-                </button>
-            </form>
-            <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add New Product</a>
+<link rel="stylesheet" href="~/css/products-index.css" asp-append-version="true" />
+
+<div class="container-fluid p-4 product-page">
+    <div class="product-header">
+        <div class="product-header-top">
+            <div class="product-header-main">
+                <h1>Product Listing</h1>
+                <div class="sub">Maintain pricing, units, and availability for all items.</div>
+                <div class="product-tools">
+                    <form method="get" asp-action="Index" class="product-search-bar">
+                        <input type="text"
+                               id="searchInput"
+                               name="q"
+                               value="@searchTerm"
+                               class="form-control form-control-sm search-input-width"
+                               placeholder="Search name, SKU, category, unit..." />
+
+                        <select id="categoryFilter" class="form-select form-select-sm category-filter-width">
+                            <option value="">All Categories</option>
+                            @foreach (var category in categoryOptions)
+                            {
+                                <option value="@category">@category</option>
+                            }
+                        </select>
+
+                        <button type="submit" class="btn btn-search">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+
+                        @if (!string.IsNullOrWhiteSpace(searchTerm))
+                        {
+                            <a asp-action="Index" class="btn btn-clear">Clear</a>
+                        }
+                    </form>
+
+                    <button type="button"
+                            class="info-btn"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#productInfoPanel"
+                            aria-expanded="false"
+                            aria-controls="productInfoPanel"
+                            title="Purpose and instructions">
+                        <i class="bi bi-info-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="product-actions">
+                <form asp-action="GenerateSkus" method="post">
+                    <button type="submit" class="btn btn-outline-light" onclick="return confirm('This will reset ALL product SKUs to V-001, V-002 sequence based on Name. Continue?');">
+                        <i class="bi bi-magic"></i> Set V-Series SKUs
+                    </button>
+                </form>
+                <a asp-action="Create" class="btn btn-light text-dark"><i class="bi bi-plus-lg"></i> Add New Product</a>
+            </div>
+        </div>
+
+        <div id="productInfoPanel" class="collapse info-collapse">
+            <div><strong>Purpose:</strong> Manage the product catalog used in orders, price setup, and purchases.</div>
+            <div><strong>Instructions:</strong> Add or edit products; inactive items are hidden from orders.</div>
         </div>
     </div>
 
-    <partial name="_PageNote" />
+    <div class="filter-bar">
+        <button type="button" class="filter-pill active" data-status-filter="all">All Products</button>
+        <button type="button" class="filter-pill" data-status-filter="active">Active</button>
+        <button type="button" class="filter-pill" data-status-filter="inactive">Inactive</button>
+        <button type="button" class="filter-pill filter-pill-warning" data-status-filter="zero">
+            Zero Price <span class="zero-badge">@zeroPriceCount</span>
+        </button>
+    </div>
 
-    <div class="card shadow border-0">
+    <div class="product-card">
         @if (TempData["Message"] != null)
         {
             <div class="alert alert-success m-3">@TempData["Message"]</div>
         }
+
+        <div class="table-top-meta">
+            <div id="rowSummary" class="row-summary">Showing 0 of 0 products</div>
+            <div class="row-summary">Tip: Use filters and sorting to focus the list.</div>
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table product-table align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th>SKU</th>
-                            <th>Name</th>
-                            <th>Category</th>
+                            <th class="col-check">
+                                <input type="checkbox" id="selectAllRows" name="selectAllRows" />
+                            </th>
+                            <th class="col-sku">
+                                <button type="button" class="sort-trigger" data-sort-key="sku">
+                                    SKU <i class="bi bi-arrow-down-up"></i>
+                                </button>
+                            </th>
+                            <th class="col-name">
+                                <button type="button" class="sort-trigger" data-sort-key="name">
+                                    Name <i class="bi bi-arrow-down-up"></i>
+                                </button>
+                            </th>
                             <th>Unit</th>
-                            <th>Cost</th>
+                            <th class="col-cost">
+                                <button type="button" class="sort-trigger" data-sort-key="cost">
+                                    Cost <i class="bi bi-arrow-down-up"></i>
+                                </button>
+                            </th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th class="col-actions">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach (var item in Model)
+                    <tbody id="productsTableBody">
+                        @if (!Model.Any())
                         {
                             <tr>
-                                <td>@item.SKU</td>
-                                <td class="fw-bold">@item.Name</td>
-                                <td>@item.Category</td>
-                                <td>@item.Unit</td>
-                                <td>@item.UnitCost.ToString("N2")</td>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    No products found.@(string.IsNullOrWhiteSpace(searchTerm) ? "" : $" Try a different keyword for \"{searchTerm}\".")
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model)
+                        {
+                            var categoryText = string.IsNullOrWhiteSpace(item.Category) ? "Uncategorized" : item.Category.Trim();
+                            var statusText = item.IsActive ? "active" : "inactive";
+                            <tr class="product-row"
+                                data-id="@item.Id"
+                                data-sku="@item.SKU"
+                                data-name="@item.Name"
+                                data-category="@categoryText"
+                                data-unit="@item.Unit"
+                                data-cost="@item.UnitCost"
+                                data-status="@statusText">
+                                <td class="col-check">
+                                    <input type="checkbox"
+                                           class="row-check"
+                                           data-id="@item.Id"
+                                           name="selectedProductIds"
+                                           value="@item.Id" />
+                                </td>
+                                <td class="product-sku">@item.SKU</td>
+                                <td>
+                                    <div class="product-name">@item.Name</div>
+                                    <div class="product-meta">@categoryText</div>
+                                </td>
+                                <td class="product-meta fw-semibold">@item.Unit</td>
+                                <td class="product-cost">
+                                    <span class="@(item.UnitCost == 0 ? "zero" : "")">₱@item.UnitCost.ToString("N2")</span>
+                                </td>
                                 <td>
                                     @if (item.IsActive)
                                     {
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="status-pill status-active">Active</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="status-pill status-inactive">Inactive</span>
                                     }
                                 </td>
-                                <td>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></a>
+                                <td class="col-actions">
+                                    <div class="dropdown">
+                                        <button class="action-menu-btn"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                title="More actions">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item product-edit-link"
+                                                   asp-action="Edit"
+                                                   asp-route-id="@item.Id"
+                                                   asp-route-returnUrl="@returnUrl">
+                                                    <i class="bi bi-pencil-square me-2"></i>Edit
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   asp-action="Create">
+                                                    <i class="bi bi-copy me-2"></i>Duplicate
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   asp-action="Delete"
+                                                   asp-route-id="@item.Id">
+                                                    <i class="bi bi-pause-circle me-2"></i>Deactivate
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider" /></li>
+                                            <li>
+                                                <a class="dropdown-item text-danger"
+                                                   asp-action="Delete"
+                                                   asp-route-id="@item.Id">
+                                                    <i class="bi bi-trash me-2"></i>Delete
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+
+            <div class="product-pager">
+                <div class="pager-controls">
+                    <label for="pageSizeSelect" class="small text-muted fw-bold text-uppercase">Page size</label>
+                    <select id="pageSizeSelect" class="form-select form-select-sm page-size-width">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="pager-controls">
+                    <button type="button" id="prevPageBtn" class="btn btn-sm btn-outline-secondary">Prev</button>
+                    <div id="pageInfo" class="pager-info">Page 1 of 1</div>
+                    <button type="button" id="nextPageBtn" class="btn btn-sm btn-outline-secondary">Next</button>
+                </div>
+            </div>
         </div>
     </div>
+
+    <div id="bulkToolbar" class="bulk-toolbar">
+        <span id="bulkCount" class="bulk-count">0 selected</span>
+        <button type="button" class="btn btn-outline-success btn-sm" title="UI toolbar ready (no bulk endpoint configured)">Activate</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" title="UI toolbar ready (no bulk endpoint configured)">Deactivate</button>
+        <button type="button" class="btn btn-outline-danger btn-sm" title="UI toolbar ready (no bulk endpoint configured)">Delete selected</button>
+        <button type="button" id="clearSelectionBtn" class="btn btn-light btn-sm">Clear</button>
+    </div>
 </div>
+
+<script src="~/js/products-index.js" asp-append-version="true"></script>

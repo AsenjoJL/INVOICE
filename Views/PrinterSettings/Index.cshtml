@@ -1,0 +1,144 @@
+@model HazelInvoice.ViewModels.PrinterSettingsViewModel
+
+@{
+    ViewData["Title"] = "Printer Settings";
+    ViewData["NotePurpose"] = "Choose which Windows printer HazelInvoice should use for invoice printing.";
+    ViewData["NoteInstructions"] = "Select a printer, optionally Test Print, then Save. For silent kiosk printing, HazelInvoice will apply the saved printer as Windows default.";
+}
+
+<div class="container-fluid p-4 invoice-ui">
+    <div class="invoice-hero invoice-hero-plain">
+        <div>
+            <h1 class="invoice-title">Printer Settings</h1>
+            <p class="invoice-sub">Select the printer used for invoices.</p>
+        </div>
+        <div class="invoice-actions">
+            @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl))
+            {
+                <a class="invoice-btn invoice-btn-ghost" href="@Model.ReturnUrl">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            }
+        </div>
+    </div>
+
+    <partial name="_PageNote" />
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="invoice-card">
+        <div class="invoice-card-header">
+            <h6 class="invoice-card-title">Default Printer</h6>
+            <span class="invoice-tag"><i class="bi bi-printer"></i> Windows</span>
+        </div>
+        <div class="invoice-card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold" for="SelectedPrinter">Installed Printers</label>
+                    <select id="SelectedPrinter" name="SelectedPrinter" class="form-select" form="printerForm" required>
+                        <option value="">-- Select printer --</option>
+                        @foreach (var p in Model.InstalledPrinters)
+                        {
+                            if (string.Equals(p, Model.SelectedPrinter, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@p" selected="selected">@p</option>
+                            }
+                            else
+                            {
+                                <option value="@p">@p</option>
+                            }
+                        }
+                    </select>
+                    <div class="form-text">
+                        Saved: <span class="fw-bold">@(!string.IsNullOrWhiteSpace(Model.SavedPrinter) ? Model.SavedPrinter : "None")</span>
+                    </div>
+
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="ReceiptBorderless" name="ReceiptBorderless" form="printerForm"
+                               value="true" @(Model.ReceiptBorderless ? "checked" : null) />
+                        <label class="form-check-label fw-bold" for="ReceiptBorderless">
+                            Borderless receipt print (no lines / grid)
+                        </label>
+                        <div class="form-text">
+                            Faster on dot-matrix printers. Removes table borders and underlines on the printed receipt.
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label fw-bold" for="PaperSize">Paper size (for browser printing)</label>
+                        <select id="PaperSize" name="PaperSize" class="form-select" form="printerForm">
+                            @if (string.Equals(Model.PaperSize, "A4", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="Letter">Letter (8.5 x 11 / short bond)</option>
+                                <option value="A4" selected="selected">A4 (210 x 297mm)</option>
+                            }
+                            else
+                            {
+                                <option value="Letter" selected="selected">Letter (8.5 x 11 / short bond)</option>
+                                <option value="A4">A4 (210 x 297mm)</option>
+                            }
+                        </select>
+                        <div class="form-text">
+                            This sets the print CSS <code>@@page</code> size used by HazelInvoice print pages. Your printer driver settings still apply.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex gap-2 justify-content-md-end">
+                    <form id="testForm" asp-action="TestPrint" method="post" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="SelectedPrinter" value="@Model.SelectedPrinter" />
+                        <input type="hidden" name="PaperSize" value="@Model.PaperSize" />
+                        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-bug"></i> Test Print
+                        </button>
+                    </form>
+
+                    <form id="printerForm" asp-action="Save" method="post" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check2-circle"></i> Save
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <hr />
+            <div class="text-muted small">
+                Dot-matrix tips: use a printer driver that supports continuous paper, set margins in Windows “Printing preferences”,
+                and keep templates simple for consistent alignment.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Keep TestPrint form in sync with the dropdown without duplicating inputs in the markup.
+    (function () {
+        const sel = document.getElementById('SelectedPrinter');
+        const paperSel = document.getElementById('PaperSize');
+        const testForm = document.getElementById('testForm');
+        if (!sel || !testForm) return;
+
+        const hidden = testForm.querySelector('input[name="SelectedPrinter"]');
+        if (!hidden) return;
+
+        const hiddenPaper = testForm.querySelector('input[name="PaperSize"]');
+
+        function sync() {
+            hidden.value = sel.value || '';
+            if (hiddenPaper && paperSel) hiddenPaper.value = paperSel.value || 'Letter';
+        }
+        sel.addEventListener('change', sync);
+        if (paperSel) paperSel.addEventListener('change', sync);
+        sync();
+    })();
+</script>

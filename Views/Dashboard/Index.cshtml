@@ -1,146 +1,133 @@
 @model HazelInvoice.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
-    ViewData["NotePurpose"] = "Quick overview of sales, expenses, and performance for today.";
-    ViewData["NoteInstructions"] = "Use the quick actions and charts to drill into orders, price setup, or reports.";
+    string TrendBadgeClass(decimal value) => value > 0 ? "is-up" : (value < 0 ? "is-down" : "is-flat");
+    string TrendIcon(decimal value) => value > 0 ? "bi-arrow-up-right" : (value < 0 ? "bi-arrow-down-right" : "bi-dash");
+    string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";
 }
 
-<div class="container-fluid pb-5 dashboard-shell">
-    <!-- DASHBOARD HEADER -->
-    <div class="dashboard-hero reveal" style="animation-delay: 40ms;">
-        <div>
-            <div class="dash-chip"><i class="bi bi-activity"></i> Live</div>
-            <h2 class="dash-title">Operations Dashboard</h2>
+<div class="container-fluid pb-5 dashboard-shell dashboard-minimal">
+    <div class="dash-header">
+        <div class="dash-header-left">
+            <h1 class="dash-title">Dashboard</h1>
             <div class="dash-meta">
-                <span><i class="bi bi-calendar-week me-1"></i>@DateTime.Now.ToString("dddd, MMM dd, yyyy")</span>
+                <span>@DateTime.Now.ToString("ddd, MMM dd, yyyy")</span>
                 <span class="meta-dot">•</span>
-                <span><i class="bi bi-clock me-1"></i>Updated @DateTime.Now.ToString("h:mm tt")</span>
+                <span>@DateTime.Now.ToString("h:mm tt")</span>
             </div>
         </div>
-        <div class="dash-actions">
-            <a href="/ProfitReport" class="dash-btn dash-btn-primary">
-                <i class="bi bi-file-earmark-spreadsheet-fill"></i> Reports
-            </a>
-            <div class="dash-quick">
-                <a href="/Orders/VegetableMatrix" class="dash-quick-link"><i class="bi bi-grid-3x3-gap"></i> Matrix</a>
-                <a href="/Orders/VegetableOutletOrder" class="dash-quick-link"><i class="bi bi-basket2"></i> Order</a>
-                <a href="/WeeklyPrices/PriceVersus" class="dash-quick-link"><i class="bi bi-sliders"></i> Price Setup</a>
+        <div class="dash-header-right">
+            <div class="dash-shortcuts">
+                <a href="/Orders/VegetableMatrix" class="dash-link-btn">Matrix</a>
+                <a href="/Orders/VegetableOutletOrder" class="dash-link-btn">Order</a>
+                <a href="/WeeklyPrices/PriceVersus" class="dash-link-btn">Price Setup</a>
             </div>
+            <a href="/ProfitReport" class="dash-btn dash-btn-primary">Reports</a>
         </div>
     </div>
 
-    <partial name="_PageNote" />
-
-    <!-- KPI ROW -->
-    <div class="row g-3 mb-4 reveal" style="animation-delay: 120ms;">
-        <!-- Sales Today -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-success h-100">
-                <div class="metric-label">Sales Today</div>
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-success">
+                <div class="metric-head">
+                    <div class="metric-label">Sales Today</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.SalesTodayTrendPercent)"><i class="bi @TrendIcon(Model.SalesTodayTrendPercent)"></i> @TrendText(Model.SalesTodayTrendPercent)</span>
+                </div>
                 <div class="metric-value">₱@Model.SalesToday.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-cash-stack"></i></div>
+                <div class="metric-state">@(Model.SalesToday == 0 ? "No activity yet" : "Updated today")</div>
             </div>
         </div>
-        
-        <!-- Sales Paid Total -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-primary h-100">
-                <div class="metric-label">Paid Sales</div>
-                <div class="metric-value">₱@Model.TotalSalesAllTime.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-bag-check"></i></div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-primary kpi-card-priority">
+                <div class="metric-head">
+                    <div class="metric-label">Sales Month</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.SalesMonthlyTrendPercent)"><i class="bi @TrendIcon(Model.SalesMonthlyTrendPercent)"></i> @TrendText(Model.SalesMonthlyTrendPercent)</span>
+                </div>
+                <div class="metric-value">₱@Model.SalesMonthly.ToString("N0")</div>
+                <div class="metric-state">@(Model.SalesMonthly == 0 ? "No activity this month" : "Current month revenue")</div>
             </div>
         </div>
-
-        <!-- Unpaid Total -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-danger h-100">
-                <div class="metric-label">Unpaid</div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-warning kpi-card-priority">
+                <div class="metric-head">
+                    <div class="metric-label">Gross Profit</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.GrossProfitTrendPercent)"><i class="bi @TrendIcon(Model.GrossProfitTrendPercent)"></i> @TrendText(Model.GrossProfitTrendPercent)</span>
+                </div>
+                <div class="metric-value">₱@Model.GrossProfit.ToString("N0")</div>
+                <div class="metric-state">@(Model.GrossProfit == 0 ? "No realized margin" : "Revenue minus item cost")</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-danger">
+                <div class="metric-head">
+                    <div class="metric-label">Unpaid</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.UnpaidTrendPercent)"><i class="bi @TrendIcon(Model.UnpaidTrendPercent)"></i> @TrendText(Model.UnpaidTrendPercent)</span>
+                </div>
                 <div class="metric-value">₱@Model.UnpaidAmount.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="unpaid-cta">
+                    <span class="unpaid-count">@Model.UnpaidInvoiceCount invoice@(Model.UnpaidInvoiceCount == 1 ? "" : "s")</span>
+                    <a class="unpaid-link" href="/Orders/UnpaidOrders">View</a>
+                </div>
             </div>
         </div>
-
-        <!-- Items Sold Today -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-info h-100">
-                <div class="metric-label">Items (Today)</div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-info">
+                <div class="metric-head">
+                    <div class="metric-label">Items Today</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.ItemsSoldTodayTrendPercent)"><i class="bi @TrendIcon(Model.ItemsSoldTodayTrendPercent)"></i> @TrendText(Model.ItemsSoldTodayTrendPercent)</span>
+                </div>
                 @if (Model.ItemsSoldTodayByUnit != null && Model.ItemsSoldTodayByUnit.Any())
                 {
                     <div class="small text-muted mt-2 d-flex flex-wrap gap-2">
                         @foreach (var unit in Model.ItemsSoldTodayByUnit)
                         {
                             <span class="badge bg-light text-dark border">
-                                @unit.Category: @unit.Value.ToString("N0")
+                                @unit.Category: @unit.Value.ToString("0.###")
                             </span>
                         }
                     </div>
+                    <div class="metric-state mt-2">Unit breakdown</div>
                 }
                 else
                 {
                     <div class="metric-value">0</div>
+                    <div class="metric-state">No item movement yet</div>
                 }
-                <div class="metric-icon"><i class="bi bi-box2"></i></div>
             </div>
         </div>
-
-        <!-- Expense Today -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-danger h-100">
-                <div class="metric-label">Expense Today</div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-danger">
+                <div class="metric-head">
+                    <div class="metric-label">Expense Today</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.ExpenseTodayTrendPercent)"><i class="bi @TrendIcon(Model.ExpenseTodayTrendPercent)"></i> @TrendText(Model.ExpenseTodayTrendPercent)</span>
+                </div>
                 <div class="metric-value">₱@Model.ExpenseToday.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-receipt-cutoff"></i></div>
+                <div class="metric-state">@(Model.ExpenseToday == 0 ? "No expense posted" : "Today cash outflow")</div>
             </div>
         </div>
-
-        <!-- Total Expense -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card h-100">
-                <div class="metric-label">Total Expense</div>
-                <div class="metric-value">₱@Model.TotalExpenseAllTime.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-cash-coin"></i></div>
-            </div>
-        </div>
-
-        <!-- Sales This Month -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-primary h-100">
-                <div class="metric-label">Sales (Month)</div>
-                <div class="metric-value">₱@Model.SalesMonthly.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-calendar-month"></i></div>
-            </div>
-        </div>
-
-        <!-- Expense This Month -->
-        <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-danger h-100">
-                <div class="metric-label">Expense (Month)</div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-danger-soft">
+                <div class="metric-head">
+                    <div class="metric-label">Expense Month</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.ExpenseMonthlyTrendPercent)"><i class="bi @TrendIcon(Model.ExpenseMonthlyTrendPercent)"></i> @TrendText(Model.ExpenseMonthlyTrendPercent)</span>
+                </div>
                 <div class="metric-value">₱@Model.ExpenseMonthly.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-calendar2-minus"></i></div>
+                <div class="metric-state">@(Model.ExpenseMonthly == 0 ? "No monthly expenses yet" : "Current month spending")</div>
             </div>
         </div>
-
-        <!-- Gross Profit -->
-         <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-warning h-100">
-                <div class="metric-label">Gross Profit</div>
-                <div class="metric-value">₱@Model.GrossProfit.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-graph-up"></i></div>
-            </div>
-        </div>
-        
-          <!-- Cash Balance -->
-         <div class="col-xl-2 col-md-4 col-sm-6">
-            <div class="metric-card is-success h-100">
-                <div class="metric-label">Cash On Hand</div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-success">
+                <div class="metric-head">
+                    <div class="metric-label">Cash On Hand</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.CashBalanceTrendPercent)"><i class="bi @TrendIcon(Model.CashBalanceTrendPercent)"></i> @TrendText(Model.CashBalanceTrendPercent)</span>
+                </div>
                 <div class="metric-value">₱@Model.CashBalance.ToString("N0")</div>
-                <div class="metric-icon"><i class="bi bi-wallet2"></i></div>
+                <div class="metric-state">@(Model.CashBalance == 0 ? "Neutral cash position" : "Payments minus expenses")</div>
             </div>
         </div>
     </div>
 
-    <!-- ANALYTICS CHARTS SECTION -->
-    <div class="row g-4 mb-4 reveal" style="animation-delay: 180ms;">
-        <!-- Sales Trend Chart -->
+    <div class="row g-4 mb-4">
         <div class="col-lg-8">
             <div class="surface-card h-100">
                 <div class="surface-card-header">
@@ -153,7 +140,6 @@
             </div>
         </div>
 
-        <!-- Top Products Chart -->
         <div class="col-lg-4">
             <div class="surface-card h-100">
                 <div class="surface-card-header">
@@ -169,9 +155,7 @@
         </div>
     </div>
 
-    <!-- MIDDLE SECTION: ORDER LISTS -->
-    <div class="row g-4 mb-4 reveal" style="animation-delay: 240ms;">
-        <!-- Recent Unpaid -->
+    <div class="row g-4 mb-4">
         <div class="col-lg-6">
             <div class="surface-card h-100">
                 <div class="surface-card-header">
@@ -189,13 +173,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if(Model.RecentUnpaidOrders != null && Model.RecentUnpaidOrders.Any()) {
-                                @foreach(var order in Model.RecentUnpaidOrders) {
+                            @if (Model.RecentUnpaidOrders != null && Model.RecentUnpaidOrders.Any())
+                            {
+                                @foreach (var order in Model.RecentUnpaidOrders)
+                                {
                                     <tr class="table-row-link" onclick="window.location='/Orders/VegetableOutletOrder?id=@order.Id'">
                                         <td>
                                             <div class="d-flex align-items-center">
-                                                 <div class="avatar-initial bg-danger text-white me-2 small" style="width:25px;height:25px;font-size:0.7rem">@order.CustomerName.Substring(0,1)</div>
-                                                 <div class="fw-bold">@order.CustomerName</div>
+                                                <div class="avatar-initial bg-danger text-white me-2 small" style="width:25px;height:25px;font-size:0.7rem">@order.CustomerName.Substring(0,1)</div>
+                                                <div class="fw-bold">@order.CustomerName</div>
                                             </div>
                                         </td>
                                         <td class="text-muted">@order.Date.ToString("MMM dd")</td>
@@ -203,7 +189,9 @@
                                         <td class="text-end"><span class="badge badge-soft-danger">Unpaid</span></td>
                                     </tr>
                                 }
-                            } else {
+                            }
+                            else
+                            {
                                 <tr><td colspan="4" class="text-center py-4 text-muted">No unpaid orders found.</td></tr>
                             }
                         </tbody>
@@ -211,8 +199,7 @@
                 </div>
             </div>
         </div>
-        
-         <!-- Recent Paid -->
+
         <div class="col-lg-6">
             <div class="surface-card h-100">
                 <div class="surface-card-header">
@@ -230,13 +217,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                             @if(Model.RecentPaidOrders != null && Model.RecentPaidOrders.Any()) {
-                                @foreach(var order in Model.RecentPaidOrders) {
+                            @if (Model.RecentPaidOrders != null && Model.RecentPaidOrders.Any())
+                            {
+                                @foreach (var order in Model.RecentPaidOrders)
+                                {
                                     <tr class="table-row-link" onclick="window.location='/Orders/VegetableOutletOrder?id=@order.Id'">
                                         <td>
                                             <div class="d-flex align-items-center">
-                                                 <div class="avatar-initial bg-success text-white me-2 small" style="width:25px;height:25px;font-size:0.7rem">@order.CustomerName.Substring(0,1)</div>
-                                                 <div class="fw-bold">@order.CustomerName</div>
+                                                <div class="avatar-initial bg-success text-white me-2 small" style="width:25px;height:25px;font-size:0.7rem">@order.CustomerName.Substring(0,1)</div>
+                                                <div class="fw-bold">@order.CustomerName</div>
                                             </div>
                                         </td>
                                         <td class="text-muted">@order.Date.ToString("MMM dd")</td>
@@ -244,7 +233,9 @@
                                         <td class="text-end"><span class="badge badge-soft-success">Paid</span></td>
                                     </tr>
                                 }
-                            } else {
+                            }
+                            else
+                            {
                                 <tr><td colspan="4" class="text-center py-4 text-muted">No paid orders found.</td></tr>
                             }
                         </tbody>
@@ -254,132 +245,240 @@
         </div>
     </div>
 
-    <!-- BOTTOM SECTIONS -->
-    <div class="row g-4 reveal" style="animation-delay: 300ms;">
-        <!-- Top Products -->
+    <div class="row g-4">
         <div class="col-lg-6">
             <div class="surface-card h-100">
-                 <div class="surface-card-header">
-                     <h6 class="surface-card-title"><i class="bi bi-trophy me-2"></i> Top Selling Products</h6>
-                     <span class="section-chip"><i class="bi bi-award"></i> Ranking</span>
-                 </div>
-                 <div class="surface-card-body p-0 table-responsive-admin">
-                     <table class="table table-admin table-striped mb-0">
+                <div class="surface-card-header">
+                    <h6 class="surface-card-title"><i class="bi bi-trophy me-2"></i> Top Selling Products</h6>
+                    <span class="section-chip"><i class="bi bi-award"></i> Ranking</span>
+                </div>
+                <div class="surface-card-body p-0 table-responsive-admin">
+                    <table class="table table-admin table-striped mb-0">
                         <thead><tr><th>Rank</th><th>Product</th><th class="text-end">Sales</th></tr></thead>
                         <tbody>
-                             @if(Model.TopItems != null) {
+                            @if (Model.TopItems != null && Model.TopItems.Any())
+                            {
                                 int rank = 1;
-                                foreach(var item in Model.TopItems) {
+                                foreach (var item in Model.TopItems)
+                                {
                                     <tr>
                                         <td class="text-center text-muted" style="width:50px">#@(rank++)</td>
                                         <td class="fw-bold text-dark">@item.Category</td>
                                         <td class="text-end fw-bold text-primary">₱@item.Value.ToString("N0")</td>
                                     </tr>
                                 }
-                             }
+                            }
+                            else
+                            {
+                                <tr><td colspan="3" class="text-center py-4 text-muted">No product sales yet.</td></tr>
+                            }
                         </tbody>
-                     </table>
-                 </div>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- Outlet Performance -->
         <div class="col-lg-6">
             <div class="surface-card h-100">
-                 <div class="surface-card-header">
-                     <h6 class="surface-card-title"><i class="bi bi-shop me-2"></i> Top Outlets (Sales)</h6>
-                     <span class="section-chip"><i class="bi bi-graph-up"></i> Ranking</span>
-                 </div>
-                 <div class="surface-card-body p-0 table-responsive-admin">
-                     <table class="table table-admin table-striped mb-0">
+                <div class="surface-card-header">
+                    <h6 class="surface-card-title"><i class="bi bi-shop me-2"></i> Top Outlets (Sales)</h6>
+                    <span class="section-chip"><i class="bi bi-graph-up"></i> Ranking</span>
+                </div>
+                <div class="surface-card-body p-0 table-responsive-admin">
+                    <table class="table table-admin table-striped mb-0">
                         <thead><tr><th>Rank</th><th>Outlet</th><th class="text-end">Total Amount</th></tr></thead>
                         <tbody>
-                             @if(Model.TopOutlets != null) {
+                            @if (Model.TopOutlets != null && Model.TopOutlets.Any())
+                            {
                                 int rank = 1;
-                                foreach(var item in Model.TopOutlets) {
+                                foreach (var item in Model.TopOutlets)
+                                {
                                     <tr>
-                                       <td class="text-center text-muted" style="width:50px">#@(rank++)</td>
+                                        <td class="text-center text-muted" style="width:50px">#@(rank++)</td>
                                         <td class="fw-bold text-dark">@item.Category</td>
                                         <td class="text-end fw-bold text-info">₱@item.Value.ToString("N0")</td>
                                     </tr>
                                 }
-                             }
+                            }
+                            else
+                            {
+                                <tr><td colspan="3" class="text-center py-4 text-muted">No outlet sales yet.</td></tr>
+                            }
                         </tbody>
-                     </table>
-                 </div>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-4">
+        <div class="col-12">
+            <div class="surface-card border border-danger">
+                <div class="surface-card-header">
+                    <h6 class="surface-card-title text-danger"><i class="bi bi-exclamation-octagon me-2"></i> Reset Database</h6>
+                </div>
+                <div class="surface-card-body">
+                    @if (TempData["ResetSuccess"] != null)
+                    {
+                        <div class="alert alert-success py-2">@TempData["ResetSuccess"]</div>
+                    }
+                    @if (TempData["ResetError"] != null)
+                    {
+                        <div class="alert alert-danger py-2">@TempData["ResetError"]</div>
+                    }
+                    <p class="text-muted mb-2">This will delete sales, purchases, expenses, deductions, payroll, and related transactions. Products, outlets, suppliers, and weekly prices will be kept.</p>
+                    <form asp-action="ResetDatabase" method="post" class="row g-2 align-items-center">
+                        @Html.AntiForgeryToken()
+                        <div class="col-md-4">
+                            <input type="text" name="confirmText" id="resetConfirmInput" class="form-control" placeholder="Type RESET to confirm" />
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" id="resetConfirmBtn" class="btn btn-danger w-100" disabled>Reset Database</button>
+                        </div>
+                    </form>
+                    <div class="small text-muted mt-2">This action cannot be undone.</div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // -- SALES TREND CHART --
-        var saleCtx = document.getElementById("salesChart").getContext("2d");
-        var salesDates = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DailySales.Select(d => d.Date.ToString("MMM dd"))));
-        var salesValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DailySales.Select(d => d.Value)));
+        const saleCanvas = document.getElementById("salesChart");
+        const itemCanvas = document.getElementById("itemsChart");
+        if (!saleCanvas || !itemCanvas) return;
 
-        var gradient = saleCtx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.18)');
-        gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+        const saleCtx = saleCanvas.getContext("2d");
+        const salesDates = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DailySales.Select(d => d.Date.ToString("MMM dd"))));
+        const salesValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DailySales.Select(d => d.Value)));
+        const normalizedSales = salesValues.map(v => Number(v));
+
+        const minSales = normalizedSales.length ? Math.min(...normalizedSales) : 0;
+        const maxSales = normalizedSales.length ? Math.max(...normalizedSales) : 0;
+        const spread = Math.max(maxSales - minSales, 1);
+        const suggestedMin = Math.max(0, minSales - (spread * 0.15));
+        const suggestedMax = maxSales === 0 ? 10 : (maxSales + (spread * 0.2));
+
+        const gradient = saleCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, "rgba(15, 118, 110, 0.24)");
+        gradient.addColorStop(1, "rgba(15, 118, 110, 0.02)");
 
         new Chart(saleCtx, {
-            type: 'line',
+            type: "line",
             data: {
                 labels: salesDates,
                 datasets: [{
-                    label: 'Sales (₱)',
-                    data: salesValues,
+                    label: "Sales (₱)",
+                    data: normalizedSales,
                     backgroundColor: gradient,
-                    borderColor: '#2563eb',
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#2563eb',
+                    borderColor: "#0f766e",
+                    borderWidth: 2.5,
+                    pointRadius: 3.5,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: "#ffffff",
+                    pointBorderColor: "#0f766e",
                     fill: true,
-                    tension: 0.3
+                    tension: 0.35
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                animation: { duration: 650, easing: "easeOutQuart" },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                         callbacks: { label: function(context) { return '₱' + context.parsed.y.toLocaleString(); } }
+                        backgroundColor: "rgba(15, 23, 42, 0.9)",
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return "₱" + Number(context.parsed.y).toLocaleString();
+                            }
+                        }
                     }
                 },
                 scales: {
-                    x: { grid: { display: false }, ticks: { color: '#64748b' } },
-                    y: { grid: { borderDash: [2, 2] }, ticks: { color: '#64748b', callback: function(value) { return '₱' + value.toLocaleString(); } } }
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: "#64748b" }
+                    },
+                    y: {
+                        suggestedMin: suggestedMin,
+                        suggestedMax: suggestedMax,
+                        grid: { color: "rgba(148, 163, 184, 0.24)" },
+                        ticks: {
+                            color: "#64748b",
+                            callback: function(value) {
+                                return "₱" + Number(value).toLocaleString();
+                            }
+                        }
+                    }
                 }
             }
         });
 
-        // -- TOP ITEMS CHART --
-        var itemCtx = document.getElementById("itemsChart").getContext("2d");
-        var itemNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model?.TopItems ?? new List<HazelInvoice.ViewModels.CategoryValuePoint>()).Take(5).Select(i => i.Category)));
-        var itemValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model?.TopItems ?? new List<HazelInvoice.ViewModels.CategoryValuePoint>()).Take(5).Select(i => i.Value)));
+        const itemCtx = itemCanvas.getContext("2d");
+        const itemNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model?.TopItems ?? new List<HazelInvoice.ViewModels.CategoryValuePoint>()).Take(5).Select(i => i.Category)));
+        const itemValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model?.TopItems ?? new List<HazelInvoice.ViewModels.CategoryValuePoint>()).Take(5).Select(i => i.Value)));
+        const itemNumbers = itemValues.map(v => Number(v));
 
         new Chart(itemCtx, {
-            type: 'doughnut',
+            type: "doughnut",
+            plugins: [ChartDataLabels],
             data: {
                 labels: itemNames,
                 datasets: [{
-                    data: itemValues,
-                    backgroundColor: ['#2563eb', '#06b6d4', '#f97316', '#16a34a', '#ef4444'],
-                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    data: itemNumbers,
+                    backgroundColor: ["#0f766e", "#334155", "#94a3b8", "#f59e0b", "#dc2626"],
+                    borderColor: "#ffffff",
                     borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                cutout: "62%",
+                animation: { duration: 550, easing: "easeOutQuart" },
                 plugins: {
-                    legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10 } } },
-                     tooltip: { callbacks: { label: function(c) { return ' ' + c.label + ': ₱' + c.parsed.toLocaleString(); } } }
-                },
-                cutout: '70%',
+                    legend: {
+                        position: "right",
+                        labels: { boxWidth: 12, usePointStyle: true, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                return " " + c.label + ": ₱" + Number(c.parsed).toLocaleString();
+                            }
+                        }
+                    },
+                    datalabels: {
+                        color: "#ffffff",
+                        font: { weight: "700", size: 11 },
+                        formatter: function(value, context) {
+                            const total = context.dataset.data.reduce((sum, current) => sum + Number(current), 0);
+                            if (!total || value <= 0) return "";
+                            const percent = (Number(value) / total) * 100;
+                            return percent < 4 ? "" : (percent.toFixed(0) + "%");
+                        }
+                    }
+                }
             }
         });
     });
+</script>
+
+<script>
+    (function () {
+        const input = document.getElementById("resetConfirmInput");
+        const btn = document.getElementById("resetConfirmBtn");
+        if (!input || !btn) return;
+        input.addEventListener("input", () => {
+            const ok = input.value.trim().toUpperCase() === "RESET";
+            btn.disabled = !ok;
+        });
+    })();
 </script>

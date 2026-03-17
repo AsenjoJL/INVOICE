@@ -79,7 +79,7 @@
              <div class="card shadow-sm border-0 border-start border-4 border-warning h-100">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Items Sold</h6>
-                    <h3 class="fw-bold text-dark mb-0">@Model.TotalItemsSold.ToString("N0")</h3>
+                    <h3 class="fw-bold text-dark mb-0">@Model.TotalItemsSold.ToString("0.###")</h3>
                     <small>Units/Qty</small>
                 </div>
             </div>
@@ -109,7 +109,7 @@
                                 {
                                     <tr>
                                         <td>@item.ItemName</td>
-                                        <td class="text-end fw-bold">@item.Quantity.ToString("N0")</td>
+                                        <td class="text-end fw-bold">@item.Quantity.ToString("0.###")</td>
                                         <td class="text-end text-muted">@item.TotalAmount.ToString("N2")</td>
                                     </tr>
                                 }

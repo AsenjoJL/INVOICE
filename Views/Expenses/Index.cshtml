@@ -6,19 +6,24 @@
     ViewData["NoteInstructions"] = "Record new expenses to keep daily and monthly totals accurate.";
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Expenses</h1>
-        <a asp-action="Create" class="btn btn-danger"><i class="bi bi-minus-circle"></i> Record Expense</a>
+<partial name="_ExpenseStyles" />
+
+<div class="container-fluid p-4 expense-page">
+    <div class="expense-header">
+        <div>
+            <h1 class="expense-title">Expenses</h1>
+            <div class="expense-sub">Track operating expenses by category and vendor.</div>
+        </div>
+        <a asp-action="Create" class="btn expense-btn expense-btn-primary"><i class="bi bi-minus-circle"></i> Record Expense</a>
     </div>
 
     <partial name="_PageNote" />
 
-    <div class="card shadow border-0">
+    <div class="card expense-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle expense-table">
+                    <thead>
                         <tr>
                             <th>Date</th>
                             <th>Category</th>
@@ -33,11 +38,11 @@
                         {
                             <tr>
                                 <td>@item.Date.ToString("MMM dd, yyyy")</td>
-                                <td class="fw-bold">@item.Category</td>
+                                <td class="expense-category">@item.Category</td>
                                 <td>@item.Vendor</td>
                                 <td>@item.ReferenceNo</td>
                                 <td>@item.PaymentMethod</td>
-                                <td class="text-danger fw-bold">@item.Amount.ToString("N2")</td>
+                                <td class="expense-amount">@item.Amount.ToString("N2")</td>
                             </tr>
                         }
                     </tbody>

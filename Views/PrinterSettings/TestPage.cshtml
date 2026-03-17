@@ -1,0 +1,79 @@
+@{
+    ViewData["Title"] = "Test Print";
+    var printerName = (string?)ViewBag.PrinterName ?? "";
+    var returnUrl = (string?)ViewBag.ReturnUrl;
+    var paperSize = ((string?)ViewBag.PaperSize ?? "Letter").Trim();
+    var pageSizeCss = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "A4" : "8.5in 11in";
+}
+
+<div class="container-fluid p-4 invoice-ui">
+    <div class="invoice-hero invoice-hero-plain no-print">
+        <div>
+            <h1 class="invoice-title">Test Print</h1>
+            <p class="invoice-sub">Printing a simple dot-matrix friendly page.</p>
+        </div>
+        <div class="invoice-actions">
+            <a class="invoice-btn invoice-btn-ghost" asp-controller="PrinterSettings" asp-action="Index" asp-route-returnUrl="@returnUrl">
+                <i class="bi bi-arrow-left"></i> Back to Settings
+            </a>
+            <a class="invoice-btn invoice-btn-primary" href="#" onclick="window.print(); return false;">
+                <i class="bi bi-printer"></i> Print Again
+            </a>
+        </div>
+    </div>
+
+    <div class="invoice-card">
+        <div class="invoice-card-header">
+            <h6 class="invoice-card-title">Output</h6>
+            <span class="invoice-tag"><i class="bi bi-printer-fill"></i> @printerName</span>
+        </div>
+        <div class="invoice-card-body">
+            <pre class="test-print-block">
+HAZELINVOICE - TEST PRINT
+========================
+Printer: @printerName
+Date: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+
+QTY    UNIT   PARTICULARS                PRICE     AMOUNT
+-----  -----  -------------------------  --------  --------
+1.00   kg     Sample Item A              120.00    120.00
+0.25   kg     Sample Item B               90.00     22.50
+5.00   pc     Sample Item C               30.00    150.00
+-----  -----  -------------------------  --------  --------
+       TOTAL                              240.00
+
+If alignment looks off:
+- Use the official printer driver (avoid "Class Driver" if possible)
+- Check Windows printer "Printing preferences" (paper size, margins)
+- In kiosk mode, HazelInvoice prints to the Windows default printer.
+            </pre>
+        </div>
+    </div>
+</div>
+
+<style>
+    .test-print-block {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.25;
+        margin: 0;
+        white-space: pre;
+    }
+
+    @@media print {
+        @@page { size: @pageSizeCss; margin: 0.25in; }
+        .no-print { display: none !important; }
+        body { background: #fff !important; }
+        .invoice-card { border: none !important; box-shadow: none !important; }
+        .invoice-card-body { padding: 0 !important; }
+        .test-print-block { font-size: 10px; }
+    }
+</style>
+
+<script>
+    // Auto-print on load (kiosk-printing will print silently).
+    window.addEventListener('load', () => {
+        window.print();
+    });
+</script>

@@ -60,10 +60,27 @@ public class PartnerCapital
     public int Id { get; set; }
     
     public DateTime Date { get; set; } = DateTime.Now;
+
+    [StringLength(120)]
+    public string? FundName { get; set; }
     
     [Column(TypeName = "decimal(18,2)")]
     public decimal Amount { get; set; }
     
     [StringLength(100)]
     public string Description { get; set; } = "Capital Fund";
+}
+
+public class CollectionReceivedOverride
+{
+    public int Id { get; set; }
+
+    public DateTime StartDate { get; set; }
+
+    public DateTime EndDate { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal Amount { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

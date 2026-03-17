@@ -74,6 +74,9 @@ public class PayrollPeriod
 {
     public int Id { get; set; }
 
+    public int? PayrollRunId { get; set; }
+    public PayrollRun? PayrollRun { get; set; }
+
     public int LaborerId { get; set; }
     public Laborer? Laborer { get; set; }
 
@@ -88,6 +91,9 @@ public class PayrollPeriod
     [Column(TypeName = "decimal(18,2)")]
     public decimal PaidAmount { get; set; }
 
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal AdjustmentTotal { get; set; }
+
     public PaymentStatus Status { get; set; } = PaymentStatus.Unpaid;
 
     public DateTime GeneratedAt { get; set; } = DateTime.Now;
@@ -96,7 +102,48 @@ public class PayrollPeriod
     public string? Notes { get; set; }
 
     public List<PayrollPayment> Payments { get; set; } = new();
+    public List<PayrollAdjustment> Adjustments { get; set; } = new();
     public List<AttendanceRecord> AttendanceRecords { get; set; } = new();
+}
+
+public class PayrollRun
+{
+    public int Id { get; set; }
+
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+
+    public PayrollRunStatus Status { get; set; } = PayrollRunStatus.Generated;
+
+    public DateTime GeneratedAt { get; set; } = DateTime.Now;
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? ClosedAt { get; set; }
+
+    [StringLength(100)]
+    public string? GeneratedBy { get; set; }
+
+    [StringLength(200)]
+    public string? Notes { get; set; }
+
+    public List<PayrollPeriod> PayrollPeriods { get; set; } = new();
+}
+
+public class PayrollCutoff
+{
+    public int Id { get; set; }
+
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+
+    public bool IsLocked { get; set; }
+
+    public DateTime? LockedAt { get; set; }
+
+    [StringLength(100)]
+    public string? LockedBy { get; set; }
+
+    [StringLength(200)]
+    public string? Notes { get; set; }
 }
 
 public class PayrollPayment
@@ -117,4 +164,25 @@ public class PayrollPayment
     public string? ReferenceNo { get; set; }
 
     public string? RecordedById { get; set; }
+}
+
+public class PayrollAdjustment
+{
+    public int Id { get; set; }
+
+    public int PayrollPeriodId { get; set; }
+    public PayrollPeriod? PayrollPeriod { get; set; }
+
+    public DateTime Date { get; set; } = DateTime.Now;
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal Amount { get; set; }
+
+    [StringLength(200)]
+    public string? Reason { get; set; }
+
+    [StringLength(100)]
+    public string? CreatedBy { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

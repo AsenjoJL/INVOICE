@@ -21,6 +21,8 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Daily(DateTime? date)
     {
         var workDate = (date ?? DateTime.Today).Date;
+        var (isDateLocked, lockReason) = await GetDateLockState(workDate);
+
         var laborers = await _context.Laborers
             .AsNoTracking()
             .Where(l => l.IsActive)
@@ -30,11 +32,17 @@ public class AttendanceController : Controller
         var laborerIds = laborers.Select(l => l.Id).ToList();
         var existing = await _context.AttendanceRecords
             .AsNoTracking()
+            .Include(a => a.PayrollPeriod)
             .Where(a => a.WorkDate == workDate && laborerIds.Contains(a.LaborerId))
             .ToListAsync();
 
         var existingMap = existing.ToDictionary(a => a.LaborerId, a => a);
-        var model = new AttendanceDailyViewModel { WorkDate = workDate };
+        var model = new AttendanceDailyViewModel
+        {
+            WorkDate = workDate,
+            IsDateLocked = isDateLocked,
+            DateLockReason = lockReason
+        };
 
         foreach (var laborer in laborers)
         {
@@ -47,7 +55,9 @@ public class AttendanceController : Controller
                     DailyRate = laborer.DailyRate,
                     Status = record.Status,
                     Notes = record.Notes,
-                    WageAmount = record.WageAmount
+                    WageAmount = record.WageAmount,
+                    IsLocked = isDateLocked,
+                    LockReason = lockReason
                 });
             }
             else
@@ -60,7 +70,9 @@ public class AttendanceController : Controller
                     LaborerName = laborer.FullName,
                     DailyRate = laborer.DailyRate,
                     Status = AttendanceStatus.Present,
-                    WageAmount = wage
+                    WageAmount = wage,
+                    IsLocked = isDateLocked,
+                    LockReason = lockReason
                 });
             }
         }
@@ -74,12 +86,20 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Daily(AttendanceDailyViewModel model)
     {
         var workDate = model.WorkDate.Date;
+        var (isDateLocked, lockReason) = await GetDateLockState(workDate);
+        if (isDateLocked)
+        {
+            TempData["AttendanceError"] = lockReason ?? "Attendance is locked for this date.";
+            return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
+        }
+
         var laborerIds = model.Entries.Select(e => e.LaborerId).ToList();
         var laborers = await _context.Laborers
             .Where(l => laborerIds.Contains(l.Id))
             .ToDictionaryAsync(l => l.Id, l => l);
 
         var existing = await _context.AttendanceRecords
+            .Include(a => a.PayrollPeriod)
             .Where(a => a.WorkDate == workDate && laborerIds.Contains(a.LaborerId))
             .ToListAsync();
 
@@ -120,6 +140,34 @@ public class AttendanceController : Controller
 
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
+    }
+
+    private async Task<(bool IsLocked, string? Reason)> GetDateLockState(DateTime workDate)
+    {
+        var cutoff = await _context.PayrollCutoffs
+            .AsNoTracking()
+            .Where(c => c.IsLocked && c.StartDate <= workDate && c.EndDate >= workDate)
+            .OrderByDescending(c => c.LockedAt)
+            .FirstOrDefaultAsync();
+
+        if (cutoff != null)
+        {
+            return (true, $"Locked by cutoff {cutoff.StartDate:MMM dd, yyyy} - {cutoff.EndDate:MMM dd, yyyy}.");
+        }
+
+        var hasPaidAttendance = await _context.AttendanceRecords
+            .AsNoTracking()
+            .AnyAsync(a => a.WorkDate == workDate &&
+                           a.PayrollPeriodId != null &&
+                           a.PayrollPeriod != null &&
+                           a.PayrollPeriod.Status == PaymentStatus.Paid);
+
+        if (hasPaidAttendance)
+        {
+            return (true, "Locked because attendance on this date is already in a paid payroll.");
+        }
+
+        return (false, null);
     }
 
     private static decimal GetMultiplier(AttendanceStatus status)

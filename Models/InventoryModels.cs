@@ -26,7 +26,8 @@ public class ProductStockMovement
 
     public DateTime Date { get; set; } = DateTime.Now;
 
-    public int Quantity { get; set; } // + for In, - for Out
+    [Column(TypeName = "decimal(18,3)")]
+    public decimal Quantity { get; set; } // + for In, - for Out
 
     [StringLength(50)]
     public string Type { get; set; } = "Adjustment"; // Sale, StockIn, Return, Adjustment
@@ -46,7 +47,8 @@ public class SupplyStockMovement
 
     public DateTime Date { get; set; } = DateTime.Now;
 
-    public int Quantity { get; set; }
+    [Column(TypeName = "decimal(18,3)")]
+    public decimal Quantity { get; set; }
 
     [StringLength(50)]
     public string Type { get; set; } = "StockIn"; // StockIn, Usage, Adjustment

@@ -6,53 +6,65 @@
     ViewData["NoteInstructions"] = "Add suppliers to auto-fill details when recording purchases.";
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Supplier List</h1>
-        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Supplier</a>
+<partial name="_SupplierStyles" />
+
+<div class="container-fluid p-4 supplier-page">
+    <div class="supplier-header d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+        <div>
+            <h1>Supplier Directory</h1>
+            <div class="sub">Manage supplier contacts for purchases and payables.</div>
+        </div>
+        <div class="supplier-actions">
+            <a asp-action="Create" class="btn btn-light text-dark"><i class="bi bi-plus-lg"></i> Add Supplier</a>
+        </div>
     </div>
 
     <partial name="_PageNote" />
 
-    <div class="card shadow border-0">
+    <div class="supplier-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table supplier-table table-hover align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Contact Person</th>
-                            <th>Contact Number</th>
+                            <th>Supplier</th>
+                            <th>Contact</th>
                             <th>Address</th>
                             <th>Status</th>
-                            <th></th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td class="fw-bold">@item.Name</td>
-                                <td>@item.ContactPerson</td>
-                                <td>@item.ContactNumber</td>
-                                <td>@item.Address</td>
+                                <td>
+                                    <div class="supplier-name">@item.Name</div>
+                                    <div class="supplier-meta">@(!string.IsNullOrWhiteSpace(item.ContactPerson) ? item.ContactPerson : "No contact person")</div>
+                                </td>
+                                <td>
+                                    <div class="supplier-meta">@(!string.IsNullOrWhiteSpace(item.ContactNumber) ? item.ContactNumber : "No contact number")</div>
+                                </td>
+                                <td class="supplier-meta">@(!string.IsNullOrWhiteSpace(item.Address) ? item.Address : "No address")</td>
                                 <td>
                                     @if (item.IsActive)
                                     {
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="status-pill status-active">Active</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="status-pill status-inactive">Inactive</span>
                                     }
                                 </td>
                                 <td>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger ms-1">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
+                                    <div class="supplier-actions-row d-flex gap-2">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         }

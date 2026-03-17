@@ -1,0 +1,211 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap');
+
+.payroll-page {
+    --payroll-primary: #0f766e;
+    --payroll-primary-soft: #ecfeff;
+    --payroll-ink: #0f172a;
+    --payroll-muted: #64748b;
+    --payroll-border: #e2e8f0;
+    --payroll-warning: #f59e0b;
+    --payroll-danger: #dc2626;
+    --payroll-success: #16a34a;
+    font-family: 'Inter', sans-serif;
+    color: var(--payroll-ink);
+}
+
+.payroll-header {
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-radius: 0;
+    color: #000000;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    box-shadow: none;
+}
+
+.payroll-header h1 {
+    margin: 0;
+    font-size: 1.45rem;
+    font-weight: 800;
+    font-family: 'Poppins', sans-serif;
+    color: #000000;
+}
+
+.payroll-header .sub {
+    margin-top: 4px;
+    opacity: 1;
+    font-size: 0.9rem;
+    color: #334155;
+    font-weight: 600;
+}
+
+.payroll-steps {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.payroll-step {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.payroll-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.payroll-kpi {
+    background: #fff;
+    border: 2px solid #cbd5e1;
+    border-radius: 0;
+    padding: 10px 12px;
+}
+
+.payroll-kpi .label {
+    color: var(--payroll-muted);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    font-weight: 800;
+}
+
+.payroll-kpi .value {
+    margin-top: 3px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--payroll-ink);
+}
+
+.payroll-kpi.warn .value {
+    color: var(--payroll-warning);
+}
+
+.payroll-kpi.danger .value {
+    color: var(--payroll-danger);
+}
+
+.payroll-filter {
+    background: #fff;
+    border: 1px solid var(--payroll-border);
+    border-radius: 0;
+    padding: 10px;
+    margin-bottom: 12px;
+}
+
+.payroll-table-card {
+    border: 2px solid #cbd5e1;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.payroll-table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    background: #f1f5f9;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.payroll-table td {
+    vertical-align: middle;
+}
+
+.payroll-table tr[data-row-link] {
+    cursor: pointer;
+}
+
+.payroll-table tr[data-row-link]:hover td {
+    background: #ecfeff !important;
+}
+
+.payroll-money {
+    font-family: Consolas, "Courier New", monospace;
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.payroll-status {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.payroll-status.paid {
+    color: var(--payroll-success);
+    background: #e8f9ef;
+}
+
+.payroll-status.partial {
+    color: #b45309;
+    background: #fff7e8;
+}
+
+.payroll-status.unpaid {
+    color: var(--payroll-danger);
+    background: #ffe8e8;
+}
+
+.payroll-panel {
+    border: 2px solid #cbd5e1;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+}
+
+.payroll-panel .panel-title {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 800;
+    color: #475569;
+}
+
+.payroll-inline-note {
+    color: var(--payroll-muted);
+    font-size: 0.83rem;
+}
+
+.payroll-page .btn,
+.payroll-page .form-control,
+.payroll-page .form-select,
+.payroll-page .input-group-text {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.payroll-page .btn {
+    font-weight: 700;
+}
+
+.payroll-page .form-control,
+.payroll-page .form-select {
+    border: 1px solid #cbd5e1;
+    font-weight: 600;
+}
+
+.payroll-page .form-control:focus,
+.payroll-page .form-select:focus {
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+}
+
+@media (max-width: 992px) {
+    .payroll-summary {
+        grid-template-columns: 1fr;
+    }
+}

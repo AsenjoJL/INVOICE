@@ -9,8 +9,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/HazelInvoice.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    <div id="hazel-af-token" style="display:none">
+        @Html.AntiForgeryToken()
+    </div>
     @{
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
@@ -35,30 +39,35 @@
             </div>
 
             <nav class="sidebar-nav">
-                <a class="@NavClass("Dashboard", "Index")" asp-area="" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                <a class="@NavClass("Receipts", "Index")" asp-area="" asp-controller="Receipts" asp-action="Index"><i class="bi bi-receipt"></i> Receipts</a>
-                <a class="@NavClass("Receipts", "Create")" asp-area="" asp-controller="Receipts" asp-action="Create"><i class="bi bi-plus-circle"></i> New Sale</a>
-                <a class="@NavClass("Products", "Index")" asp-area="" asp-controller="Products" asp-action="Index"><i class="bi bi-box-seam"></i> Products</a>
-                <a class="@NavClass("Customers", "Index")" asp-area="" asp-controller="Customers" asp-action="Index"><i class="bi bi-shop"></i> Outlets</a>
-                <a class="@NavClass("Suppliers", "Index")" asp-area="" asp-controller="Suppliers" asp-action="Index"><i class="bi bi-truck"></i> Suppliers</a>
-                <a class="@NavClass("Orders", "VegetableMatrix")" asp-area="" asp-controller="Orders" asp-action="VegetableMatrix"><i class="bi bi-grid-3x3-gap"></i> Vegetable Order</a>
-                <a class="@NavClass("ProfitReport", "Index")" asp-area="" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-bar-chart-fill"></i> Profit & Sales</a>
-                <a class="@NavClass("WeeklyPrices", "PriceVersus")" asp-area="" asp-controller="WeeklyPrices" asp-action="PriceVersus"><i class="bi bi-sliders"></i> Price Setup</a>
-                <a class="@NavClass("WeeklyPrices", "Index")" asp-area="" asp-controller="WeeklyPrices" asp-action="Index"><i class="bi bi-clock-history"></i> Price History</a>
-                <a class="@NavClass("Expenses", "Index")" asp-area="" asp-controller="Expenses" asp-action="Index"><i class="bi bi-cash-coin"></i> Expenses</a>
-                <a class="@NavClass("Purchases", "Index")" asp-area="" asp-controller="Purchases" asp-action="Index"><i class="bi bi-cart-check"></i> Purchases</a>
-                <a class="@NavClass("Purchases", "Create")" asp-area="" asp-controller="Purchases" asp-action="Create"><i class="bi bi-cart-plus"></i> New Purchase</a>
-                <a class="@NavClass("Purchases", "Payables")" asp-area="" asp-controller="Purchases" asp-action="Payables"><i class="bi bi-wallet2"></i> Payables</a>
-                <a class="@NavClass("Laborers", "Index")" asp-area="" asp-controller="Laborers" asp-action="Index"><i class="bi bi-people"></i> Laborers</a>
-                <a class="@NavClass("Attendance", "Daily")" asp-area="" asp-controller="Attendance" asp-action="Daily"><i class="bi bi-calendar-check"></i> Attendance</a>
-                <a class="@NavClass("Payroll", "Index")" asp-area="" asp-controller="Payroll" asp-action="Index"><i class="bi bi-cash-stack"></i> Payroll</a>
+                <div class="sidebar-section-title">Sales</div>
+                <a class="@NavClass("Dashboard", "Index")" asp-area="" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+                <a class="@NavClass("Receipts", "Index")" asp-area="" asp-controller="Receipts" asp-action="Index"><i class="bi bi-receipt-cutoff"></i> Receipts</a>
+                <a class="@NavClass("Receipts", "Create")" asp-area="" asp-controller="Receipts" asp-action="Create"><i class="bi bi-bag-plus-fill"></i> New Sale</a>
+                <a class="@NavClass("Orders", "VegetableMatrix")" asp-area="" asp-controller="Orders" asp-action="VegetableMatrix"><i class="bi bi-table"></i> Vegetable Order</a>
+                <a class="@NavClass("ProfitReport", "Index")" asp-area="" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-graph-up-arrow"></i> Profit & Sales</a>
 
-                <div class="sidebar-section-title">Reports</div>
+                <div class="sidebar-section-title">Inventory</div>
+                <a class="@NavClass("Products", "Index")" asp-area="" asp-controller="Products" asp-action="Index"><i class="bi bi-box-seam-fill"></i> Products</a>
+                <a class="@NavClass("Customers", "Index")" asp-area="" asp-controller="Customers" asp-action="Index"><i class="bi bi-shop-window"></i> Outlets</a>
+                <a class="@NavClass("Suppliers", "Index")" asp-area="" asp-controller="Suppliers" asp-action="Index"><i class="bi bi-truck-flatbed"></i> Suppliers</a>
+                <a class="@NavClass("WeeklyPrices", "PriceVersus")" asp-area="" asp-controller="WeeklyPrices" asp-action="PriceVersus"><i class="bi bi-sliders2"></i> Price Setup</a>
+                <a class="@NavClass("WeeklyPrices", "Index")" asp-area="" asp-controller="WeeklyPrices" asp-action="Index"><i class="bi bi-clock-history"></i> Price History</a>
+                <a class="@NavClass("Purchases", "Index")" asp-area="" asp-controller="Purchases" asp-action="Index"><i class="bi bi-bag-check-fill"></i> Purchases</a>
+                <a class="@NavClass("Purchases", "Create")" asp-area="" asp-controller="Purchases" asp-action="Create"><i class="bi bi-bag-plus"></i> New Purchase</a>
+                <a class="@NavClass("Purchases", "Payables")" asp-area="" asp-controller="Purchases" asp-action="Payables"><i class="bi bi-wallet2"></i> Payables</a>
+
+                <div class="sidebar-section-title">Finance</div>
+                <a class="@NavClass("Expenses", "Index")" asp-area="" asp-controller="Expenses" asp-action="Index"><i class="bi bi-cash-stack"></i> Expenses</a>
+                <a class="@NavClass("Partners", "Index")" asp-area="" asp-controller="Partners" asp-action="Index"><i class="bi bi-people"></i> Partners</a>
+                <a class="@NavClass("PrinterSettings", "Index")" asp-area="" asp-controller="PrinterSettings" asp-action="Index"><i class="bi bi-printer-fill"></i> Printer Settings</a>
+                <a class="@NavClass("Laborers", "Index")" asp-area="" asp-controller="Laborers" asp-action="Index"><i class="bi bi-people-fill"></i> Laborers</a>
+                <a class="@NavClass("Attendance", "Daily")" asp-area="" asp-controller="Attendance" asp-action="Daily"><i class="bi bi-calendar-check-fill"></i> Attendance</a>
+                <a class="@NavClass("Payroll", "Index")" asp-area="" asp-controller="Payroll" asp-action="Index"><i class="bi bi-cash-coin"></i> Payroll</a>
                 <a class="@NavClass("Reports", "IncomeStatement")" asp-controller="Reports" asp-action="IncomeStatement"><i class="bi bi-file-earmark-text"></i> Income Statement</a>
                 <a class="@NavClass("Reports", "Inventory")" asp-controller="Reports" asp-action="Inventory"><i class="bi bi-clipboard-data"></i> Inventory Status</a>
-                <a class="@NavClass("ProfitReport", "Index")" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-file-earmark-spreadsheet-fill"></i> Profit Summary</a>
-                <a class="@NavClass("PayrollReports", "Unpaid")" asp-controller="PayrollReports" asp-action="Unpaid"><i class="bi bi-exclamation-circle"></i> Unpaid Labor</a>
-                <a class="@NavClass("PayrollReports", "LaborCost")" asp-controller="PayrollReports" asp-action="LaborCost"><i class="bi bi-graph-down-arrow"></i> Labor Cost</a>
+                <a class="@NavClass("ProfitReport", "Index")" asp-controller="ProfitReport" asp-action="Index"><i class="bi bi-file-earmark-spreadsheet"></i> Profit Summary</a>
+                <a class="@NavClass("PayrollReports", "Unpaid")" asp-controller="PayrollReports" asp-action="Unpaid"><i class="bi bi-exclamation-triangle"></i> Unpaid Labor</a>
+                <a class="@NavClass("PayrollReports", "LaborCost")" asp-controller="PayrollReports" asp-action="LaborCost"><i class="bi bi-graph-down"></i> Labor Cost</a>
             </nav>
 
             <div class="sidebar-footer">
@@ -86,6 +95,35 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            const sidebar = document.getElementById('sidebarNav');
+            if (!sidebar) return;
+
+            const storageKey = 'hazelinvoice.sidebar.scrollTop';
+            const saved = sessionStorage.getItem(storageKey);
+            if (saved !== null) {
+                const top = parseInt(saved, 10);
+                if (!Number.isNaN(top)) sidebar.scrollTop = top;
+            } else {
+                const active = sidebar.querySelector('.sidebar-link.active');
+                if (active && active.scrollIntoView) {
+                    active.scrollIntoView({ block: 'nearest' });
+                }
+            }
+
+            sidebar.addEventListener('scroll', () => {
+                sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
+            }, { passive: true });
+
+            const links = sidebar.querySelectorAll('.sidebar-link');
+            links.forEach(link => {
+                link.addEventListener('click', () => {
+                    sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
+                });
+            });
+        })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

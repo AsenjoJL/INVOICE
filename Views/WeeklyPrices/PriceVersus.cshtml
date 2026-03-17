@@ -6,20 +6,158 @@
     ViewData["NoteInstructions"] = "Reset restores master cost/markup; Save changes applies to the selected week (and optionally to master cost).";
 }
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap');
+
+    .price-setup-page {
+        font-family: 'Inter', sans-serif;
+        color: #0f172a;
+    }
+    .price-setup-header {
+        background: #ffffff;
+        border: 2px solid #cbd5e1;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 1rem 1.25rem;
+    }
+    .price-setup-title {
+        margin: 0;
+        font-family: 'Poppins', sans-serif;
+        font-weight: 800;
+        color: #000000;
+    }
+    .price-setup-sub {
+        margin: 0.25rem 0 0;
+        color: #334155;
+        font-weight: 600;
+    }
+    .price-week-label {
+        color: #000000;
+        font-weight: 800;
+    }
+    .price-btn {
+        border-radius: 0;
+        font-weight: 700;
+        border-width: 1px;
+        box-shadow: none !important;
+    }
+    .price-btn-neutral {
+        border-color: #cbd5e1;
+        color: #0f172a;
+        background: #ffffff;
+    }
+    .price-btn-primary {
+        border-color: #0f766e;
+        background: #0f766e;
+        color: #ffffff;
+    }
+    .price-date-form {
+        display: inline-block;
+        background: #ffffff;
+        border: 2px solid #cbd5e1;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0.75rem 0.9rem;
+    }
+    .price-date-form label {
+        font-weight: 700;
+        color: #0f172a;
+        margin-right: 0.5rem;
+    }
+    .price-date-form input[type="date"] {
+        border-radius: 0;
+        border: 1px solid #cbd5e1;
+        font-weight: 600;
+    }
+    .price-card {
+        border: 2px solid #cbd5e1;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: hidden;
+    }
+    .price-table {
+        margin: 0;
+    }
+    .price-table thead th {
+        background: #f1f5f9;
+        color: #334155;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.76rem;
+        border-bottom: 1px solid #cbd5e1;
+    }
+    .price-table tbody tr:nth-child(even) {
+        background: #fafcff;
+    }
+    .price-table tbody tr:hover {
+        background: #f0fdfa;
+    }
+    .price-table .row-edited {
+        background: #fff7ed !important;
+    }
+    .price-product-name {
+        font-weight: 800;
+        color: #111827;
+    }
+    .price-unit {
+        color: #64748b;
+        font-weight: 600;
+    }
+    .price-input {
+        border-radius: 0;
+        border: 1px solid #cbd5e1;
+        font-weight: 700;
+        box-shadow: none;
+    }
+    .price-input:focus {
+        border-color: #0f766e;
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+    }
+    .price-value {
+        color: #2563eb;
+    }
+    .price-delivery-input {
+        border-radius: 0;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #2563eb;
+        font-weight: 700;
+    }
+    .price-reset-btn {
+        border-radius: 0;
+        font-weight: 700;
+    }
+    .price-status {
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        padding: 0.3rem 0.65rem;
+    }
+    .price-status-weekly {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    .price-status-default {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #cbd5e1;
+    }
+</style>
+
+<div class="container-fluid p-4 price-setup-page">
+    <div class="price-setup-header d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold text-primary">Price Versus Setup</h2>
-            <p class="text-muted">
+            <h2 class="price-setup-title">Price Versus Setup</h2>
+            <p class="price-setup-sub">
                 Original Price vs Selling Price for Week: 
-                <span class="fw-bold text-dark">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd, yyyy")</span>
+                <span class="price-week-label">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd, yyyy")</span>
             </p>
         </div>
         <div>
-            <a asp-controller="Orders" asp-action="VegetableMatrix" class="btn btn-outline-secondary">
+            <a asp-controller="Orders" asp-action="VegetableMatrix" class="btn price-btn price-btn-neutral">
                 <i class="bi bi-arrow-left"></i> Back to Matrix
             </a>
-            <button type="submit" form="versusForm" class="btn btn-success fw-bold ms-2 px-4 shadow-sm">
+            <button type="submit" form="versusForm" class="btn price-btn price-btn-primary ms-2 px-4">
                 <i class="bi bi-save me-1"></i> Save Changes
             </button>
         </div>
@@ -27,12 +165,12 @@
 
     <partial name="_PageNote" />
 
-    <form method="get" class="mb-4 bg-white p-3 rounded shadow-sm d-inline-block">
-        <label class="fw-bold me-2">View Prices For Date:</label>
+    <form method="get" class="mb-4 price-date-form">
+        <label>View Prices For Date:</label>
         <input type="date" name="date" class="form-control d-inline-block w-auto" value="@Model.TargetDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
     </form>
 
-    <div class="card shadow-lg border-0 rounded-3">
+    <div class="card price-card">
         <div class="card-body p-0">
             <form method="post" id="versusForm">
                 @Html.AntiForgeryToken()
@@ -50,8 +188,8 @@
                 </div>
                 
                 <div class="table-responsive" style="max-height: 70vh;">
-                    <table class="table table-hover align-middle mb-0" id="priceTable">
-                        <thead class="bg-primary text-white sticky-top" style="top: 0; z-index: 10;">
+                    <table class="table table-hover align-middle price-table" id="priceTable">
+                        <thead class="sticky-top" style="top: 0; z-index: 10;">
                             <tr>
                                 <th class="ps-4 py-3">Product Name</th>
                                 <th class="py-3">Unit</th>
@@ -71,19 +209,19 @@
                                     data-master-cost="@item.MasterCost.ToString("0.00")"
                                     data-master-markup="@item.MasterMarkup.ToString("0.00")"
                                     data-delivery-fee="@((item.DeliveryFee ?? item.MasterDeliveryFee).ToString("0.00"))">
-                                    <td class="ps-4 fw-bold">
+                                    <td class="ps-4 price-product-name">
                                         @item.ProductName
                                         <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                         <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
                                     </td>
-                                    <td class="text-muted">@item.Unit</td>
+                                    <td class="price-unit">@item.Unit</td>
                                     
                                     <td class="text-end">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-light border-0">₱</span>
                                             <input type="number" step="0.01" min="0"
                                                    name="Items[@i].Cost"
-                                                   class="form-control text-end cost-input fw-bold"
+                                                   class="form-control text-end cost-input price-input"
                                                    value="@item.Cost.ToString("0.00")" />
                                         </div>
                                     </td>
@@ -91,36 +229,36 @@
                                     <td class="text-end">
                                         <input type="number" step="0.01" min="0"
                                                name="Items[@i].Markup"
-                                               class="form-control text-end markup-input fw-bold"
+                                               class="form-control text-end markup-input price-input"
                                                value="@item.Markup.ToString("0.00")" />
                                     </td>
 
                                     <td class="text-end">
                                         <input type="number" step="0.01" min="0"
                                                name="Items[@i].BasePrice"
-                                               class="form-control text-end base-price-input fw-bold text-primary"
+                                               class="form-control text-end base-price-input price-input price-value"
                                                value="@(item.BasePrice.ToString("0.00"))" />
                                     </td>
 
                                     <td class="text-end">
                                         <input type="text" 
-                                               class="form-control text-end delivery-price-input border-0 bg-transparent fw-bold text-primary" 
+                                               class="form-control text-end delivery-price-input price-delivery-input" 
                                                value="@((item.Cost + item.Markup + (item.DeliveryFee ?? item.MasterDeliveryFee)).ToString("0.00"))" 
                                                readonly />
                                     </td>
 
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary reset-cost-btn">Reset</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary price-reset-btn reset-cost-btn">Reset</button>
                                     </td>
                                     
                                     <td class="text-center">
                                         @if (item.HasWeeklyRecord)
                                         {
-                                            <span class="badge bg-warning text-dark">Weekly</span>
+                                            <span class="badge price-status price-status-weekly">Weekly</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-light text-muted border">Default</span>
+                                            <span class="badge price-status price-status-default">Default</span>
                                         }
                                     </td>
                                 </tr>
@@ -158,7 +296,7 @@
             const deliveryPriceInput = row.querySelector('.delivery-price-input');
             if (deliveryPriceInput) deliveryPriceInput.value = deliveryPrice.toFixed(2);
 
-            row.classList.add('table-warning');
+            row.classList.add('row-edited');
         };
 
         const updateRowFromBasePrice = (row) => {
@@ -176,7 +314,7 @@
             const deliveryPriceInput = row.querySelector('.delivery-price-input');
             if (deliveryPriceInput) deliveryPriceInput.value = deliveryPrice.toFixed(2);
 
-            row.classList.add('table-warning');
+            row.classList.add('row-edited');
         };
 
         table.addEventListener('input', function(e) {

@@ -2,6 +2,9 @@
 
 @{
     Layout = null;
+    var paperSize = ((string?)ViewBag.PaperSize ?? "Letter").Trim();
+    var drPaperWidth = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "210mm" : "8.5in";
+    var drPaperHeight = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "297mm" : "11in";
 }
 
 <!DOCTYPE html>
@@ -16,12 +19,16 @@
             --muted: #4b5563;
             --line: #1f2937;
             --accent: #b91c1c;
+            /* Paper size (used by the page print rule) */
+            --dr-paper-width: @drPaperWidth;
+            --dr-paper-height: @drPaperHeight;
+            --dr-print-font-size: 8pt;
         }
 
         * { box-sizing: border-box; }
 
         body.receipt-body {
-            font-family: "Segoe UI", Arial, sans-serif;
+            font-family: Calibri, "Arial Narrow", Arial, sans-serif;
             color: var(--ink);
             margin: 0;
             padding: 20px;
@@ -63,15 +70,20 @@
         }
 
         .receipt-container {
-            width: 820px;
+            width: min(100%, var(--dr-paper-width));
             margin: 0 auto;
         }
 
         .header-top {
             display: grid;
-            grid-template-columns: 90px 1fr 160px;
+            grid-template-columns: 86px 1fr 120px;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+        }
+
+        .header-spacer {
+            width: 100%;
+            height: 1px;
         }
 
         .logo-box {
@@ -93,24 +105,53 @@
 
         .company {
             text-align: center;
-            line-height: 1.2;
+            line-height: 1.15;
         }
 
         .company-name {
             font-weight: 900;
-            font-size: 18px;
-            letter-spacing: 0.6px;
+            font-size: 20px;
+            letter-spacing: 0.35px;
             text-transform: uppercase;
         }
 
         .company-meta {
-            font-size: 12.5px;
+            font-size: 12px;
             color: var(--muted);
         }
 
         .receipt-meta {
             text-align: right;
             font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            margin-top: 0;
+        }
+
+        .receipt-meta .meta-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            gap: 4px;
+            white-space: nowrap;
+            width: 172px;
+        }
+
+        .receipt-meta .meta-label {
+            width: 58px;
+            font-size: 36px;
+            line-height: 0.8;
+            font-family: "Times New Roman", serif;
+            text-align: left;
+        }
+
+        .receipt-meta .date-label {
+            width: 58px;
+            font-size: 40px;
+            line-height: 0.8;
+            text-align: left;
         }
 
         .receipt-meta .no {
@@ -118,33 +159,46 @@
         }
 
         .receipt-meta .no-value {
-            color: var(--accent);
+            color: var(--ink);
             font-weight: 800;
-            font-size: 18px;
-            margin-left: 6px;
+            font-size: 48px;
+            margin-left: 0;
             letter-spacing: 1px;
+            line-height: 0.9;
+            display: inline-block;
+            width: 110px;
+            text-align: center;
         }
 
         .receipt-meta .date-line {
-            margin-top: 6px;
             display: inline-block;
-            min-width: 120px;
+            width: 110px;
+            min-width: 110px;
             border-bottom: 1px solid var(--line);
-            padding-left: 6px;
+            padding: 0 2px 1px 2px;
+            font-weight: 700;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .receipt-meta .date-value {
+            font-family: "Brush Script MT", "Segoe Script", cursive;
+            font-size: 22px;
             font-weight: 700;
         }
 
         .title-row {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: flex-start;
             margin: 14px 0 6px;
         }
 
         .doc-title {
-            font-size: 20px;
+            font-size: 36px;
             font-weight: 900;
             text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
 
         .info-line {
@@ -156,25 +210,35 @@
 
         .info-label {
             white-space: nowrap;
+            font-size: 32px;
         }
 
         .info-value {
-            border-bottom: 1px solid var(--line);
+            border-bottom: 1.5px solid var(--line);
             flex: 1;
             padding-left: 8px;
             font-weight: 700;
-            min-height: 20px;
+            min-height: 30px;
+            font-size: 34px;
+            line-height: 1.1;
+        }
+
+        .info-value.delivered-to {
+            text-align: left;
+            padding-left: 25;
+            position: relative;
+            left: -30;
         }
 
         .info-value.short {
-            flex: 0 0 200px;
+            flex: 0 0 165px;
         }
 
         .items-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
-            border: 1.5px solid var(--line);
+            border: 2px solid var(--line);
         }
 
         .items-table th,
@@ -195,8 +259,9 @@
         .col-qty { width: 8%; text-align: center; }
         .col-unit { width: 10%; text-align: center; }
         .col-part { width: 50%; }
-        .col-price { width: 16%; text-align: right; }
-        .col-amount { width: 16%; text-align: right; }
+        .col-price { width: 16%; text-align: center; }
+        .col-amount { width: 16%; text-align: center; }
+        .items-table td.col-part { text-align: center; }
 
         .total-row td {
             font-weight: 800;
@@ -204,40 +269,143 @@
             text-align: center;
         }
 
-        .total-row .amount {
-            text-align: right;
-            font-size: 15px;
+        .total-row .amount { text-align: center; font-size: 15px; }
+
+        .ack-block {
+            margin-top: 12px;
+            width: max-content;
+            margin-left: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
         }
 
         .footer-note {
-            margin-top: 12px;
-            text-align: center;
+            margin-top: 0;
+            text-align: right;
             font-size: 13px;
         }
 
         .received-line {
-            margin-top: 18px;
+            margin-top: 8px;
             display: flex;
             align-items: flex-end;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 10px;
+            text-align: left;
+            width: 100%;
+            padding-left: 21ch;
         }
 
         .received-input {
             border-bottom: 1px solid var(--line);
-            width: 260px;
+            width: 1.8in;
+        }
+
+        /* Borderless option (dot-matrix friendly / faster printing).
+           Must come AFTER normal borders so it can override them. */
+        body.receipt-borderless .items-table {
+            border: none !important;
+        }
+        body.receipt-borderless .items-table th,
+        body.receipt-borderless .items-table td {
+            border: none !important;
+        }
+        body.receipt-borderless .items-table th {
+            background: transparent !important;
+        }
+        body.receipt-borderless .info-value,
+        body.receipt-borderless .receipt-meta .date-line,
+        body.receipt-borderless .received-input {
+            border-bottom: none !important;
         }
 
         @@media print {
-            @@page { size: letter; margin: 6mm; }
-            body.receipt-body { padding: 0; margin: 0; }
+            @@page { size: var(--dr-paper-width) var(--dr-paper-height); margin: 0.12in; }
+            html, body { width: var(--dr-paper-width); height: var(--dr-paper-height); overflow: hidden; }
+            body.receipt-body {
+                padding: 0;
+                margin: 0;
+                font-size: var(--dr-print-font-size);
+                line-height: 1.12;
+                font-family: Calibri, Arial, sans-serif;
+                font-weight: 700;
+            }
             .toolbar { display: none !important; }
-            .receipt-container { width: 100%; }
+            .receipt-container {
+                width: 100%;
+                page-break-inside: avoid;
+                break-inside: avoid-page;
+            }
+            .header-top {
+                grid-template-columns: 54px 1fr 90px;
+                gap: 4px;
+            }
+            .logo-box { width: 54px; height: 54px; }
+            .company-name { font-size: 10.5pt; letter-spacing: 0.2px; }
+            .company-meta {
+                font-size: 8pt;
+                line-height: 1.15;
+                font-weight: 700;
+            }
+            .receipt-meta { font-size: 8pt; gap: 0; margin-top: 1px; }
+            .receipt-meta .meta-row {
+                gap: 3px;
+                width: 1.38in;
+                justify-content: flex-start;
+            }
+            .receipt-meta .meta-label {
+                width: 0.55in;
+                font-size: 12pt;
+                text-align: left;
+                line-height: 1;
+            }
+            .receipt-meta .date-label {
+                width: 0.55in;
+                font-size: 12pt;
+                text-align: left;
+                line-height: 1;
+            }
+            .receipt-meta .no-value { font-size: 16pt; margin-left: 0; }
+            .receipt-meta .no-value {
+                width: 0.8in;
+                text-align: center;
+                display: inline-block;
+            }
+            .receipt-meta .date-line {
+                width: 0.8in;
+                min-width: 0.8in;
+            }
+            .receipt-meta .date-value { font-size: 11pt; }
+            .title-row { margin: 3px 0 2px; }
+            .doc-title { font-size: 12pt; letter-spacing: 0.2px; }
+            .info-line { margin: 1px 0; gap: 3px; }
+            .info-label { font-size: 10pt; font-weight: 700; }
+            .info-value { min-height: 14px; font-size: 9pt; font-weight: 700; }
+            .info-value.short { flex-basis: 100px; }
+            .items-table { margin-top: 6px; }
+            .items-table th,
+            .items-table td {
+                padding: 2px 5px;
+                height: 0.22in;
+                font-size: 8pt;
+            }
+            .items-table th { font-size: 8pt; }
+            .total-row .amount { font-size: 9pt; }
+            .ack-block { margin-top: 4px; }
+            .footer-note { margin-top: 0; font-size: 8pt; }
+            .received-line { margin-top: 5px; font-size: 9pt; }
+            .received-input { width: 1.4in; }
             .items-table th { -webkit-print-color-adjust: exact; }
+
+            /* Print: remove table gridlines so it prints clean on dot-matrix / PDF. */
+            .items-table,
+            .items-table th,
+            .items-table td { border: none !important; }
         }
     </style>
 </head>
-<body class="receipt-body">
+<body class="receipt-body @(ViewBag.ReceiptBorderless == true ? "receipt-borderless" : "")">
     <div class="toolbar no-print">
         <strong>Delivery Receipt</strong>
         <div>
@@ -249,7 +417,7 @@
     <div class="receipt-container">
         <div class="header-top">
             <div class="logo-box">
-                <img src="/images/logo.jpg" alt="Logo" />
+                <img src="~/images/logo.png" alt="Logo" asp-append-version="true" />
             </div>
             <div class="company">
                 <div class="company-name">Healthy Harvest Vegetable Trading</div>
@@ -259,19 +427,26 @@
                     Prop.: Ma. Hazel M. Calvo
                 </div>
             </div>
-            <div class="receipt-meta">
-                <div class="no">No.<span class="no-value">@Model.ReceiptNumber</span></div>
-                <div>Date: <span class="date-line">@Model.Date.ToString("MM/dd/yy")</span></div>
-            </div>
+            <div class="header-spacer" aria-hidden="true"></div>
         </div>
 
         <div class="title-row">
             <div class="doc-title">Delivery Receipt</div>
+            <div class="receipt-meta">
+                <div class="meta-row">
+                    <span class="meta-label no">No.</span>
+                    <span class="no-value">@Model.ReceiptNumber</span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-label date-label">Date:</span>
+                    <span class="date-line"><span class="date-value">@Model.Date.ToString("MM/dd/yy")</span></span>
+                </div>
+            </div>
         </div>
 
         <div class="info-line">
             <div class="info-label">Delivered to:</div>
-            <div class="info-value">@Model.CustomerName</div>
+            <div class="info-value delivered-to">@Model.CustomerName</div>
         </div>
         <div class="info-line">
             <div class="info-label">Address:</div>
@@ -292,13 +467,14 @@
             </thead>
             <tbody>
                 @{
-                    int maxRows = 18;
+                    int maxRows = 20;
+                    var printableLines = Model.Lines.Take(maxRows).ToList();
                     int count = 0;
                 }
-                @foreach (var item in Model.Lines)
+                @foreach (var item in printableLines)
                 {
                     <tr>
-                        <td class="col-qty">@item.Quantity</td>
+                        <td class="col-qty">@item.Quantity.ToString("0.###")</td>
                         <td class="col-unit">@item.Unit</td>
                         <td class="col-part">@item.ItemName</td>
                         <td class="col-price">@item.Price.ToString("N2")</td>
@@ -325,13 +501,14 @@
                 </tr>
             </tfoot>
         </table>
-
-        <div class="footer-note">
-            Received the above merchandise in good order condition.
-        </div>
-        <div class="received-line">
-            <div>Received By:</div>
-            <div class="received-input"></div>
+        <div class="ack-block">
+            <div class="footer-note">
+                Received the above merchandise in good order condition.
+            </div>
+            <div class="received-line">
+                <div>Received By:</div>
+                <div class="received-input"></div>
+            </div>
         </div>
     </div>
 

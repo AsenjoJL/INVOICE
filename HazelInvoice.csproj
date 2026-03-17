@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-HazelInvoice-f2f2e446-247f-4d2a-bd77-4a8e4ed7b58d</UserSecretsId>
+    <!-- Printer enumeration + test printing uses System.Drawing.Printing (Windows). -->
+    <UseSystemDrawing>true</UseSystemDrawing>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +15,21 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Prevent duplicate static web assets from accidentally copied publish artifacts -->
+    <Content Remove="wwwroot\Identity\**" />
+    <None Remove="wwwroot\Identity\**" />
+    <Content Remove="wwwroot\HazelInvoice.styles.css" />
+    <None Remove="wwwroot\HazelInvoice.styles.css" />
+
+    <!-- Tooling scripts live under /scripts and must not be compiled into the web app -->
+    <Compile Remove="scripts\**\*.cs" />
+
+    <!-- Ignore generated binaries/manifests if they appear at project root -->
+    <Content Remove="HazelInvoice.exe;HazelInvoice.pdb;HazelInvoice.deps.json;HazelInvoice.runtimeconfig.json;HazelInvoice.staticwebassets*.json;Uninstall.exe;launch_app.cmd;install.log" />
+    <None Remove="HazelInvoice.exe;HazelInvoice.pdb;HazelInvoice.deps.json;HazelInvoice.runtimeconfig.json;HazelInvoice.staticwebassets*.json;Uninstall.exe;launch_app.cmd;install.log" />
   </ItemGroup>
 
 </Project>

@@ -60,10 +60,16 @@ public class ReceiptLine
     [StringLength(100)]
     public string ItemName { get; set; } = string.Empty; // Snapshot of name
 
-    public int Quantity { get; set; }
+    [Column(TypeName = "decimal(18,3)")]
+    public decimal Quantity { get; set; }
 
     [StringLength(20)]
     public string Unit { get; set; } = "pc";
+
+    // Optional: tag which business partner this line is attributed to (e.g., Hazel/Troy).
+    // Used for Vegetable Order Details partner columns and reporting.
+    [StringLength(50)]
+    public string? PartnerName { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }

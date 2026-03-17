@@ -22,6 +22,24 @@ namespace HazelInvoice.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("HazelInvoice.Models.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Value")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppSettings");
+                });
+
             modelBuilder.Entity("HazelInvoice.Models.AttendanceRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -68,6 +86,31 @@ namespace HazelInvoice.Migrations
                         .IsUnique();
 
                     b.ToTable("AttendanceRecords");
+                });
+
+            modelBuilder.Entity("HazelInvoice.Models.CollectionReceivedOverride", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CollectionReceivedOverrides");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Customer", b =>
@@ -309,6 +352,10 @@ namespace HazelInvoice.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("FundName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.HasKey("Id");
 
                     b.ToTable("PartnerCapitals");
@@ -376,6 +423,80 @@ namespace HazelInvoice.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("HazelInvoice.Models.PayrollAdjustment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("PayrollPeriodId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.HasIndex("PayrollPeriodId");
+
+                    b.ToTable("PayrollAdjustments");
+                });
+
+            modelBuilder.Entity("HazelInvoice.Models.PayrollCutoff", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("LockedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsLocked");
+
+                    b.HasIndex("StartDate", "EndDate");
+
+                    b.ToTable("PayrollCutoffs");
+                });
+
             modelBuilder.Entity("HazelInvoice.Models.PayrollPayment", b =>
                 {
                     b.Property<int>("Id")
@@ -418,6 +539,9 @@ namespace HazelInvoice.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("AdjustmentTotal")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("GeneratedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -430,6 +554,9 @@ namespace HazelInvoice.Migrations
 
                     b.Property<decimal>("PaidAmount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("PayrollRunId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("PeriodEnd")
                         .HasColumnType("timestamp without time zone");
@@ -450,11 +577,56 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("LaborerId");
 
+                    b.HasIndex("PayrollRunId");
+
                     b.HasIndex("PeriodStart");
 
                     b.HasIndex("Status");
 
                     b.ToTable("PayrollPeriods");
+                });
+
+            modelBuilder.Entity("HazelInvoice.Models.PayrollRun", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("GeneratedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("PeriodEnd")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("PeriodStart")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("PeriodStart", "PeriodEnd");
+
+                    b.ToTable("PayrollRuns");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Product", b =>
@@ -484,10 +656,17 @@ namespace HazelInvoice.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("OwnerName")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<string>("SKU")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -500,6 +679,8 @@ namespace HazelInvoice.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IsActive");
+
+                    b.HasIndex("SupplierId");
 
                     b.ToTable("Products");
                 });
@@ -518,8 +699,8 @@ namespace HazelInvoice.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<string>("RecordedById")
                         .HasColumnType("text");
@@ -628,8 +809,8 @@ namespace HazelInvoice.Migrations
                     b.Property<int>("PurchaseId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -785,14 +966,18 @@ namespace HazelInvoice.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("PartnerName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("ProductId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<int>("ReceiptId")
                         .HasColumnType("integer");
@@ -936,8 +1121,8 @@ namespace HazelInvoice.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<string>("RecordedById")
                         .HasColumnType("text");
@@ -1228,6 +1413,17 @@ namespace HazelInvoice.Migrations
                     b.Navigation("Receipt");
                 });
 
+            modelBuilder.Entity("HazelInvoice.Models.PayrollAdjustment", b =>
+                {
+                    b.HasOne("HazelInvoice.Models.PayrollPeriod", "PayrollPeriod")
+                        .WithMany("Adjustments")
+                        .HasForeignKey("PayrollPeriodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PayrollPeriod");
+                });
+
             modelBuilder.Entity("HazelInvoice.Models.PayrollPayment", b =>
                 {
                     b.HasOne("HazelInvoice.Models.PayrollPeriod", "PayrollPeriod")
@@ -1247,7 +1443,22 @@ namespace HazelInvoice.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("HazelInvoice.Models.PayrollRun", "PayrollRun")
+                        .WithMany("PayrollPeriods")
+                        .HasForeignKey("PayrollRunId");
+
                     b.Navigation("Laborer");
+
+                    b.Navigation("PayrollRun");
+                });
+
+            modelBuilder.Entity("HazelInvoice.Models.Product", b =>
+                {
+                    b.HasOne("HazelInvoice.Models.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId");
+
+                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.ProductStockMovement", b =>
@@ -1414,9 +1625,16 @@ namespace HazelInvoice.Migrations
 
             modelBuilder.Entity("HazelInvoice.Models.PayrollPeriod", b =>
                 {
+                    b.Navigation("Adjustments");
+
                     b.Navigation("AttendanceRecords");
 
                     b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("HazelInvoice.Models.PayrollRun", b =>
+                {
+                    b.Navigation("PayrollPeriods");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Purchase", b =>

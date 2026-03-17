@@ -29,3 +29,11 @@ public enum AttendanceStatus
     Late,
     HalfDay
 }
+
+public enum PayrollRunStatus
+{
+    Draft,
+    Generated,
+    Approved,
+    Closed
+}

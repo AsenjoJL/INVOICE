@@ -7,67 +7,112 @@
     ViewData["NoteInstructions"] = "Statuses update wages on save. Late = 75%, Half-day = 50%, Absent = 0%.";
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Daily Attendance</h1>
-        <a asp-controller="Laborers" asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Manage Laborers</a>
+<partial name="_WorkforceStyles" />
+
+<div class="container-fluid p-4 workforce-page">
+    <div class="workforce-header">
+        <div>
+            <h1 class="workforce-title">Daily Attendance</h1>
+            <div class="workforce-sub">Record attendance and auto-compute daily wages.</div>
+        </div>
+        <a asp-controller="Laborers" asp-action="Index" class="btn workforce-btn workforce-btn-neutral"><i class="bi bi-people"></i> Manage Laborers</a>
     </div>
 
     <partial name="_PageNote" />
 
-    <form method="get" class="row g-2 align-items-end mb-3">
+    @if (TempData["AttendanceError"] is string attendanceError && !string.IsNullOrWhiteSpace(attendanceError))
+    {
+        <div class="alert alert-danger">@attendanceError</div>
+    }
+
+    @if (Model.IsDateLocked)
+    {
+        <div class="alert alert-warning d-flex justify-content-between align-items-center gap-2">
+            <div>
+                <strong>Attendance Locked:</strong> @Model.DateLockReason
+            </div>
+            <span class="badge bg-dark">Read Only</span>
+        </div>
+    }
+
+    <form method="get" class="workforce-filter">
         <div class="col-md-3">
             <label class="form-label fw-bold small">Work Date</label>
             <input type="date" name="date" class="form-control" value="@Model.WorkDate.ToString("yyyy-MM-dd")" />
         </div>
         <div class="col-md-2">
-            <button type="submit" class="btn btn-outline-primary w-100">Load Date</button>
+            <button type="submit" class="btn workforce-btn workforce-btn-neutral w-100">Load Date</button>
         </div>
     </form>
 
     <form asp-action="Daily" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="WorkDate" />
-        <div class="card shadow border-0">
+        <div class="card workforce-card">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle workforce-table">
+                        <thead>
                             <tr>
                                 <th>Laborer</th>
                                 <th>Daily Rate</th>
                                 <th>Status</th>
                                 <th>Wage</th>
                                 <th>Notes</th>
+                                <th>Payroll</th>
                             </tr>
                         </thead>
                         <tbody>
                             @for (var i = 0; i < Model.Entries.Count; i++)
                             {
+                                var isLocked = Model.Entries[i].IsLocked;
                                 <tr>
                                     <td class="fw-bold">
                                         @Model.Entries[i].LaborerName
                                         <input type="hidden" name="Entries[@i].LaborerId" value="@Model.Entries[i].LaborerId" />
                                     </td>
-                                    <td>₱@Model.Entries[i].DailyRate.ToString("N2")</td>
+                                    <td class="workforce-money">₱@Model.Entries[i].DailyRate.ToString("N2")</td>
                                     <td style="max-width: 180px;">
-                                        <select class="form-select" name="Entries[@i].Status">
+                                        <select class="form-select" name="Entries[@i].Status" @(isLocked ? "disabled" : null)>
                                             @foreach (AttendanceStatus status in Enum.GetValues(typeof(AttendanceStatus)))
                                             {
                                                 <option value="@status" selected="@(status == Model.Entries[i].Status)">@status</option>
                                             }
                                         </select>
+                                        @if (isLocked)
+                                        {
+                                            <input type="hidden" name="Entries[@i].Status" value="@Model.Entries[i].Status" />
+                                        }
                                     </td>
                                     <td>₱@Model.Entries[i].WageAmount.ToString("N2")</td>
                                     <td>
-                                        <input type="text" class="form-control" name="Entries[@i].Notes" value="@Model.Entries[i].Notes" placeholder="Optional" />
+                                        <input type="text"
+                                               class="form-control"
+                                               name="Entries[@i].Notes"
+                                               value="@Model.Entries[i].Notes"
+                                               placeholder="Optional"
+                                               @(isLocked ? "disabled" : null) />
+                                        @if (isLocked)
+                                        {
+                                            <input type="hidden" name="Entries[@i].Notes" value="@Model.Entries[i].Notes" />
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isLocked)
+                                        {
+                                            <span class="workforce-status workforce-status-locked">Locked</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="workforce-status workforce-status-open">Open</span>
+                                        }
                                     </td>
                                 </tr>
                             }
                             @if (!Model.Entries.Any())
                             {
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">No active laborers found.</td>
+                                    <td colspan="6" class="text-center text-muted py-4">No active laborers found.</td>
                                 </tr>
                             }
                         </tbody>
@@ -75,8 +120,20 @@
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-between align-items-center">
-                <div class="fw-bold">Total Wages: ₱@Model.TotalWage.ToString("N2")</div>
-                <button type="submit" class="btn btn-primary">Save Attendance</button>
+                <div>
+                    <div class="fw-bold">Total Wages: ₱@Model.TotalWage.ToString("N2")</div>
+                    <div class="small text-muted">
+                        @if (Model.IsDateLocked)
+                        {
+                            <span>This entire date is locked and cannot be edited.</span>
+                        }
+                        else
+                        {
+                            <span>Save updates attendance for all active laborers on this date.</span>
+                        }
+                    </div>
+                </div>
+                <button type="submit" class="btn workforce-btn workforce-btn-primary" @(Model.IsDateLocked ? "disabled" : null)>Save Attendance</button>
             </div>
         </div>
     </form>

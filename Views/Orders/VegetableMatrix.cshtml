@@ -4,238 +4,181 @@
     ViewData["Title"] = "Vegetable Order Matrix";
     ViewData["NotePurpose"] = "Daily vegetable order matrix by outlet and product.";
     ViewData["NoteInstructions"] = "Enter quantities, review totals, then Save Changes or Print.";
-    string peachBg = "#fce5cd";
-    string yellowBg = "#fff2cc";
-    string blueText = "#0000FF";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/vegetable-matrix.css" asp-append-version="true" />
+    @{
+        var paperSize = ((string?)ViewBag.PaperSize ?? "Letter").Trim();
+        var pageSizeCss = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "A4 landscape" : "11in 8.5in";
+    }
+    <style>
+        @@media print {
+            @@page { size: @pageSizeCss; margin: 2mm; }
+        }
+    </style>
 }
 
-<style>
-    .matrix-container {
-        height: 85vh;
-        overflow: auto;
-        border: 1px solid #777;
-        font-family: Arial, sans-serif;
-        font-size: 13px;
-        position: relative;
-        background: #fff;
-    }
+<div class="container-fluid p-0 matrix-page">
+    <div class="matrix-toolbar no-print">
+        <div class="matrix-toolbar-head">
+            <div class="matrix-title-block">
+                <div class="matrix-title">Daily Order Matrix</div>
+                <div class="matrix-page-meta">Outlets @Model.CurrentPage/@Model.TotalPages · Products @Model.ProductPage/@Model.TotalProductPages</div>
+            </div>
+            <button type="button"
+                    class="btn-matrix btn-matrix-subtle btn-icon-only"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#matrixInfoPanel"
+                    aria-expanded="false"
+                    aria-controls="matrixInfoPanel"
+                    title="Show purpose and instructions">
+                <i class="bi bi-info-circle"></i>
+            </button>
+        </div>
 
-    .matrix-table {
-        border-collapse: separate;
-        border-spacing: 0;
-        width: 100%;
-        margin-bottom: 0;
-    }
+        <div class="matrix-toolbar-body">
+            <div class="matrix-tool-group">
+                <span class="group-label">Navigation</span>
+                <button type="button" class="btn-matrix btn-matrix-outline"
+                        onclick="changeProductPage(-1)" @(Model.ProductPage <= 1 ? "disabled" : "")>
+                    <i class="bi bi-chevron-left"></i> Prev
+                </button>
+                <button type="button" class="btn-matrix btn-matrix-outline"
+                        onclick="changeProductPage(1)" @(Model.ProductPage >= Model.TotalProductPages ? "disabled" : "")>
+                    Next <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
 
-    .matrix-table th, .matrix-table td {
-        border: 1px solid #ccc;
-        border-right: 1px solid #aaa;
-        border-bottom: 1px solid #aaa;
-        padding: 4px;
-        vertical-align: middle;
-        white-space: nowrap;
-    }
+            <div class="matrix-tool-divider"></div>
 
-    .sticky-h { position: sticky; z-index: 10; background: #fff; }
+            <div class="matrix-tool-group">
+                <span class="group-label">Actions</span>
+                <button type="submit" form="matrixForm" class="btn-matrix btn-matrix-primary">
+                    <i class="bi bi-check2-circle"></i> Save Changes
+                </button>
+                <button type="button" class="btn-matrix btn-matrix-outline btn-action-secondary" onclick="submitForPrint()">
+                    <i class="bi bi-printer-fill"></i> Print
+                </button>
 
-    .sticky-left-col {
-        position: sticky;
-        left: 0;
-        z-index: 25;
-        border-right: 2px solid #555 !important;
-        min-width: 200px;
-        max-width: 200px;
-        background: #fff;
-    }
-    thead .sticky-left-col { z-index: 60; }
+                @if (!Model.ShowDetails)
+                {
+                    <a asp-action="VegetableMatrix"
+                       asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
+                       asp-route-page="@Model.CurrentPage"
+                       asp-route-productPage="@Model.ProductPage"
+                       asp-route-details="true"
+                       class="btn-matrix btn-matrix-outline btn-action-secondary">
+                        <i class="bi bi-layout-text-sidebar-reverse"></i> Load Details
+                    </a>
+                }
+                else
+                {
+                    <a asp-action="VegetableMatrix"
+                       asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
+                       asp-route-page="@Model.CurrentPage"
+                       asp-route-productPage="@Model.ProductPage"
+                       asp-route-details="false"
+                       class="btn-matrix btn-matrix-outline btn-action-secondary">
+                        <i class="bi bi-layout-text-sidebar"></i> Hide Details
+                    </a>
+                }
 
-    .excel-input {
-        width: 100%;
-        border: none;
-        text-align: center;
-        background: transparent;
-        outline: none;
-        font-weight: bold;
-        padding: 2px 0;
-    }
-    .excel-input:focus {
-        background-color: #e8f0fe;
-        box-shadow: inset 0 0 0 2px #0d6efd;
-    }
-    .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
+                <input type="date"
+                       id="toolbarDeliveryDate"
+                       name="toolbarDeliveryDate"
+                       value="@Model.Date.ToString("yyyy-MM-dd")"
+                       class="matrix-date-input"
+                       title="Delivery Date"
+                       aria-label="Delivery Date"
+                       onchange="document.getElementById('hiddenDate').value=this.value; document.getElementById('filterForm').submit();" />
 
-    .header-row-1-title {
-        font-size: 1.5rem;
-        font-weight: bold;
-        text-align: center;
-        background: white;
-        border-bottom: none !important;
-    }
-    .header-row-2-date {
-        text-align: right;
-        background: white;
-        padding-right: 20px;
-        border-top: none !important;
-    }
-    .header-row-3-group {
-        text-align: center;
-        font-weight: bold;
-        font-size: 1.2rem;
-        border: 2px solid #000 !important;
-        background: white;
-    }
-    .header-row-4-main {
-        background-color: @peachBg !important;
-        color: @blueText;
-        font-weight: bold;
-        text-align: center;
-        text-transform: uppercase;
-    }
-    .header-row-5-sub {
-        background-color: @yellowBg !important;
-        color: #555;
-        font-size: 0.85rem;
-        height: 30px;
-    }
+                <button type="button" id="toggleZeroPriceBtn" class="btn-matrix btn-matrix-outline btn-action-secondary">
+                    <i class="bi bi-funnel"></i> Hide zero-price items
+                </button>
 
-    .status-noorders { background-color: #e5e7eb; color: #64748b; }
-    .status-unpaid { background-color: #ff0000 !important; color: white !important; }
-    .status-paid { background-color: #ffc000 !important; color: black !important; }
-    .status-threeplus { background-color: black !important; color: white !important; }
+                <form asp-action="ImportVegetableMatrixExcel"
+                      method="post"
+                      enctype="multipart/form-data"
+                      class="matrix-import-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="page" value="@Model.CurrentPage" />
+                    <input type="hidden" name="productPage" value="@Model.ProductPage" />
+                    <input type="hidden" name="details" value="@Model.ShowDetails.ToString().ToLowerInvariant()" />
+                    <input type="file"
+                           name="importFile"
+                           accept=".xlsx"
+                           class="form-control form-control-sm matrix-file-input"
+                           required />
+                    <button type="submit" class="btn-matrix btn-matrix-outline btn-import">
+                        <i class="bi bi-upload"></i> Import Excel
+                    </button>
+                </form>
 
-    .qty-positive { background-color: #f7b267; } /* orange */
-    .qty-3plus { font-weight: 900; color: #fff; background-color: #2563eb; border: 2px solid #1d4ed8; } /* blue */
-    .qty-lowest { background-color: #86efac; color: #064e3b; font-weight: 700; }
-    .outlet-no-orders { background-color: #e5e7eb !important; color: #64748b !important; }
-    .cell-noorder { background-color: #e5e7eb; color: #64748b; }
+                <a asp-action="DownloadVegetableMatrixTemplate"
+                   asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
+                   class="btn-matrix btn-matrix-outline btn-import"
+                   title="Download an .xlsx template that matches the Import Excel format">
+                    <i class="bi bi-download"></i> Template
+                </a>
+            </div>
 
-    tfoot td {
-        position: sticky;
-        bottom: 0;
-        z-index: 70;
-        background: #f8f9fa;
-        border-top: 2px solid #000;
-    }
+            <div class="matrix-tool-divider"></div>
 
-    tbody tr { content-visibility: auto; contain-intrinsic-size: 28px; }
-
-    .cell-paid { background-color: #ffc000 !important; color: black !important; }
-    .cell-unpaid { background-color: #ff0000 !important; color: white !important; }
-    .cell-unpaid input { color: white !important; }
-    .cell-paid input { color: black !important; }
-
-    @@media print {
-        @@page { size: landscape; margin: 8mm; }
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .no-print { display: none !important; }
-        .matrix-container { height: auto; overflow: visible; border: none; }
-        .matrix-table { font-size: 9px; }
-        .matrix-table th, .matrix-table td { border-color: #999; padding: 2px; }
-        .sticky-h, .sticky-left-col { position: static !important; z-index: auto !important; }
-        thead { display: table-header-group; }
-        tfoot { display: table-footer-group; }
-        .outlet-no-orders { display: none !important; }
-        .no-print-row { display: none !important; }
-        .sticky-left-col { min-width: 140px; max-width: 140px; }
-        .matrix-container { zoom: 0.85; }
-    }
-</style>
-
-<div class="container-fluid p-0">
-    <div class="d-flex justify-content-between align-items-center mb-2 px-3 py-2 bg-light border-bottom no-print">
-        <div class="d-flex flex-column">
-            <div class="fw-bold">Daily Order Matrix</div>
-            <div class="small text-muted">
-                Outlets Page @Model.CurrentPage / @Model.TotalPages • Products Page @Model.ProductPage / @Model.TotalProductPages
+            <div class="matrix-tool-group">
+                <span class="group-label">Views</span>
+                <a asp-action="UnpaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn-matrix btn-matrix-subtle btn-alert">
+                    <i class="bi bi-exclamation-circle"></i> Unpaid
+                </a>
+                <a asp-action="PaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn-matrix btn-matrix-subtle btn-warning-soft">
+                    <i class="bi bi-check-circle"></i> Paid
+                </a>
+                <a asp-controller="ProfitReport" asp-action="Index" class="btn-matrix btn-matrix-subtle">
+                    <i class="bi bi-bar-chart-fill"></i> Profit &amp; Sales
+                </a>
             </div>
         </div>
-
-        <div class="d-flex gap-2 align-items-center">
-            <button type="button" class="btn btn-sm btn-outline-secondary"
-                    onclick="changeOutletPage(-1)" @(Model.CurrentPage <= 1 ? "disabled" : "")>
-                Prev Outlet
-            </button>
-
-            <button type="button" class="btn btn-sm btn-outline-secondary"
-                    onclick="changeOutletPage(1)" @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")>
-                Next Outlet
-            </button>
-
-            <button type="button" class="btn btn-sm btn-outline-secondary ms-3"
-                    onclick="changeProductPage(-1)" @(Model.ProductPage <= 1 ? "disabled" : "")>
-                Prev Products
-            </button>
-
-            <button type="button" class="btn btn-sm btn-outline-secondary"
-                    onclick="changeProductPage(1)" @(Model.ProductPage >= Model.TotalProductPages ? "disabled" : "")>
-                Next Products
-            </button>
-
-            <button type="submit" form="matrixForm" class="btn btn-sm btn-success fw-bold ms-3 px-4">SAVE CHANGES</button>
-
-            <button type="button" class="btn btn-sm btn-outline-dark ms-2" onclick="window.print()">
-                <i class="bi bi-printer-fill"></i> Print
-            </button>
-        
-            <div class="vr mx-3"></div>
-            <a asp-action="UnpaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-danger fw-bold">View UNPAID</a>
-            <a asp-action="PaidOrders" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-warning fw-bold ms-1">View PAID</a>
-            <a asp-controller="ProfitReport" asp-action="Index" class="btn btn-sm btn-info text-white fw-bold ms-3" target="_blank"><i class="bi bi-bar-chart-fill"></i> Profit & Sales</a>
-        </div>
     </div>
 
-    <div class="px-3 no-print">
-        <partial name="_PageNote" />
+    <div id="matrixInfoPanel" class="collapse matrix-info-panel no-print">
+        <div><span class="info-label">Purpose:</span> Daily vegetable order matrix by outlet and product.</div>
+        <div><span class="info-label">Instructions:</span> Enter quantities, review totals, then Save Changes or Print.</div>
     </div>
 
-    <div class="d-flex flex-wrap gap-3 align-items-center mb-2 px-3 py-2 bg-white border-bottom small no-print">
-        <div class="fw-bold me-2">LEGEND:</div>
-        
-        <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#ff0000; border-radius:3px;"></span> 
-            <span>Unpaid</span>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="outlet-tabs-wrap no-print">
+            <span class="outlet-tabs-label">Outlet Pages</span>
+            <div class="outlet-tabs">
+                @for (int outletPage = 1; outletPage <= Model.TotalPages; outletPage++)
+                {
+                    var activeCls = outletPage == Model.CurrentPage ? "active" : "";
+                    <button type="button" class="outlet-tab @activeCls" onclick="setOutletPage(@outletPage)">
+                        Page @outletPage
+                    </button>
+                }
+            </div>
         </div>
-        
-        <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#ffc000; border-radius:3px;"></span> 
-            <span>Paid</span>
-        </div>
+    }
 
-        <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:black; border-radius:3px;"></span> 
-            <span class="text-muted">3+ Customer Orders</span>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="px-3 py-2 no-print">
+            <div class="alert alert-success mb-2">@TempData["SuccessMessage"]</div>
         </div>
-
-        <div class="border-start mx-2 h-50"></div>
-
-        <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#f7b267; border-radius:3px;"></span> 
-            <span>Item Ordered</span>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="px-3 py-2 no-print">
+            <div class="alert alert-danger mb-2">@TempData["ErrorMessage"]</div>
         </div>
-        
-        <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#2563eb; border: 2px solid #1d4ed8; border-radius:3px;"></span> 
-            <span>High Qty (≥ 3)</span>
-        </div>
-
-        <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#e5e7eb; border-radius:3px;"></span> 
-            <span>No Orders</span>
-        </div>
-
-        <div class="d-flex align-items-center">
-            <span class="border me-1 shadow-sm" style="width:16px; height:16px; background-color:#86efac; border-radius:3px;"></span> 
-            <span>Lowest Qty</span>
-        </div>
-    </div>
+    }
 
     <form id="filterForm" method="get" class="no-print">
         <input type="hidden" name="date" id="hiddenDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
         <input type="hidden" name="page" id="hiddenOutletPage" value="@Model.CurrentPage" />
         <input type="hidden" name="productPage" id="hiddenProductPage" value="@Model.ProductPage" />
+        <input type="hidden" name="details" value="@Model.ShowDetails.ToString().ToLowerInvariant()" />
     </form>
 
     <form asp-action="SaveMatrix" method="post" id="matrixForm">
@@ -244,40 +187,64 @@
         <input type="hidden" asp-for="CurrentPage" />
         <input type="hidden" asp-for="ProductPage" />
         <input type="hidden" asp-for="SelectedGroupName" />
+        <input type="hidden" asp-for="ShowDetails" />
+        <input type="hidden" name="doPrint" id="doPrint" value="false" />
 
         @{
             var isAdmin = User.IsInRole("Admin");
-            var preOutletCols = isAdmin ? 4 : 3; // Cost? + Price + Total + UOM
-            var headerSpan = preOutletCols + Model.VisibleOutlets.Count + 2;
+            var showCostCol = isAdmin;
+            var showPriceTotalUomCols = true;  // show on screen + print
+            var showRightTotalQtyCols = true;  // show on screen + print
+
+            var preOutletCols = (showCostCol ? 1 : 0) + (showPriceTotalUomCols ? 3 : 0);
+            var postOutletCols = showRightTotalQtyCols ? 2 : 0;
+            var headerSpan = preOutletCols + Model.VisibleOutlets.Count + postOutletCols;
+            var totalHeaderSpan = 1 + headerSpan; // left product column + remaining columns
+            // Use server-computed page size for print.
+            // This avoids forcing tiny row chunks (which creates large blank space per page).
+            var printRowsPerSheet = Model.ProductPageSize;
+            var stickyVegWidth = 200;
+            var stickyCostWidth = showCostCol ? 70 : 0;
         }
 
         <div class="matrix-container">
-            <table class="matrix-table" id="mainTable">
+            <table class="matrix-table"
+                   id="mainTable"
+                   style="--sticky-veg-width:@(stickyVegWidth)px; --sticky-cost-width:@(stickyCostWidth)px; --sticky-price-width:90px; --sticky-total-width:90px;">
                 <thead>
                     <tr>
-                        <th class="sticky-left-col header-row-1-title sticky-h" style="top:0;"></th>
-                        <th colspan="@headerSpan" class="header-row-1-title sticky-h" style="top:0;">VEGEATABLE ORDER</th>
-                    </tr>
-
-                    <tr>
-                        <th class="sticky-left-col bg-white sticky-h" style="top:35px;"></th>
-                        <th colspan="@headerSpan" class="header-row-2-date sticky-h" style="top:35px;">
-                            <span class="fw-bold me-2">DELIVERY DATE:</span>
-                            <input type="date"
-                                   value="@Model.Date.ToString("yyyy-MM-dd")"
-                                   class="border-0 text-danger fw-bold"
-                                   onchange="document.getElementById('hiddenDate').value=this.value; document.getElementById('filterForm').submit();" />
+                        <th colspan="@totalHeaderSpan" class="header-row-1-title sticky-h top-0">
+                            <div class="matrix-title-row">
+                                <span class="matrix-title-text">VEGETABLE ORDER</span>
+                                <span class="matrix-title-date-inline">Delivery Date: @Model.Date.ToString("MM/dd/yyyy")</span>
+                            </div>
                         </th>
                     </tr>
 
                     <tr>
-                        <th class="sticky-left-col bg-white sticky-h" style="top:70px;"></th>
-                        <th colspan="@preOutletCols" class="bg-white sticky-h" style="top:70px;"></th>
+                        <th colspan="@totalHeaderSpan" class="header-row-legend sticky-h top-35">
+                            <div class="legend-inline">
+                                <span class="legend-caption">Legend:</span>
+                                <span class="legend-item"><span class="legend-dot legend-one" aria-hidden="true"></span><span class="legend-name">Orange</span> 1 Order</span>
+                                <span class="legend-item"><span class="legend-dot legend-many" aria-hidden="true"></span><span class="legend-name">Yellow</span> Many Orders</span>
+                                <span class="legend-item"><span class="legend-dot legend-low" aria-hidden="true"></span><span class="legend-name">Green</span> Lowest Qty</span>
+                                <span class="legend-item"><span class="legend-dot legend-none" aria-hidden="true"></span><span class="legend-name">Gray</span> No Orders</span>
+                                <span class="legend-item"><span class="legend-dot legend-high" aria-hidden="true"></span><span class="legend-name">Blue</span> Highest Qty</span>
+                            </div>
+                        </th>
+                    </tr>
+
+                    <tr>
+                        <th class="sticky-left-col bg-white sticky-h top-70"></th>
+                        @if (preOutletCols > 0)
+                        {
+                            <th colspan="@preOutletCols" class="bg-white sticky-h top-70"></th>
+                        }
 
                         @{
                             if (!Model.VisibleOutlets.Any())
                             {
-                                <th class="bg-white sticky-h" style="top:70px;"></th>
+                                <th class="bg-white sticky-h top-70"></th>
                             }
                             else
                             {
@@ -288,101 +255,106 @@
                                     while (i + span < Model.VisibleOutlets.Count && Model.VisibleOutlets[i + span].GroupName == grp)
                                         span++;
 
-                                    <th colspan="@span" class="header-row-3-group sticky-h" style="top:70px;">@grp</th>
+                                    <th colspan="@span" class="header-row-3-group sticky-h top-70">@grp</th>
                                     i += span - 1;
                                 }
                             }
                         }
 
-                        <th colspan="2" class="bg-white sticky-h" style="top:70px;"></th>
+                        @if (postOutletCols > 0)
+                        {
+                            <th colspan="@postOutletCols" class="bg-white sticky-h top-70"></th>
+                        }
                     </tr>
 
                     <tr>
-                        <th class="sticky-left-col header-row-4-main sticky-h" style="top:105px;">VEGETABLES</th>
-                        @if (User.IsInRole("Admin")) { <th class="header-row-4-main sticky-h" style="top:105px; width:70px;">Cost</th> }
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Price</th>
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:90px;">Total</th>
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:50px;">UOM</th>
+                        <th class="sticky-left-col header-row-4-main sticky-h top-105">VEGETABLES</th>
+                        @if (showCostCol) { <th class="header-row-4-main sticky-h sticky-cost-col top-105" style="width:70px;">Cost</th> }
+                        @if (showPriceTotalUomCols)
+                        {
+                            <th class="header-row-4-main sticky-h sticky-price-col top-105" style="width:90px;">Price</th>
+                            <th class="header-row-4-main sticky-h sticky-total-col top-105" style="width:90px;">Total</th>
+                            <th class="header-row-4-main sticky-h sticky-uom-col top-105" style="width:50px;">UOM</th>
+                        }
 
                         @foreach (var c in Model.VisibleOutlets)
                         {
-                            var noOrders = Model.OutletHasOrders.TryGetValue(c.Id, out var hasOrder) ? !hasOrder : false;
-                            <th class="header-row-4-main sticky-h @(noOrders ? "outlet-no-orders" : "")" style="top:105px; min-width:80px;">@c.Name</th>
+                            <th class="header-row-4-main outlet-head sticky-h top-105" style="min-width:80px;">@c.Name</th>
                         }
 
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:80px;">Total Qty</th>
-                        <th class="header-row-4-main sticky-h" style="top:105px; width:50px;">uom</th>
+                        @if (showRightTotalQtyCols)
+                        {
+                            <th class="header-row-4-main sticky-h top-105" style="width:80px;">Total Qty</th>
+                            <th class="header-row-4-main sticky-h top-105" style="width:50px;">uom</th>
+                        }
                     </tr>
 
                     <tr>
-                        <th class="sticky-left-col header-row-5-sub sticky-h" style="top:140px; text-align:left; padding-left:10px;">PO NUMBER</th>
-                        <th class="header-row-5-sub sticky-h" style="top:140px;" colspan="@preOutletCols"></th>
+                        <th class="sticky-left-col header-row-5-sub sticky-h top-140" style="text-align:left; padding-left:10px;">PO NUMBER</th>
+                        @if (preOutletCols > 0)
+                        {
+                            <th class="header-row-5-sub sticky-h top-140" colspan="@preOutletCols"></th>
+                        }
 
                         @foreach (var c in Model.VisibleOutlets)
                         {
-                            var noOrders = Model.OutletHasOrders.TryGetValue(c.Id, out var hasOrder) ? !hasOrder : false;
-                            <th class="header-row-5-sub sticky-h text-center fst-italic @(noOrders ? "outlet-no-orders" : "")" style="top:140px;">@c.SubLabel</th>
+                            <th class="header-row-5-sub sticky-h top-140 text-center fst-italic">@c.SubLabel</th>
                         }
 
-                        <th class="header-row-5-sub sticky-h" style="top:140px;" colspan="2"></th>
+                        @if (postOutletCols > 0)
+                        {
+                            <th class="header-row-5-sub sticky-h top-140" colspan="@postOutletCols"></th>
+                        }
                     </tr>
                 </thead>
 
                 <tbody>
-                    @foreach (var p in Model.VisibleProducts)
+                    @for (int i = 0; i < Model.VisibleProducts.Count; i++)
                     {
+                        var p = Model.VisibleProducts[i];
+                        var breakClass = (Model.IsPrint && printRowsPerSheet > 0 && i > 0 && (i % printRowsPerSheet) == 0)
+                            ? "print-page-break"
+                            : "";
                         decimal rowTotalQty = Model.ProductTotalQtyAllOutletsInGroup.TryGetValue(p.Id, out var tq) ? tq : 0m;
                         decimal cost = Model.ProductCosts.TryGetValue(p.Id, out var cCost) ? cCost : 0m;
                         decimal price = Model.ProductPrices.TryGetValue(p.Id, out var pr) ? pr : 0m;
                         decimal rowTotalAmt = rowTotalQty * price;
 
-                        var rowQtys = Model.VisibleOutlets
-                            .Select(o => Model.MatrixQuantities.TryGetValue($"{p.Id}_{o.Id}", out var v) ? v : 0m)
-                            .Where(v => v > 0)
-                            .ToList();
-                        decimal rowMinPositive = rowQtys.Any() ? rowQtys.Min() : 0m;
-
                         string status = Model.ProductStatuses.TryGetValue(p.Id, out var st) ? st : "NO_ORDERS";
                         string statusClass = status switch
                         {
-                            "UNPAID" => "status-unpaid",
-                            "PAID" => "status-paid",
-                            "THREE_PLUS" => "status-threeplus",
+                            "ONE_ORDER" => "status-one-order",
+                            "MANY_ORDERS" => "status-many-orders",
+                            "LOWEST_QTY" => "status-lowest-qty",
+                            "HIGHEST_QTY" => "status-highest-qty",
                             _ => "status-noorders"
                         };
 
-                        <tr data-row-qty="@rowTotalQty" data-price="@price">
+                        <tr class="@breakClass" data-row-qty="@rowTotalQty" data-price="@price">
                             <td class="sticky-left-col fw-bold border-end vege-cell @statusClass">@p.Name</td>
 
-                            @if (User.IsInRole("Admin")) { <td class="text-end pe-2 bg-light text-muted">@cost.ToString("N2")</td> }
+                            @if (showCostCol) { <td class="text-end pe-2 bg-light text-muted sticky-cost-col">@cost.ToString("N2")</td> }
 
-                            <td style="background:#fff;">
-                                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
-                                       class="excel-input price-input no-spin text-end"
-                                       name="ProductPrices[@p.Id]"
-                                       value="@price.ToString("0.00")"
-                                       autocomplete="off" spellcheck="false" />
-                            </td>
+                            @if (showPriceTotalUomCols)
+                            {
+                                <td class="sticky-price-col price-cell">
+                                    <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
+                                           class="excel-input price-input no-spin text-end"
+                                           name="ProductPrices[@p.Id]"
+                                           value="@price.ToString("0.00")"
+                                           autocomplete="off" spellcheck="false" />
+                                </td>
 
-                            <td class="text-end pe-2 row-amt-cell">@(rowTotalAmt > 0 ? rowTotalAmt.ToString("N2") : "-")</td>
-                            <td class="text-center small text-muted">@p.Unit</td>
+                                <td class="text-end pe-2 row-amt-cell sticky-total-col">@(rowTotalAmt > 0 ? rowTotalAmt.ToString("N2") : "-")</td>
+                                <td class="text-center small text-muted sticky-uom-col">@p.Unit</td>
+                            }
 
                             @foreach (var c in Model.VisibleOutlets)
                             {
                                 string key = $"{p.Id}_{c.Id}";
                                 decimal val = Model.MatrixQuantities.TryGetValue(key, out var v) ? v : 0m;
-                                string mSt = Model.MatrixStatuses.TryGetValue(key, out var s) ? s : "";
-                                var noOrders = Model.OutletHasOrders.TryGetValue(c.Id, out var hasOrder) ? !hasOrder : false;
-                                
-                                string qtyClass = "";
-                                if (mSt == "PAID") qtyClass = "cell-paid";
-                                else if (mSt == "UNPAID") qtyClass = "cell-unpaid";
-                                else if (val >= 3) qtyClass = "qty-3plus";
-                                else if (rowMinPositive > 0 && rowMinPositive < 3 && val == rowMinPositive) qtyClass = "qty-lowest";
-                                else if (val > 0) qtyClass = "qty-positive";
-                                else qtyClass = "cell-noorder";
 
-                                <td class="qty-td @qtyClass @(noOrders ? "outlet-no-orders" : "")">
+                                <td class="qty-td">
                                     <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                            class="excel-input qty-input no-spin"
                                            name="MatrixQuantities[@key]"
@@ -391,8 +363,11 @@
                                 </td>
                             }
 
-                            <td class="text-center fw-bold bg-light row-qty-cell">@(rowTotalQty > 0 ? rowTotalQty.ToString("0.##") : "")</td>
-                            <td class="text-center small text-muted">@p.Unit</td>
+                            @if (showRightTotalQtyCols)
+                            {
+                                <td class="text-center fw-bold bg-light row-qty-cell">@(rowTotalQty > 0 ? rowTotalQty.ToString("0.##") : "")</td>
+                                <td class="text-center small text-muted">@p.Unit</td>
+                            }
                         </tr>
                     }
                 </tbody>
@@ -400,186 +375,393 @@
                 <tfoot>
                     <tr class="fw-bold">
                         <td class="sticky-left-col text-end pe-3 bg-light">GRAND TOTAL</td>
-                        @if (User.IsInRole("Admin"))
+                        @if (showCostCol)
                         {
                             <td></td>
                         }
-                        <td></td>
-                        <td class="text-end pe-2 text-primary" id="grandTotalAmt">@Model.GrandTotalAmount.ToString("N2")</td>
-                        <td></td>
+                        @if (showPriceTotalUomCols)
+                        {
+                            <td></td>
+                            <td class="text-end pe-2 text-primary" id="grandTotalAmt">@Model.GrandTotalAmount.ToString("N2")</td>
+                            <td></td>
+                        }
 
                         @foreach (var _ in Model.VisibleOutlets) { <td></td> }
 
-                        <td class="text-center text-danger" id="grandTotalQty">@Model.GrandTotalQty.ToString("0.##")</td>
-                        <td></td>
+                        @if (showRightTotalQtyCols)
+                        {
+                            <td class="text-center text-danger" id="grandTotalQty">@Model.GrandTotalQty.ToString("0.##")</td>
+                            <td></td>
+                        }
                     </tr>
                 </tfoot>
             </table>
         </div>
     </form>
-</div>
 
-<script>
-    function changeOutletPage(d) {
-        const p = document.getElementById('hiddenOutletPage');
-        p.value = Math.max(1, (parseInt(p.value) || 1) + d);
-        document.getElementById('filterForm').submit();
-    }
-    function changeProductPage(d) {
-        const p = document.getElementById('hiddenProductPage');
-        p.value = Math.max(1, (parseInt(p.value) || 1) + d);
-        document.getElementById('filterForm').submit();
-    }
-
-    (function () {
-        'use strict';
-
-        const table = document.getElementById('mainTable');
-        if (!table) return;
-
-        const elGrandAmt = document.getElementById('grandTotalAmt');
-        const elGrandQty = document.getElementById('grandTotalQty');
-        const fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        let totalQty = @Model.GrandTotalQty;
-        let totalAmt = @Model.GrandTotalAmount;
-
-        const prevValues = new WeakMap();
-        const rowRefs = new WeakMap();
-        function num(v) {
-            if (v == null) return 0;
-            let s = ('' + v).trim();
-            if (s === '') return 0;
-            const hasComma = s.includes(',');
-            const hasDot = s.includes('.');
-            if (hasComma && !hasDot) {
-                s = s.replace(',', '.');
-            } else if (hasComma && hasDot) {
-                s = s.replace(/,/g, '');
-            }
-            const n = Number(s);
-            return Number.isFinite(n) ? n : 0;
-        }
-
-        function getRowRefs(row) {
-            let refs = rowRefs.get(row);
-            if (refs) return refs;
-            refs = {
-                amtCell: row.querySelector('.row-amt-cell'),
-                qtyCell: row.querySelector('.row-qty-cell'),
-                vegeCell: row.querySelector('.vege-cell')
-            };
-            rowRefs.set(row, refs);
-            return refs;
-        }
-
-        table.addEventListener('focusin', (e) => {
-            const input = e.target;
-            if (!(input instanceof HTMLInputElement)) return;
-            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input')) return;
-            if (!prevValues.has(input)) prevValues.set(input, num(input.value));
-        });
-
-        table.addEventListener('change', (e) => {
-            const input = e.target;
-            if (!(input instanceof HTMLInputElement)) return;
-            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input')) return;
-            handle(input);
-        });
-
-        table.addEventListener('blur', (e) => {
-            const input = e.target;
-            if (!(input instanceof HTMLInputElement)) return;
-            if (!input.classList.contains('qty-input') && !input.classList.contains('price-input')) return;
-            handle(input);
-        }, true);
-
-        function handle(input) {
-            const row = input.closest('tr');
-            if (!row) return;
-
-            const oldVal = prevValues.get(input) ?? 0;
-            const newVal = num(input.value);
-            if (oldVal === newVal) return;
-            prevValues.set(input, newVal);
-
-            let rowQty = num(row.dataset.rowQty);
-            let price = num(row.dataset.price);
-
-            const refs = getRowRefs(row);
-
-            if (input.classList.contains('qty-input')) {
-                const diff = newVal - oldVal;
-                rowQty += diff;
-                row.dataset.rowQty = rowQty;
-
-                totalQty += diff;
-                totalAmt += (diff * price);
-
-                // Recompute lowest qty for this row
-                const qtyInputs = Array.from(row.querySelectorAll('.qty-input'));
-                let minPositive = Infinity;
-                qtyInputs.forEach(q => {
-                    const v = num(q.value);
-                    if (v > 0 && v < minPositive) minPositive = v;
-                });
-                if (!Number.isFinite(minPositive)) minPositive = 0;
-
-                qtyInputs.forEach(q => {
-                    const v = num(q.value);
-                    const td = q.closest('td');
-                    if (!td) return;
-                    td.classList.remove('qty-lowest');
-                    if (minPositive > 0 && minPositive < 3 && v === minPositive) {
-                        if (!td.classList.contains('cell-paid') && !td.classList.contains('cell-unpaid')) {
-                            td.classList.add('qty-lowest');
-                        }
+    @if (Model.ShowDetails)
+    {
+    <div class="detail-wrap no-print">
+        <div class="detail-card">
+            <div class="detail-card-header">Vegetable Order Details</div>
+            <div class="detail-summary">
+                <div class="detail-metric">
+                    <div class="label">Total Sales</div>
+                    <div class="value">₱@Model.DetailTotalSales.ToString("N2")</div>
+                </div>
+                <div class="detail-metric">
+                    <div class="label">Total Cost</div>
+                    <div class="value">₱@Model.DetailTotalCost.ToString("N2")</div>
+                </div>
+                <div class="detail-metric">
+                    <div class="label">Gross Profit</div>
+                    <div class="value">₱@Model.DetailTotalGrossProfit.ToString("N2")</div>
+                </div>
+                <div class="detail-metric">
+                    <div class="label">Expenses</div>
+                    <div class="value">₱@Model.DetailTotalExpenses.ToString("N2")</div>
+                </div>
+                <div class="detail-metric">
+                    <div class="label">Total Deductions</div>
+                    <div class="value">₱@Model.DetailTotalDeductions.ToString("N2")</div>
+                </div>
+                <div class="detail-metric">
+                    <div class="label">Delivery Payments</div>
+                    <div class="value">₱@Model.DetailTotalDeliveryPayments.ToString("N2")</div>
+                </div>
+            </div>
+            <div class="p-3">
+                <div class="fw-bold mb-2">Who Purchased / Item Owner</div>
+                <div class="table-responsive">
+                    @{
+                        var partnerNames = (Model.DetailPartnerNames ?? new List<string>())
+                            .Where(x => !string.IsNullOrWhiteSpace(x))
+                            .Select(x => x.Trim())
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .OrderBy(x => x)
+                            .ToList();
+                        var partnerCount = partnerNames.Count;
+                        var seenPartnerProductIds = new HashSet<int>();
                     }
-                });
+                    <table class="detail-table">
+                        <thead>
+                            <tr>
+                                <th>Outlet</th>
+                                <th>Product</th>
+                                <th>Owner / Supplier</th>
+                                <th>Qty</th>
+                                <th>Amount</th>
+                                <th>Cost</th>
+                                <th>Gross Profit</th>
+                                <th>Status</th>
+                                @foreach (var pn in partnerNames)
+                                {
+                                    <th class="partner-col">@pn.ToUpperInvariant()</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.DetailRows.Any())
+                            {
+                                foreach (var row in Model.DetailRows)
+                                {
+                                    var showPartner = seenPartnerProductIds.Add(row.ProductId);
+                                    <tr>
+                                        <td class="text-start">@row.OutletName</td>
+                                        <td class="text-start">@row.ProductName</td>
+                                        <td class="text-start">@row.OwnerName</td>
+                                        <td>@row.Quantity.ToString("0.##")</td>
+                                        <td class="text-end">₱@row.Amount.ToString("N2")</td>
+                                        <td class="text-end">₱@row.CostAmount.ToString("N2")</td>
+                                        <td class="text-end">₱@row.GrossProfit.ToString("N2")</td>
+                                        <td>
+                                            @if (row.Status == "UNPAID")
+                                            {
+                                                <span class="badge-unpaid">UNPAID</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge-paid">PAID</span>
+                                            }
+                                        </td>
+                                        @foreach (var pn in partnerNames)
+                                        {
+                                            decimal amt = 0m;
+                                            if (showPartner && row.PartnerPurchaseByPartner != null)
+                                            {
+                                                row.PartnerPurchaseByPartner.TryGetValue(pn, out amt);
+                                            }
+                                            <td class="text-end partner-col">@(amt > 0 ? $"₱{amt:N2}" : "")</td>
+                                        }
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="@(8 + partnerCount)" class="text-center text-muted">No orders for this date.</td>
+                                </tr>
+                            }
+                        </tbody>
+                        @if (Model.DetailRows.Any())
+                        {
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td colspan="4" class="text-end">TOTAL</td>
+                                    <td class="text-end">₱@Model.DetailTotalSales.ToString("N2")</td>
+                                    <td class="text-end">₱@Model.DetailTotalCost.ToString("N2")</td>
+                                    <td class="text-end">₱@Model.DetailTotalGrossProfit.ToString("N2")</td>
+                                    <td></td>
+                                    @foreach (var pn in partnerNames)
+                                    {
+                                        Model.DetailPartnerOrderTotals.TryGetValue(pn, out var total);
+                                        <td class="text-end partner-col">₱@total.ToString("N2")</td>
+                                    }
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
 
-                const td = input.closest('td');
-                if (td && !td.classList.contains('cell-paid') && !td.classList.contains('cell-unpaid')) {
-                    td.classList.remove('qty-positive', 'qty-3plus', 'cell-noorder');
-                    if (newVal >= 3) td.classList.add('qty-3plus');
-                    else if (newVal > 0) td.classList.add('qty-positive');
-                    else td.classList.add('cell-noorder');
-                }
-            } else if (input.classList.contains('price-input')) {
-                const diff = newVal - oldVal;
-                totalAmt += (rowQty * diff);
-                price = newVal;
-                row.dataset.price = price;
-            }
+                <div class="detail-finance-wrap">
+                    <table class="detail-finance">
+                        <thead>
+                            <tr><th colspan="2">DEDUCTIONS</th></tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.DetailDeductionItems.Any())
+                            {
+                                foreach (var d in Model.DetailDeductionItems)
+                                {
+                                    <tr>
+                                        <td class="text-start">@d.Label</td>
+                                        <td class="amt">₱@d.Amount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td class="text-start text-muted" colspan="2">No deductions</td></tr>
+                            }
+                            <tr class="total-row">
+                                <td class="text-start">TOTAL DEDUCTIONS</td>
+                                <td class="amt">₱@Model.DetailTotalDeductions.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                        <thead>
+                            <tr><th colspan="2">EXPENSES</th></tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.DetailExpenseItems.Any())
+                            {
+                                foreach (var e in Model.DetailExpenseItems)
+                                {
+                                    <tr>
+                                        <td class="text-start">@e.Label</td>
+                                        <td class="amt">₱@e.Amount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td class="text-start text-muted" colspan="2">No expenses</td></tr>
+                            }
+                            <tr class="total-row">
+                                <td class="text-start">TOTAL EXPENSES</td>
+                                <td class="amt">₱@Model.DetailTotalExpenses.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                        <thead>
+                            <tr><th colspan="2">PARTNER CASH PURCHASES</th></tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var partnerGridNames = (Model.DetailPartnerNames ?? new List<string>())
+                                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                                    .Select(x => x.Trim())
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .OrderBy(x => x)
+                                    .ToList();
 
-            const rowAmt = rowQty * price;
-            if (refs.amtCell) refs.amtCell.textContent = rowAmt !== 0 ? fmt.format(rowAmt) : '-';
-            if (refs.qtyCell) refs.qtyCell.textContent = formatQty(rowQty);
-            if (elGrandAmt) elGrandAmt.textContent = fmt.format(totalAmt);
-            if (elGrandQty) elGrandQty.textContent = totalQty !== 0 ? totalQty.toFixed(2).replace(/\.?0+$/, '') : '0';
+                                var groups = partnerGridNames
+                                    .Select(pn => Model.DetailPartnerPurchaseGroups.FirstOrDefault(g => string.Equals(g.PartnerName, pn, StringComparison.OrdinalIgnoreCase))
+                                                  ?? new HazelInvoice.ViewModels.PartnerPurchaseGroupVm { PartnerName = pn })
+                                    .ToList();
 
-            if (refs.vegeCell) {
-                const isPaid = refs.vegeCell.classList.contains('status-paid');
-                const isUnpaid = refs.vegeCell.classList.contains('status-unpaid');
-                if (!isPaid && !isUnpaid) {
-                    refs.vegeCell.classList.remove('status-noorders', 'status-threeplus');
-                    if (rowQty <= 0) refs.vegeCell.classList.add('status-noorders');
-                    else if (rowQty >= 3) refs.vegeCell.classList.add('status-threeplus');
-                }
-            }
-        }
+                                var maxRows = groups.Count > 0 ? groups.Max(g => g.Items.Count) : 0;
+                            }
 
-        function applyPrintRowFilter() {
-            const rows = Array.from(table.querySelectorAll('tbody tr'));
-            rows.forEach(row => {
-                const rowQty = num(row.dataset.rowQty);
-                row.classList.toggle('no-print-row', rowQty <= 0);
-            });
-        }
+                            @if (groups.Count > 0)
+                            {
+                                <tr>
+                                    <td colspan="2" class="partner-grid-cell">
+                                        <table class="pp-grid">
+                                            <thead>
+                                                <tr>
+                                                    @for (var i = 0; i < groups.Count; i++)
+                                                    {
+                                                        <th class="pp-head pp-i-@i">@groups[i].PartnerName.ToUpperInvariant()</th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (maxRows > 0)
+                                                {
+                                                    @for (var r = 0; r < maxRows; r++)
+                                                    {
+                                                        <tr>
+                                                            @for (var c = 0; c < groups.Count; c++)
+                                                            {
+                                                                var item = r < groups[c].Items.Count ? groups[c].Items[r] : null;
+                                                                var hasVal = item != null && item.Amount > 0;
+                                                                <td class="pp-cell pp-i-@c @(hasVal ? "has-val" : "")" title="@(item?.Label ?? "")">
+                                                                    @(hasVal ? $"₱{item!.Amount:N2}" : "")
+                                                                </td>
+                                                            }
+                                                        </tr>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <tr>
+                                                        <td colspan="@groups.Count" class="text-start text-muted" style="padding:8px 10px;">
+                                                            No partner cash purchases
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    @for (var i = 0; i < groups.Count; i++)
+                                                    {
+                                                        <td class="pp-total pp-i-@i">₱@groups[i].TotalAmount.ToString("N2")</td>
+                                                    }
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr><td class="text-start text-muted" colspan="2">No partner cash purchases</td></tr>
+                            }
+                            <tr class="total-row">
+                                <td class="text-start">TOTAL PARTNER PURCHASES</td>
+                                <td class="amt">₱@Model.DetailTotalPartnerPurchases.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                        <thead>
+                            <tr><th colspan="2">PARTNER ITEM PURCHASES (FROM SALES)</th></tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.DetailPartnerSalesAttributions.Any())
+                            {
+                                var groups2 = (Model.DetailPartnerNames ?? new List<string>())
+                                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                                    .Select(x => x.Trim())
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .OrderBy(x => x)
+                                    .Select(pn => Model.DetailPartnerSalesAttributions.FirstOrDefault(g => string.Equals(g.PartnerName, pn, StringComparison.OrdinalIgnoreCase))
+                                                  ?? new HazelInvoice.ViewModels.PartnerSalesAttributionGroupVm { PartnerName = pn })
+                                    .ToList();
 
-        window.addEventListener('beforeprint', applyPrintRowFilter);
-        window.addEventListener('afterprint', () => {
-            const rows = Array.from(table.querySelectorAll('tbody tr'));
-            rows.forEach(row => row.classList.remove('no-print-row'));
-        });
-    })();
-</script>
+                                var maxRows2 = groups2.Count > 0 ? groups2.Max(g => g.Items.Count) : 0;
+
+                                <tr>
+                                    <td colspan="2" class="partner-grid-cell">
+                                        <table class="pp-grid">
+                                            <thead>
+                                                <tr>
+                                                    @for (var i = 0; i < groups2.Count; i++)
+                                                    {
+                                                        <th class="pp-head pp-i-@i">@groups2[i].PartnerName.ToUpperInvariant()</th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (maxRows2 > 0)
+                                                {
+                                                    @for (var r = 0; r < maxRows2; r++)
+                                                    {
+                                                        <tr>
+                                                            @for (var c = 0; c < groups2.Count; c++)
+                                                            {
+                                                                var item = r < groups2[c].Items.Count ? groups2[c].Items[r] : null;
+                                                                var hasVal = item != null && item.Amount > 0;
+                                                                <td class="pp-cell pp-i-@c @(hasVal ? "has-val" : "")" title="@(item?.Label ?? "")">
+                                                                    @(hasVal ? $"₱{item!.Amount:N2}" : "")
+                                                                </td>
+                                                            }
+                                                        </tr>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <tr>
+                                                        <td colspan="@groups2.Count" class="text-start text-muted" style="padding:8px 10px;">
+                                                            No partner-tagged sales (set Partner in New Sale line items)
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    @for (var i = 0; i < groups2.Count; i++)
+                                                    {
+                                                        <td class="pp-total pp-i-@i">₱@groups2[i].TotalAmount.ToString("N2")</td>
+                                                    }
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr><td class="text-start text-muted" colspan="2">No partner-tagged sales (set Partner in New Sale line items)</td></tr>
+                            }
+                            <tr class="total-row">
+                                <td class="text-start">TOTAL PARTNER ITEM PURCHASES</td>
+                                <td class="amt">₱@Model.DetailTotalPartnerSalesAttributed.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="sales-row">
+                                <td class="text-start">TOTAL SALES</td>
+                                <td class="amt">₱@Model.DetailTotalSales.ToString("N2")</td>
+                            </tr>
+                            <tr class="sales-row">
+                                <td class="text-start">SALES + PARTNER PURCHASES</td>
+                                <td class="amt">₱@Model.DetailSalesSubTotal.ToString("N2")</td>
+                            </tr>
+                            <tr class="subtotal-row">
+                                <td class="text-start">SUBTOTAL</td>
+                                <td class="amt">₱@Model.DetailSubTotal.ToString("N2")</td>
+                            </tr>
+                            <tr class="fee-row">
+                                <td class="text-start">@Model.DetailPercentFee.ToString("N2")%</td>
+                                <td class="amt">₱@Model.DetailPercentFeeAmount.ToString("N2")</td>
+                            </tr>
+                            <tr class="net-row">
+                                <td class="text-start">NET PROFIT</td>
+                                <td class="amt">₱@Model.DetailNetProfit.ToString("N2")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+</div>
+@section Scripts {
+    <script>
+        window.vmMatrixConfig = {
+            isPrintView: @Model.IsPrint.ToString().ToLower(),
+            grandTotalQty: @Model.GrandTotalQty.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            grandTotalAmount: @Model.GrandTotalAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        };
+    </script>
+    <script src="~/js/vegetable-matrix.js" asp-append-version="true"></script>
+}

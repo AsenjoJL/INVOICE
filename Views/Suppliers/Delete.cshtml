@@ -4,17 +4,19 @@
     ViewData["Title"] = "Deactivate Supplier";
 }
 
-<div class="container p-4">
-    <div class="card shadow border-0" style="max-width: 700px; margin: 0 auto;">
-        <div class="card-header bg-danger text-white">
+<partial name="_SupplierStyles" />
+
+<div class="container p-4 supplier-page">
+    <div class="card supplier-delete-card">
+        <div class="card-header supplier-delete-header">
             <h4 class="mb-0">Deactivate Supplier</h4>
         </div>
-        <div class="card-body">
+        <div class="card-body supplier-delete-body">
             <p class="mb-3">
                 This will <strong>deactivate</strong> the supplier so it no longer appears in selections.
             </p>
 
-            <dl class="row">
+            <dl class="row supplier-delete-meta">
                 <dt class="col-sm-4">Name</dt>
                 <dd class="col-sm-8">@Model.Name</dd>
 
@@ -28,8 +30,8 @@
             <form asp-action="Delete">
                 <input type="hidden" asp-for="Id" />
                 <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-danger">Deactivate</button>
-                    <a asp-action="Index" class="btn btn-light">Cancel</a>
+                    <button type="submit" class="btn supplier-btn-danger">Deactivate</button>
+                    <a asp-action="Index" class="btn supplier-btn-neutral">Cancel</a>
                 </div>
             </form>
         </div>

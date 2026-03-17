@@ -7,7 +7,7 @@
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Inventory Report</h2>
-        <button onclick="window.print()" class="btn btn-outline-secondary no-print"><i class="bi bi-printer"></i> Print</button>
+        <button onclick="return window.hazelPrint && window.hazelPrint.prepareAndPrint ? window.hazelPrint.prepareAndPrint() : (window.print(), false)" class="btn btn-outline-secondary no-print"><i class="bi bi-printer"></i> Print</button>
     </div>
 
     <div class="card shadow border-0">

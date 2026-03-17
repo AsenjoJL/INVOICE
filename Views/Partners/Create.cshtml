@@ -1,0 +1,46 @@
+@model HazelInvoice.Models.PartnerBalanceConfig
+@{
+    ViewData["Title"] = "Add Partner";
+}
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h1 class="h4 fw-bold mb-1">Add Partner</h1>
+            <div class="text-muted">Create a partner name used across the system.</div>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary" style="border-radius:0; font-weight:800;">Back</a>
+    </div>
+
+    <div class="card" style="border-radius:0;">
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold" for="PartnerName">Partner Name</label>
+                    <input id="PartnerName" name="PartnerName" value="@Model.PartnerName" class="form-control" style="border-radius:0; font-weight:800;" />
+                    <span class="text-danger">@Html.ValidationMessageFor(m => m.PartnerName)</span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold" for="OpeningBalance">Opening Balance</label>
+                    <div class="input-group">
+                        <span class="input-group-text" style="border-radius:0;">₱</span>
+                        <input id="OpeningBalance" name="OpeningBalance" type="number" step="0.01" value="@Model.OpeningBalance"
+                               class="form-control" style="border-radius:0; font-weight:800;" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold" for="AsOfDate">As Of Date</label>
+                    <input id="AsOfDate" name="AsOfDate" type="date" value="@Model.AsOfDate.ToString("yyyy-MM-dd")"
+                           class="form-control" style="border-radius:0; font-weight:800;" />
+                </div>
+
+                <button type="submit" class="btn btn-success" style="border-radius:0; font-weight:900;">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
+

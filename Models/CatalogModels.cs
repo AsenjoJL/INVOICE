@@ -18,6 +18,12 @@ public class Product
     [StringLength(50)]
     public string Category { get; set; } = string.Empty;
 
+    [StringLength(80)]
+    public string? OwnerName { get; set; }
+
+    public int? SupplierId { get; set; }
+    public Supplier? Supplier { get; set; }
+
     [StringLength(20)]
     public string Unit { get; set; } = "pc"; // kg, pc, box
 

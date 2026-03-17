@@ -1,0 +1,155 @@
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap');
+
+    .weekly-page {
+        font-family: 'Inter', sans-serif;
+        color: #0f172a;
+    }
+
+    .weekly-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        background: #ffffff;
+        border: 2px solid #cbd5e1;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 1rem 1.2rem;
+        margin-bottom: 1.2rem;
+    }
+    .weekly-header h1,
+    .weekly-form-title {
+        margin: 0;
+        font-family: 'Poppins', sans-serif;
+        font-weight: 800;
+        color: #000000;
+    }
+    .weekly-sub {
+        margin: 0.3rem 0 0;
+        color: #334155;
+        font-weight: 600;
+    }
+
+    .weekly-btn {
+        border-radius: 0;
+        font-weight: 700;
+        box-shadow: none !important;
+    }
+    .weekly-btn-neutral {
+        border: 1px solid #cbd5e1;
+        color: #0f172a;
+        background: #ffffff;
+    }
+    .weekly-btn-primary {
+        border: 1px solid #0f766e;
+        background: #0f766e;
+        color: #ffffff;
+    }
+
+    .weekly-card {
+        border: 2px solid #cbd5e1;
+        border-radius: 0;
+        box-shadow: none;
+        background: #ffffff;
+        overflow: hidden;
+    }
+    .weekly-table {
+        margin-bottom: 0;
+    }
+    .weekly-table thead th {
+        background: #f1f5f9;
+        color: #334155;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.76rem;
+        font-weight: 700;
+    }
+    .weekly-table tbody tr:nth-child(even) {
+        background: #fafcff;
+    }
+    .weekly-table tbody tr:hover {
+        background: #f0fdfa;
+    }
+    .weekly-row-active {
+        background: #ecfdf5 !important;
+    }
+    .weekly-name {
+        font-weight: 800;
+    }
+    .weekly-money {
+        font-weight: 700;
+        text-align: right;
+    }
+    .weekly-status {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.28rem 0.7rem;
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .weekly-status-active {
+        color: #166534;
+        background: #dcfce7;
+    }
+    .weekly-status-expired {
+        color: #475569;
+        background: #e2e8f0;
+    }
+    .weekly-status-upcoming {
+        color: #0e7490;
+        background: #cffafe;
+    }
+
+    .weekly-form-wrap {
+        max-width: 660px;
+        margin: 0 auto;
+    }
+    .weekly-form-card {
+        border: 2px solid #cbd5e1;
+        border-radius: 0;
+        box-shadow: none;
+        background: #ffffff;
+        overflow: hidden;
+    }
+    .weekly-form-header {
+        padding: 0.9rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+    .weekly-form-body {
+        padding: 1rem;
+    }
+    .weekly-form-body .form-control,
+    .weekly-form-body .form-select {
+        border-radius: 0;
+        border: 1px solid #cbd5e1;
+        font-weight: 600;
+        box-shadow: none;
+    }
+    .weekly-form-body .form-control:focus,
+    .weekly-form-body .form-select:focus {
+        border-color: #0f766e;
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+    }
+    .weekly-form-body .form-label {
+        font-weight: 700;
+    }
+    .weekly-form-actions .btn {
+        border-radius: 0;
+        font-weight: 700;
+    }
+
+    @@media (max-width: 768px) {
+        .weekly-header {
+            padding: 0.85rem 1rem;
+        }
+        .weekly-form-body {
+            padding: 0.85rem;
+        }
+    }
+</style>
