@@ -15,6 +15,9 @@ AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Optional local overrides (keep secrets out of git; highest precedence after env vars).
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 
 // Add services to the container.
 var envConn = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
