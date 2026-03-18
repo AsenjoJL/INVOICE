@@ -148,9 +148,10 @@ public class OrdersController : Controller
         // Preload products (avoid FindAsync inside loops)
         var productMap = await _context.Products
             .AsNoTracking()
-            .Where(p => affectedProductIds.Contains(p.Id))
+            .Where(p => affectedProductIds.Contains(p.Id) && p.IsActive)
             .Select(p => new { p.Id, p.Name, p.Unit, p.UnitCost, p.Markup, p.DeliveryFee })
             .ToDictionaryAsync(x => x.Id, x => x);
+        var activeProductIds = productMap.Keys.ToHashSet();
 
         var weeklyCostOverrides = (await _context.WeeklyPrices
                 .AsNoTracking()
@@ -228,6 +229,13 @@ public class OrdersController : Controller
                         // No posted rows for this outlet/customer
                         continue;
                     }
+                    var filteredInputs = inputs
+                        .Where(kvp => activeProductIds.Contains(kvp.Key))
+                        .ToDictionary(k => k.Key, v => v.Value);
+                    if (filteredInputs.Count == 0)
+                    {
+                        continue;
+                    }
 
                     // 2) Find Existing UNPAID receipt or Create NEW
                     var unpaidReceipt = existingReceipts.FirstOrDefault(r => 
@@ -237,7 +245,7 @@ public class OrdersController : Controller
                     if (unpaidReceipt == null)
                     {
                         // Check if any input requires an unpaid delta
-                        bool needsReceipt = inputs.Any(kvp => {
+                        bool needsReceipt = filteredInputs.Any(kvp => {
                             int pid = kvp.Key;
                             decimal target = kvp.Value;
                             decimal paid = paidLines.TryGetValue(pid, out decimal p) ? p : 0m;
@@ -262,8 +270,15 @@ public class OrdersController : Controller
                     }
 
                     var lines = unpaidReceipt.Lines.Where(l => l.ProductId.HasValue).ToList();
+                    // Remove lines tied to inactive products so they don't appear in deliveries
+                    var inactiveLines = lines.Where(l => !activeProductIds.Contains(l.ProductId!.Value)).ToList();
+                    if (inactiveLines.Count > 0)
+                    {
+                        _context.ReceiptLines.RemoveRange(inactiveLines);
+                        foreach (var rem in inactiveLines) lines.Remove(rem);
+                    }
 
-                    foreach (var kvp in inputs)
+                    foreach (var kvp in filteredInputs)
                     {
                         int pid = kvp.Key;
                         decimal targetQty = kvp.Value;
