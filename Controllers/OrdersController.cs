@@ -1209,7 +1209,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         if (productMap.TryGetValue(key, out product))
             return true;
 
-        // Fallback: unique contains-match for minor naming variants.
+        // Fallback: best contains/prefix match for minor naming variants.
         var containMatches = productMap
             .Where(kvp => kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase) ||
                           key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase))
@@ -1220,6 +1220,15 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         if (containMatches.Count == 1)
         {
             product = containMatches[0];
+            return true;
+        }
+        else if (containMatches.Count > 1)
+        {
+            // Pick the closest length match to reduce ambiguity (helps when Excel has generic name like "Black Pepper")
+            product = containMatches
+                .OrderBy(p => Math.Abs(NormalizeKey(p.Name).Length - key.Length))
+                .ThenBy(p => p.Name.Length)
+                .First();
             return true;
         }
 
