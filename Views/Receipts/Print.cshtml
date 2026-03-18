@@ -2,9 +2,22 @@
 
 @{
     Layout = null;
+
+    // Whole short bond paper (Letter): 8.5in x 11in
     var paperSize = ((string?)ViewBag.PaperSize ?? "Letter").Trim();
     var drPaperWidth = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "210mm" : "8.5in";
     var drPaperHeight = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "297mm" : "11in";
+
+    const int rowsPerPage = 30;
+    var allLines = Model.Lines?.ToList() ?? new List<HazelInvoice.Models.ReceiptLine>();
+    var pages = allLines
+        .Select((line, idx) => new { line, idx })
+        .GroupBy(x => x.idx / rowsPerPage)
+        .Select(g => g.Select(x => x.line).ToList())
+        .ToList();
+
+    if (pages.Count == 0)
+        pages.Add(new List<HazelInvoice.Models.ReceiptLine>());
 }
 
 <!DOCTYPE html>
@@ -19,10 +32,16 @@
             --muted: #4b5563;
             --line: #1f2937;
             --accent: #b91c1c;
+
             /* Paper size (used by the page print rule) */
             --dr-paper-width: @drPaperWidth;
             --dr-paper-height: @drPaperHeight;
+
             --dr-print-font-size: 8pt;
+
+            /* Requested: item details in 14 font size */
+            --dr-items-print-font-size: 14pt;
+            --dr-items-print-row-height: 0.24in;
         }
 
         * { box-sizing: border-box; }
@@ -69,7 +88,8 @@
             border-color: #111827;
         }
 
-        .receipt-container {
+        /* Each printed page is rendered as its own block. */
+        .receipt-page {
             width: min(100%, var(--dr-paper-width));
             margin: 0 auto;
         }
@@ -225,9 +245,9 @@
 
         .info-value.delivered-to {
             text-align: left;
-            padding-left: 25;
+            padding-left: 25px;
             position: relative;
-            left: -30;
+            left: -30px;
         }
 
         .info-value.short {
@@ -246,6 +266,7 @@
             border: 1px solid var(--line);
             padding: 6px 8px;
             height: 26px;
+            font-size: 14px;
         }
 
         .items-table th {
@@ -263,13 +284,32 @@
         .col-amount { width: 16%; text-align: center; }
         .items-table td.col-part { text-align: center; }
 
-        .total-row td {
-            font-weight: 800;
-            text-transform: uppercase;
-            text-align: center;
+        .total-row {
+            display: grid;
+            grid-template-columns: 8% 10% 50% 16% 16%;
+            align-items: end;
+            width: 100%;
+            margin-top: 6px;
         }
 
-        .total-row .amount { text-align: center; font-size: 15px; }
+        .total-row .label {
+            grid-column: 1 / span 3;
+            text-align: center;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .total-row .spacer { grid-column: 4; }
+        .total-row .amount {
+            grid-column: 5;
+            text-align: center;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .page-footer {
+            margin-top: 10px;
+        }
 
         .ack-block {
             margin-top: 12px;
@@ -322,7 +362,9 @@
 
         @@media print {
             @@page { size: var(--dr-paper-width) var(--dr-paper-height); margin: 0.12in; }
-            html, body { width: var(--dr-paper-width); height: var(--dr-paper-height); overflow: hidden; }
+            /* IMPORTANT: no fixed height/overflow hidden; allow multi-page printing */
+            html, body { width: var(--dr-paper-width); height: auto; overflow: visible; }
+
             body.receipt-body {
                 padding: 0;
                 margin: 0;
@@ -331,12 +373,26 @@
                 font-family: Calibri, Arial, sans-serif;
                 font-weight: 700;
             }
+
             .toolbar { display: none !important; }
-            .receipt-container {
+
+            /* Explicit pagination: 30 line items per page. */
+            .receipt-page {
                 width: 100%;
-                page-break-inside: avoid;
                 break-inside: avoid-page;
+                page-break-inside: avoid;
             }
+            .receipt-page { break-after: page; page-break-after: always; }
+            .receipt-page:last-child { break-after: auto; page-break-after: auto; }
+
+            /* Make the last-page totals + acknowledgement stick to the bottom of the page. */
+            .receipt-page {
+                display: flex;
+                flex-direction: column;
+                min-height: calc(var(--dr-paper-height) - 0.24in); /* page height minus top+bottom margin */
+            }
+            .receipt-page .page-footer { margin-top: auto; }
+
             .header-top {
                 grid-template-columns: 54px 1fr 90px;
                 gap: 4px;
@@ -377,20 +433,26 @@
                 min-width: 0.8in;
             }
             .receipt-meta .date-value { font-size: 11pt; }
+
             .title-row { margin: 3px 0 2px; }
             .doc-title { font-size: 12pt; letter-spacing: 0.2px; }
+
             .info-line { margin: 1px 0; gap: 3px; }
             .info-label { font-size: 10pt; font-weight: 700; }
             .info-value { min-height: 14px; font-size: 9pt; font-weight: 700; }
             .info-value.short { flex-basis: 100px; }
+
             .items-table { margin-top: 6px; }
             .items-table th,
             .items-table td {
-                padding: 2px 5px;
-                height: 0.22in;
-                font-size: 8pt;
+                padding: 1px 4px;
+                height: var(--dr-items-print-row-height);
+                font-size: var(--dr-items-print-font-size);
+                line-height: 1;
             }
-            .items-table th { font-size: 8pt; }
+            .items-table th { font-size: var(--dr-items-print-font-size); }
+            .total-row { margin-top: 4px; }
+            .total-row .label,
             .total-row .amount { font-size: 9pt; }
             .ack-block { margin-top: 4px; }
             .footer-note { margin-top: 0; font-size: 8pt; }
@@ -398,7 +460,7 @@
             .received-input { width: 1.4in; }
             .items-table th { -webkit-print-color-adjust: exact; }
 
-            /* Print: remove table gridlines so it prints clean on dot-matrix / PDF. */
+            /* Dot-matrix friendly: remove table/grid lines in print output. */
             .items-table,
             .items-table th,
             .items-table td { border: none !important; }
@@ -414,109 +476,121 @@
         </div>
     </div>
 
-    <div class="receipt-container">
-        <div class="header-top">
-            <div class="logo-box">
-                <img src="~/images/logo.png" alt="Logo" asp-append-version="true" />
+    @for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+    {
+        var pageLines = pages[pageIndex];
+        var isLastPage = pageIndex == pages.Count - 1;
+        var count = pageLines.Count;
+
+        <div class="receipt-page">
+            <div class="header-top">
+                <div class="logo-box">
+                    <img src="~/images/logo.png" alt="Logo" asp-append-version="true" />
+                </div>
+                <div class="company">
+                    <div class="company-name">Healthy Harvest Vegetable Trading</div>
+                    <div class="company-meta">
+                        Plaridel St., Brgy. Ermita, Cebu City<br />
+                        Contact#: 0969-2044656 • 0966-0861132<br />
+                        Prop.: Ma. Hazel M. Calvo
+                    </div>
+                </div>
+                <div class="header-spacer" aria-hidden="true"></div>
             </div>
-            <div class="company">
-                <div class="company-name">Healthy Harvest Vegetable Trading</div>
-                <div class="company-meta">
-                    Plaridel St., Brgy. Ermita, Cebu City<br />
-                    Contact#: 0969-2044656 • 0966-0861132<br />
-                    Prop.: Ma. Hazel M. Calvo
+
+            <div class="title-row">
+                <div class="doc-title">Delivery Receipt</div>
+                <div class="receipt-meta">
+                    <div class="meta-row">
+                        <span class="meta-label no">No.</span>
+                        <span class="no-value">@Model.ReceiptNumber</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label date-label">Date:</span>
+                        <span class="date-line"><span class="date-value">@Model.Date.ToString("MM/dd/yy")</span></span>
+                    </div>
                 </div>
             </div>
-            <div class="header-spacer" aria-hidden="true"></div>
-        </div>
 
-        <div class="title-row">
-            <div class="doc-title">Delivery Receipt</div>
-            <div class="receipt-meta">
-                <div class="meta-row">
-                    <span class="meta-label no">No.</span>
-                    <span class="no-value">@Model.ReceiptNumber</span>
-                </div>
-                <div class="meta-row">
-                    <span class="meta-label date-label">Date:</span>
-                    <span class="date-line"><span class="date-value">@Model.Date.ToString("MM/dd/yy")</span></span>
-                </div>
+            <div class="info-line">
+                <div class="info-label">Delivered to:</div>
+                <div class="info-value delivered-to">@Model.CustomerName</div>
             </div>
-        </div>
+            <div class="info-line">
+                <div class="info-label">Address:</div>
+                <div class="info-value">@Model.CustomerAddress</div>
+                <div class="info-label">Contact:</div>
+                <div class="info-value short">@Model.ContactNumber</div>
+            </div>
 
-        <div class="info-line">
-            <div class="info-label">Delivered to:</div>
-            <div class="info-value delivered-to">@Model.CustomerName</div>
-        </div>
-        <div class="info-line">
-            <div class="info-label">Address:</div>
-            <div class="info-value">@Model.CustomerAddress</div>
-            <div class="info-label">Contact:</div>
-            <div class="info-value short">@Model.ContactNumber</div>
-        </div>
-
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th class="col-qty">Qty.</th>
-                    <th class="col-unit">Unit</th>
-                    <th class="col-part">Particulars</th>
-                    <th class="col-price">Price</th>
-                    <th class="col-amount">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @{
-                    int maxRows = 20;
-                    var printableLines = Model.Lines.Take(maxRows).ToList();
-                    int count = 0;
-                }
-                @foreach (var item in printableLines)
-                {
+            <table class="items-table">
+                <thead>
                     <tr>
-                        <td class="col-qty">@item.Quantity.ToString("0.###")</td>
-                        <td class="col-unit">@item.Unit</td>
-                        <td class="col-part">@item.ItemName</td>
-                        <td class="col-price">@item.Price.ToString("N2")</td>
-                        <td class="col-amount">@item.Amount.ToString("N2")</td>
+                        <th class="col-qty">Qty.</th>
+                        <th class="col-unit">Unit</th>
+                        <th class="col-part">Particulars</th>
+                        <th class="col-price">Price</th>
+                        <th class="col-amount">Amount</th>
                     </tr>
-                    count++;
-                }
-                @for (int i = count; i < maxRows; i++)
-                {
-                    <tr>
-                        <td class="col-qty">&nbsp;</td>
-                        <td class="col-unit">&nbsp;</td>
-                        <td class="col-part">&nbsp;</td>
-                        <td class="col-price">&nbsp;</td>
-                        <td class="col-amount">&nbsp;</td>
-                    </tr>
-                }
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="3">Total Amount Due</td>
-                    <td></td>
-                    <td class="col-amount amount">@Model.TotalAmount.ToString("N2")</td>
-                </tr>
-            </tfoot>
-        </table>
-        <div class="ack-block">
-            <div class="footer-note">
-                Received the above merchandise in good order condition.
-            </div>
-            <div class="received-line">
-                <div>Received By:</div>
-                <div class="received-input"></div>
-            </div>
+                </thead>
+                <tbody>
+                    @foreach (var item in pageLines)
+                    {
+                        <tr>
+                            <td class="col-qty">@item.Quantity.ToString("0.###")</td>
+                            <td class="col-unit">@item.Unit</td>
+                            <td class="col-part">@item.ItemName</td>
+                            <td class="col-price">@item.Price.ToString("N2")</td>
+                            <td class="col-amount">@item.Amount.ToString("N2")</td>
+                        </tr>
+                    }
+                    @for (int i = count; i < rowsPerPage; i++)
+                    {
+                        <tr>
+                            <td class="col-qty">&nbsp;</td>
+                            <td class="col-unit">&nbsp;</td>
+                            <td class="col-part">&nbsp;</td>
+                            <td class="col-price">&nbsp;</td>
+                            <td class="col-amount">&nbsp;</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (isLastPage)
+            {
+                <div class="page-footer">
+                    <div class="total-row">
+                        <div class="label">Total Amount Due</div>
+                        <div class="spacer"></div>
+                        <div class="amount">@Model.TotalAmount.ToString("N2")</div>
+                    </div>
+
+                    <div class="ack-block">
+                        <div class="footer-note">
+                            Received the above merchandise in good order condition.
+                        </div>
+                        <div class="received-line">
+                            <div>Received By:</div>
+                            <div class="received-input"></div>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
-    </div>
+    }
 
     <script>
         window.onload = () => {
-            setTimeout(() => {
-                window.print();
-            }, 800);
+            setTimeout(() => window.print(), 650);
+        };
+
+        // If this view was opened as a dedicated print tab/window, close it after printing.
+        // This reduces accidental re-prints of stale content and avoids confusion.
+        window.onafterprint = () => {
+            if (window.opener && !window.opener.closed) {
+                window.close();
+            }
         };
     </script>
 </body>
