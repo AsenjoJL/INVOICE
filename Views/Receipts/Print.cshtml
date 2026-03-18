@@ -244,10 +244,10 @@
         }
 
         .info-value.delivered-to {
-            text-align: left;
-            padding-left: 25px;
-            position: relative;
-            left: -30px;
+            /* Requested: Delivered-to outlet name centered on the line */
+            text-align: center;
+            padding-left: 0;
+            position: static;
         }
 
         .info-value.short {
@@ -293,13 +293,13 @@
         }
 
         .total-row .label {
-            grid-column: 1 / span 3;
+            /* Requested: "TOTAL AMOUNT DUE" label under the PRICE column */
+            grid-column: 4;
             text-align: center;
             font-weight: 800;
             text-transform: uppercase;
         }
 
-        .total-row .spacer { grid-column: 4; }
         .total-row .amount {
             grid-column: 5;
             text-align: center;
@@ -441,6 +441,9 @@
             .info-label { font-size: 10pt; font-weight: 700; }
             .info-value { min-height: 14px; font-size: 9pt; font-weight: 700; }
             .info-value.short { flex-basis: 100px; }
+            /* Requested: Address font size 14 */
+            .info-line.address .info-label,
+            .info-line.address .info-value { font-size: 14pt; }
 
             .items-table { margin-top: 6px; }
             .items-table th,
@@ -452,8 +455,9 @@
             }
             .items-table th { font-size: var(--dr-items-print-font-size); }
             .total-row { margin-top: 4px; }
+            /* Requested: total label + total amount in 14 font size */
             .total-row .label,
-            .total-row .amount { font-size: 9pt; }
+            .total-row .amount { font-size: 14pt; line-height: 1; }
             .ack-block { margin-top: 4px; }
             .footer-note { margin-top: 0; font-size: 8pt; }
             .received-line { margin-top: 5px; font-size: 9pt; }
@@ -516,7 +520,7 @@
                 <div class="info-label">Delivered to:</div>
                 <div class="info-value delivered-to">@Model.CustomerName</div>
             </div>
-            <div class="info-line">
+            <div class="info-line address">
                 <div class="info-label">Address:</div>
                 <div class="info-value">@Model.CustomerAddress</div>
                 <div class="info-label">Contact:</div>
@@ -562,7 +566,6 @@
                 <div class="page-footer">
                     <div class="total-row">
                         <div class="label">Total Amount Due</div>
-                        <div class="spacer"></div>
                         <div class="amount">@Model.TotalAmount.ToString("N2")</div>
                     </div>
 
