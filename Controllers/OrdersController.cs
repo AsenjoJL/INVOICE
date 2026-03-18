@@ -489,9 +489,18 @@ public class OrdersController : Controller
             .Where(p => p.IsActive)
             .ToListAsync();
 
-        var productMap = products
-            .GroupBy(p => NormalizeKey(p.Name))
-            .ToDictionary(g => g.Key, g => g.First());
+        // Map by normalized Name and SKU to improve matching coverage
+        var productMap = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in products)
+        {
+            var nameKey = NormalizeKey(p.Name);
+            if (!string.IsNullOrWhiteSpace(nameKey))
+                productMap[nameKey] = p;
+
+            var skuKey = NormalizeKey(p.SKU);
+            if (!string.IsNullOrWhiteSpace(skuKey) && !productMap.ContainsKey(skuKey))
+                productMap[skuKey] = p;
+        }
 
         var matrix = new Dictionary<string, decimal>();
         var prices = new Dictionary<int, decimal>();
