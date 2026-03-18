@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "XVDYSTcTowM=",
+  "dgSpecHash": "bMBdaaqdp/E=",
   "success": true,
   "projectFilePath": "C:\\Users\\John Lester\\Desktop\\HazelInvoice\\HazelInvoice.csproj",
   "expectedPackageFiles": [
@@ -55,5 +55,15 @@
     "C:\\Users\\John Lester\\.nuget\\packages\\system.text.json\\8.0.0\\system.text.json.8.0.0.nupkg.sha512",
     "C:\\Users\\John Lester\\.nuget\\packages\\system.threading.channels\\6.0.0\\system.threading.channels.6.0.0.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1900",
+      "level": "Warning",
+      "message": "Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json.",
+      "projectPath": "C:\\Users\\John Lester\\Desktop\\HazelInvoice\\HazelInvoice.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\John Lester\\Desktop\\HazelInvoice\\HazelInvoice.csproj",
+      "targetGraphs": []
+    }
+  ]
 }

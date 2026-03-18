@@ -56,6 +56,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ3VzdG9tZXJzXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Customers/_OutletStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ3VzdG9tZXJzXF9PdXRsZXRTdHlsZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Dashboard/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRGFzaGJvYXJkXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -66,6 +70,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Expenses/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRXhwZW5zZXNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Expenses/_ExpenseStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRXhwZW5zZXNcX0V4cGVuc2VTdHlsZXMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Home/Index.cshtml]
@@ -104,6 +112,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJzXFZlZ2V0YWJsZU91dGxldE9yZGVyLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Partners/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGFydG5lcnNcQ3JlYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Partners/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGFydG5lcnNcRWRpdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Partners/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGFydG5lcnNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/PayrollReports/LaborCost.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5cm9sbFJlcG9ydHNcTGFib3JDb3N0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -124,6 +144,14 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5cm9sbFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/PrinterSettings/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJpbnRlclNldHRpbmdzXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/PrinterSettings/TestPage.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJpbnRlclNldHRpbmdzXFRlc3RQYWdlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Products/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdHNcQ3JlYXRlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -138,6 +166,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Products/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdHNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Products/_ProductFormStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdHNcX1Byb2R1Y3RGb3JtU3R5bGVzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/ProfitReport/Index.cshtml]
@@ -158,6 +190,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Purchases/Payables.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHVyY2hhc2VzXFBheWFibGVzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Purchases/_PurchaseStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHVyY2hhc2VzXF9QdXJjaGFzZVN0eWxlcy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Receipts/Create.cshtml]
@@ -208,6 +244,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Shared/_WorkforceStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9Xb3JrZm9yY2VTdHlsZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/Suppliers/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3VwcGxpZXJzXENyZWF0ZS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -224,6 +264,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3VwcGxpZXJzXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/Suppliers/_SupplierStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3VwcGxpZXJzXF9TdXBwbGllclN0eWxlcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/WeeklyPrices/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcV2Vla2x5UHJpY2VzXENyZWF0ZS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -238,6 +282,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/WeeklyPrices/PriceVersus.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcV2Vla2x5UHJpY2VzXFByaWNlVmVyc3VzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/John Lester/Desktop/HazelInvoice/Views/WeeklyPrices/_WeeklyPriceStyles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcV2Vla2x5UHJpY2VzXF9XZWVrbHlQcmljZVN0eWxlcy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/John Lester/Desktop/HazelInvoice/Views/_ViewImports.cshtml]

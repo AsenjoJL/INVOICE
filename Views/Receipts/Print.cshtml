@@ -9,7 +9,11 @@
     var drPaperHeight = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "297mm" : "11in";
 
     const int rowsPerPage = 30;
-    var allLines = Model.Lines?.ToList() ?? new List<HazelInvoice.Models.ReceiptLine>();
+    // Sort particulars alphabetically before paging
+    var allLines = (Model.Lines ?? Enumerable.Empty<HazelInvoice.Models.ReceiptLine>())
+        .OrderBy(l => l.ItemName)
+        .ThenBy(l => l.Id)
+        .ToList();
     var pages = allLines
         .Select((line, idx) => new { line, idx })
         .GroupBy(x => x.idx / rowsPerPage)
@@ -282,7 +286,7 @@
         .col-part { width: 50%; }
         .col-price { width: 16%; text-align: center; }
         .col-amount { width: 16%; text-align: center; }
-        .items-table td.col-part { text-align: center; }
+        .items-table td.col-part { text-align: left; }
 
         .total-row {
             display: grid;
