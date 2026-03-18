@@ -7,6 +7,7 @@ using HazelInvoice.Services.Settings;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace HazelInvoice.Controllers;
@@ -532,13 +533,9 @@ public class OrdersController : Controller
             foreach (var oc in matchedOutletCols)
             {
                 var qtyRaw = sheet.GetCell(r, oc.Key);
-                var qty = 0m;
-                if (SimpleXlsxReader.TryParseDecimal(qtyRaw, out var parsedQty))
-                {
-                    qty = parsedQty;
-                    if (qty != decimal.Truncate(qty))
-                        fractionalQtyCount++;
-                }
+                var qty = TryParseQuantityLoose(qtyRaw, out var parsedQty) ? parsedQty : 0m;
+                if (qty != decimal.Truncate(qty))
+                    fractionalQtyCount++;
                 if (qty < 0) qty = 0m;
 
                 matrix[$"{product.Id}_{oc.Value.Id}"] = qty;
@@ -1233,6 +1230,36 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         }
 
         return false;
+    }
+
+    private static bool TryParseQuantityLoose(string? raw, out decimal qty)
+    {
+        qty = 0m;
+        if (SimpleXlsxReader.TryParseDecimal(raw, out qty))
+            return true;
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return false;
+
+        var cleaned = Regex.Replace(raw, @"[^0-9\./-]+", "");
+        if (string.IsNullOrWhiteSpace(cleaned))
+            return false;
+
+        // Handle simple fractions like 1/2 or 3/4
+        if (cleaned.Contains('/'))
+        {
+            var parts = cleaned.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 2 &&
+                decimal.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var num) &&
+                decimal.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var den) &&
+                den != 0)
+            {
+                qty = num / den;
+                return true;
+            }
+        }
+
+        return decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out qty);
     }
 
     private static int GetOutletOrderIndex(string? name)
