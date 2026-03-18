@@ -12,6 +12,7 @@ public interface IReceiptService
 public class ReceiptService : IReceiptService
 {
     private readonly ApplicationDbContext _context;
+    private const int StartingReceiptNumber = 8000;
 
     public ReceiptService(ApplicationDbContext context)
     {
@@ -54,15 +55,17 @@ public class ReceiptService : IReceiptService
 
         if (sequence == null)
         {
-            sequence = new ReceiptSequence { Year = year, LastNumber = 5000 };
+            // Initialize to one before the starting number, so the first generated number is StartingReceiptNumber.
+            sequence = new ReceiptSequence { Year = year, LastNumber = StartingReceiptNumber - 1 };
             _context.ReceiptSequences.Add(sequence);
             await _context.SaveChangesAsync();
         }
 
-        // Adjust sequence if it's below the starting point of 5000
-        if (sequence.LastNumber < 5000)
+        // If the existing sequence is below our configured starting number, jump it forward.
+        // This allows changing the receipt start number without requiring DB edits/migrations.
+        if (sequence.LastNumber < StartingReceiptNumber - 1)
         {
-            sequence.LastNumber = 5000;
+            sequence.LastNumber = StartingReceiptNumber - 1;
         }
 
         sequence.LastNumber++;

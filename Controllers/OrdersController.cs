@@ -63,7 +63,9 @@ public class OrdersController : Controller
     // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1&print=false&details=false
     public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1, bool print = false, bool details = false)
     {
-        var targetDate = (date ?? DateTime.Today).Date;
+        // Default to tomorrow's delivery date when not specified.
+        // Most workflows enter orders today for delivery the next day.
+        var targetDate = (date ?? DateTime.Today.AddDays(1)).Date;
 
         if (print)
         {
@@ -105,7 +107,7 @@ public class OrdersController : Controller
     [HttpGet]
     public async Task<IActionResult> DownloadVegetableMatrixTemplate(DateTime? date)
     {
-        var targetDate = (date ?? DateTime.Today).Date;
+        var targetDate = (date ?? DateTime.Today.AddDays(1)).Date;
         var bytes = await _vegetableMatrixTemplateService.BuildTemplateAsync(targetDate, HttpContext.RequestAborted);
 
         var fileName = $"VegetableOrderTemplate_{targetDate:yyyy-MM-dd}.xlsx";
