@@ -7,6 +7,7 @@ using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Reports;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Data;
+using HazelInvoice.Configuration;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -55,6 +56,9 @@ builder.Services.AddSingleton<IPrinterCatalog, WindowsPrinterCatalog>();
 builder.Services.AddSingleton<IPrinterSpooler, WindowsPrinterSpooler>();
 builder.Services.AddScoped<PrinterSettingsService>();
 builder.Services.AddScoped<IInvoicePrintManager, InvoicePrintManager>();
+
+// Feature flags (safe defaults; can be extended later)
+builder.Services.Configure<FeaturesOptions>(builder.Configuration.GetSection("Features"));
 
 // Orders / Vegetable matrix (keep controller thin / scalable)
 builder.Services.AddScoped<IVegetableMatrixService, VegetableMatrixService>();

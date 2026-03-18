@@ -2,6 +2,8 @@ using HazelInvoice.Data;
 using HazelInvoice.Models;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
+using HazelInvoice.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Services.Orders;
 
@@ -18,6 +20,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
     private const decimal DetailPercentFeeDefault = 1.0m;
 
     private readonly ApplicationDbContext _context;
+    private readonly bool _partnersEnabled;
 
     private static readonly string[] OutletOrderTokens = new[]
     {
@@ -26,9 +29,10 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         "bakery", "wlahug", "mitsumi", "feeder", "mphokim", "phokim"
     };
 
-    public VegetableMatrixService(ApplicationDbContext context)
+    public VegetableMatrixService(ApplicationDbContext context, IOptions<FeaturesOptions> features)
     {
         _context = context;
+        _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
     }
 
     public async Task<VegetableMatrixViewModel> GetAsync(VegetableMatrixQueryOptions options, CancellationToken cancellationToken = default)
@@ -513,107 +517,110 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
                 })
                 .ToListAsync(cancellationToken);
 
-            // Partner purchases are treated like additional "sales" for fee calculation (matches Profit & Sales behavior).
-            var dayPartnerPurchases = await _context.PartnerPurchases
-                .AsNoTracking()
-                .Where(p => p.Date >= dayStart && p.Date < dayEnd)
-                .OrderBy(p => p.PartnerName)
-                .ThenBy(p => p.Id)
-                .ToListAsync(cancellationToken);
-
-            totalPartnerPurchases = dayPartnerPurchases.Sum(p => p.Amount);
-
-            partnerPurchaseGroups = dayPartnerPurchases
-                .GroupBy(p => string.IsNullOrWhiteSpace(p.PartnerName) ? "Partner" : p.PartnerName.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Select(g => new PartnerPurchaseGroupVm
-                {
-                    PartnerName = g.Key,
-                    Items = g.Select(x => new MoneyLineItem
-                    {
-                        Label = string.IsNullOrWhiteSpace(x.Notes) ? "Partner purchase" : x.Notes!,
-                        Amount = x.Amount
-                    }).ToList()
-                })
-                .OrderBy(g => g.PartnerName)
-                .ToList();
-
-            // Build partner-attributed totals from receipt lines (the user selects PartnerName per item when encoding sales).
-            foreach (var dl in detailLines)
+            if (_partnersEnabled)
             {
-                if (dl.Amount <= 0) continue;
-                if (string.IsNullOrWhiteSpace(dl.PartnerName)) continue;
+                // Partner purchases are treated like additional "sales" for fee calculation (matches Profit & Sales behavior).
+                var dayPartnerPurchases = await _context.PartnerPurchases
+                    .AsNoTracking()
+                    .Where(p => p.Date >= dayStart && p.Date < dayEnd)
+                    .OrderBy(p => p.PartnerName)
+                    .ThenBy(p => p.Id)
+                    .ToListAsync(cancellationToken);
 
-                var pn = dl.PartnerName.Trim();
+                totalPartnerPurchases = dayPartnerPurchases.Sum(p => p.Amount);
 
-                if (!partnerPurchasesByProductId.TryGetValue(dl.ProductId, out var map))
+                partnerPurchaseGroups = dayPartnerPurchases
+                    .GroupBy(p => string.IsNullOrWhiteSpace(p.PartnerName) ? "Partner" : p.PartnerName.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new PartnerPurchaseGroupVm
+                    {
+                        PartnerName = g.Key,
+                        Items = g.Select(x => new MoneyLineItem
+                        {
+                            Label = string.IsNullOrWhiteSpace(x.Notes) ? "Partner purchase" : x.Notes!,
+                            Amount = x.Amount
+                        }).ToList()
+                    })
+                    .OrderBy(g => g.PartnerName)
+                    .ToList();
+
+                // Build partner-attributed totals from receipt lines (the user selects PartnerName per item when encoding sales).
+                foreach (var dl in detailLines)
                 {
-                    map = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-                    partnerPurchasesByProductId[dl.ProductId] = map;
+                    if (dl.Amount <= 0) continue;
+                    if (string.IsNullOrWhiteSpace(dl.PartnerName)) continue;
+
+                    var pn = dl.PartnerName.Trim();
+
+                    if (!partnerPurchasesByProductId.TryGetValue(dl.ProductId, out var map))
+                    {
+                        map = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+                        partnerPurchasesByProductId[dl.ProductId] = map;
+                    }
+
+                    map[pn] = (map.TryGetValue(pn, out var existing) ? existing : 0m) + dl.Amount;
+                    partnerOrderTotals[pn] = (partnerOrderTotals.TryGetValue(pn, out var t) ? t : 0m) + dl.Amount;
                 }
 
-                map[pn] = (map.TryGetValue(pn, out var existing) ? existing : 0m) + dl.Amount;
-                partnerOrderTotals[pn] = (partnerOrderTotals.TryGetValue(pn, out var t) ? t : 0m) + dl.Amount;
-            }
+                // Partner-attributed sales: group by partner and item name to create a clean list/grid.
+                partnerSalesAttributionGroups = detailLines
+                    .Where(x => x.Amount > 0m && !string.IsNullOrWhiteSpace(x.PartnerName))
+                    .GroupBy(x => x.PartnerName!.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new PartnerSalesAttributionGroupVm
+                    {
+                        PartnerName = g.Key,
+                        Items = g
+                            .GroupBy(x => x.ItemName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                            .Select(gg => new MoneyLineItem
+                            {
+                                Label = gg.Key,
+                                Amount = gg.Sum(z => z.Amount)
+                            })
+                            .Where(i => i.Amount > 0m)
+                            .OrderByDescending(i => i.Amount)
+                            .ThenBy(i => i.Label)
+                            .ToList()
+                    })
+                    .OrderBy(x => x.PartnerName)
+                    .ToList();
 
-            // Partner-attributed sales: group by partner and item name to create a clean list/grid.
-            partnerSalesAttributionGroups = detailLines
-                .Where(x => x.Amount > 0m && !string.IsNullOrWhiteSpace(x.PartnerName))
-                .GroupBy(x => x.PartnerName!.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Select(g => new PartnerSalesAttributionGroupVm
+                totalPartnerSalesAttributed = partnerSalesAttributionGroups.Sum(g => g.TotalAmount);
+
+                // Attach partner purchase values to the detail rows (shown once per product in the view).
+                foreach (var row in detailRows)
                 {
-                    PartnerName = g.Key,
-                    Items = g
-                        .GroupBy(x => x.ItemName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                        .Select(gg => new MoneyLineItem
-                        {
-                            Label = gg.Key,
-                            Amount = gg.Sum(z => z.Amount)
-                        })
-                        .Where(i => i.Amount > 0m)
-                        .OrderByDescending(i => i.Amount)
-                        .ThenBy(i => i.Label)
-                        .ToList()
-                })
-                .OrderBy(x => x.PartnerName)
-                .ToList();
+                    if (partnerPurchasesByProductId.TryGetValue(row.ProductId, out var map))
+                        row.PartnerPurchaseByPartner = new Dictionary<string, decimal>(map, StringComparer.OrdinalIgnoreCase);
+                }
 
-            totalPartnerSalesAttributed = partnerSalesAttributionGroups.Sum(g => g.TotalAmount);
-
-            // Attach partner purchase values to the detail rows (shown once per product in the view).
-            foreach (var row in detailRows)
-            {
-                if (partnerPurchasesByProductId.TryGetValue(row.ProductId, out var map))
-                    row.PartnerPurchaseByPartner = new Dictionary<string, decimal>(map, StringComparer.OrdinalIgnoreCase);
-            }
-
-            // Partner names: from config + from existing purchases (scalable).
-            var configPartners = await _context.PartnerBalanceConfigs
-                .AsNoTracking()
-                .OrderBy(p => p.PartnerName)
-                .Select(p => p.PartnerName)
-                .ToListAsync(cancellationToken);
-
-            // If partners aren't configured yet, fall back to whatever exists in PartnerPurchases (any date).
-            // This keeps the UI stable (partner columns still appear) without hardcoding names in the matrix.
-            if (configPartners.Count == 0)
-            {
-                configPartners = await _context.PartnerPurchases
+                // Partner names: from config + from existing purchases (scalable).
+                var configPartners = await _context.PartnerBalanceConfigs
                     .AsNoTracking()
-                    .Where(p => !string.IsNullOrWhiteSpace(p.PartnerName))
-                    .Select(p => p.PartnerName!)
-                    .Distinct()
-                    .OrderBy(p => p)
+                    .OrderBy(p => p.PartnerName)
+                    .Select(p => p.PartnerName)
                     .ToListAsync(cancellationToken);
-            }
 
-            partnerNames = configPartners
-                .Concat(dayPartnerPurchases.Select(p => p.PartnerName))
-                .Concat(partnerOrderTotals.Keys)
-                .Where(p => !string.IsNullOrWhiteSpace(p))
-                .Select(p => p.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(p => p)
-                .ToList();
+                // If partners aren't configured yet, fall back to whatever exists in PartnerPurchases (any date).
+                // This keeps the UI stable without hardcoding names in the matrix.
+                if (configPartners.Count == 0)
+                {
+                    configPartners = await _context.PartnerPurchases
+                        .AsNoTracking()
+                        .Where(p => !string.IsNullOrWhiteSpace(p.PartnerName))
+                        .Select(p => p.PartnerName!)
+                        .Distinct()
+                        .OrderBy(p => p)
+                        .ToListAsync(cancellationToken);
+                }
+
+                partnerNames = configPartners
+                    .Concat(dayPartnerPurchases.Select(p => p.PartnerName))
+                    .Concat(partnerOrderTotals.Keys)
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Select(p => p.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(p => p)
+                    .ToList();
+            }
 
             totalDeliveryPayments = await _context.Receipts
                 .AsNoTracking()

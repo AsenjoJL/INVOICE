@@ -12,6 +12,7 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    @inject Microsoft.Extensions.Options.IOptions<HazelInvoice.Configuration.FeaturesOptions> Features
     <div id="hazel-af-token" style="display:none">
         @Html.AntiForgeryToken()
     </div>
@@ -58,7 +59,10 @@
 
                 <div class="sidebar-section-title">Finance</div>
                 <a class="@NavClass("Expenses", "Index")" asp-area="" asp-controller="Expenses" asp-action="Index"><i class="bi bi-cash-stack"></i> Expenses</a>
-                <a class="@NavClass("Partners", "Index")" asp-area="" asp-controller="Partners" asp-action="Index"><i class="bi bi-people"></i> Partners</a>
+                @if (Features.Value.PartnersEnabled)
+                {
+                    <a class="@NavClass("Partners", "Index")" asp-area="" asp-controller="Partners" asp-action="Index"><i class="bi bi-people"></i> Partners</a>
+                }
                 <a class="@NavClass("PrinterSettings", "Index")" asp-area="" asp-controller="PrinterSettings" asp-action="Index"><i class="bi bi-printer-fill"></i> Printer Settings</a>
                 <a class="@NavClass("Laborers", "Index")" asp-area="" asp-controller="Laborers" asp-action="Index"><i class="bi bi-people-fill"></i> Laborers</a>
                 <a class="@NavClass("Attendance", "Daily")" asp-area="" asp-controller="Attendance" asp-action="Daily"><i class="bi bi-calendar-check-fill"></i> Attendance</a>

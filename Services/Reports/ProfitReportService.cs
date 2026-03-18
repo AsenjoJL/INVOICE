@@ -8,8 +8,12 @@ using HazelInvoice.Models;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using HazelInvoice.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Services.Reports;
+
+internal sealed record PartnerAttributedRow(string PartnerName, string ItemName, decimal Amount);
 
 /// <summary>
 /// Builds the Profit & Sales Summary view model using DB-side aggregation.
@@ -19,11 +23,16 @@ public sealed class ProfitReportService : IProfitReportService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ProfitReportService> _logger;
+    private readonly bool _partnersEnabled;
 
-    public ProfitReportService(ApplicationDbContext context, ILogger<ProfitReportService> logger)
+    public ProfitReportService(
+        ApplicationDbContext context,
+        ILogger<ProfitReportService> logger,
+        IOptions<FeaturesOptions> features)
     {
         _context = context;
         _logger = logger;
+        _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
     }
 
     public async Task<ProfitSummaryViewModel> BuildAsync(ProfitReportQueryOptions options, CancellationToken ct = default)
@@ -38,8 +47,10 @@ public sealed class ProfitReportService : IProfitReportService
             EndDate = options.EndDate,
             IncludeUnpaid = options.IncludeUnpaid,
             PercentFee = options.PercentFee,
-            Partner1SharePercent = options.Partner1SharePercent,
-            Partner2SharePercent = 100m - options.Partner1SharePercent,
+            // When partners are disabled, default to a single-owner view:
+            // Partner1 = 100%, Partner2 = 0%.
+            Partner1SharePercent = _partnersEnabled ? options.Partner1SharePercent : 100m,
+            Partner2SharePercent = _partnersEnabled ? (100m - options.Partner1SharePercent) : 0m,
         };
 
         // Base receipts filter (not void, date range).
@@ -169,10 +180,12 @@ public sealed class ProfitReportService : IProfitReportService
             .Where(d => d.Date >= startDateOnly && d.Date < endExclusive)
             .ToListAsync(ct);
 
-        var purchases = await _context.PartnerPurchases
-            .AsNoTracking()
-            .Where(p => p.Date >= startDateOnly && p.Date < endExclusive)
-            .ToListAsync(ct);
+        var purchases = _partnersEnabled
+            ? await _context.PartnerPurchases
+                .AsNoTracking()
+                .Where(p => p.Date >= startDateOnly && p.Date < endExclusive)
+                .ToListAsync(ct)
+            : new List<PartnerPurchase>();
 
         var capitals = await _context.PartnerCapitals
             .AsNoTracking()
@@ -184,17 +197,31 @@ public sealed class ProfitReportService : IProfitReportService
             .Where(e => e.Date >= startDateOnly && e.Date < endExclusive)
             .ToListAsync(ct);
 
-        // Partner balances & names
-        var balances = await _context.PartnerBalanceConfigs
-            .AsNoTracking()
-            .OrderBy(b => b.PartnerName)
-            .ToListAsync(ct);
+        // Partner balances & names (optional)
+        var balances = _partnersEnabled
+            ? await _context.PartnerBalanceConfigs
+                .AsNoTracking()
+                .OrderBy(b => b.PartnerName)
+                .ToListAsync(ct)
+            : new List<PartnerBalanceConfig>();
 
-        if (balances.Count >= 1) vm.Partner1Name = balances[0].PartnerName;
-        if (balances.Count >= 2) vm.Partner2Name = balances[1].PartnerName;
+        if (_partnersEnabled)
+        {
+            if (balances.Count >= 1) vm.Partner1Name = balances[0].PartnerName;
+            if (balances.Count >= 2) vm.Partner2Name = balances[1].PartnerName;
+        }
+        else
+        {
+            vm.Partner1Name = "OWNER";
+            vm.Partner2Name = string.Empty;
+        }
 
-        vm.Partner1OpeningBalance = balances.FirstOrDefault(b => b.PartnerName == vm.Partner1Name)?.OpeningBalance ?? 0;
-        vm.Partner2OpeningBalance = balances.FirstOrDefault(b => b.PartnerName == vm.Partner2Name)?.OpeningBalance ?? 0;
+        vm.Partner1OpeningBalance = _partnersEnabled
+            ? (balances.FirstOrDefault(b => b.PartnerName == vm.Partner1Name)?.OpeningBalance ?? 0)
+            : 0m;
+        vm.Partner2OpeningBalance = _partnersEnabled
+            ? (balances.FirstOrDefault(b => b.PartnerName == vm.Partner2Name)?.OpeningBalance ?? 0)
+            : 0m;
 
         var noteDeductions = deductions
             .Where(d => string.Equals(d.Category, "Note", StringComparison.OrdinalIgnoreCase))
@@ -219,43 +246,49 @@ public sealed class ProfitReportService : IProfitReportService
 
         // Purchases
         vm.PartnerPurchases = purchases;
-        vm.TotalPartner1Purchases = purchases.Where(p => p.PartnerName == vm.Partner1Name).Sum(p => p.Amount);
-        vm.TotalPartner2Purchases = purchases.Where(p => p.PartnerName == vm.Partner2Name).Sum(p => p.Amount);
+        vm.TotalPartner1Purchases = _partnersEnabled
+            ? purchases.Where(p => p.PartnerName == vm.Partner1Name).Sum(p => p.Amount)
+            : 0m;
+        vm.TotalPartner2Purchases = _partnersEnabled
+            ? purchases.Where(p => p.PartnerName == vm.Partner2Name).Sum(p => p.Amount)
+            : 0m;
 
         // Partner-attributed sales (from receipt lines tagging).
         // Group by PartnerName + ItemName so the UI can show a clean per-partner list like the Excel format.
-        var partnerAttributed = await (
-            from l in _context.ReceiptLines.AsNoTracking()
-            join r in receiptsQuery on l.ReceiptId equals r.Id
-            where !string.IsNullOrWhiteSpace(l.PartnerName) && l.Amount > 0m
-            group l by new { Partner = l.PartnerName!, Item = l.ItemName }
-            into g
-            select new
-            {
-                PartnerName = g.Key.Partner,
-                ItemName = g.Key.Item,
-                Amount = g.Sum(x => (decimal?)x.Amount) ?? 0m
-            }
-        ).ToListAsync(ct);
+        var partnerAttributed = _partnersEnabled
+            ? await (
+                from l in _context.ReceiptLines.AsNoTracking()
+                join r in receiptsQuery on l.ReceiptId equals r.Id
+                where !string.IsNullOrWhiteSpace(l.PartnerName) && l.Amount > 0m
+                group l by new { Partner = l.PartnerName!, Item = l.ItemName }
+                into g
+                select new PartnerAttributedRow(
+                    g.Key.Partner,
+                    g.Key.Item ?? string.Empty,
+                    g.Sum(x => (decimal?)x.Amount) ?? 0m)
+            ).ToListAsync(ct)
+            : new List<PartnerAttributedRow>();
 
-        vm.PartnerSalesAttributions = partnerAttributed
-            .GroupBy(x => x.PartnerName.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Select(g => new PartnerSalesAttributionGroup
-            {
-                PartnerName = g.Key,
-                Items = g
-                    .Where(x => x.Amount > 0m)
-                    .OrderByDescending(x => x.Amount)
-                    .ThenBy(x => x.ItemName)
-                    .Select(x => new PartnerSalesAttributionItem
-                    {
-                        ItemName = x.ItemName,
-                        Amount = x.Amount
-                    })
-                    .ToList()
-            })
-            .OrderBy(x => x.PartnerName)
-            .ToList();
+        vm.PartnerSalesAttributions = _partnersEnabled
+            ? partnerAttributed
+                .GroupBy(x => x.PartnerName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => new PartnerSalesAttributionGroup
+                {
+                    PartnerName = g.Key,
+                    Items = g
+                        .Where(x => x.Amount > 0m)
+                        .OrderByDescending(x => x.Amount)
+                        .ThenBy(x => x.ItemName)
+                        .Select(x => new PartnerSalesAttributionItem
+                        {
+                            ItemName = x.ItemName,
+                            Amount = x.Amount
+                        })
+                        .ToList()
+                })
+                .OrderBy(x => x.PartnerName)
+                .ToList()
+            : new List<PartnerSalesAttributionGroup>();
 
         vm.TotalPartnerSalesAttributed = vm.PartnerSalesAttributions.Sum(g => g.TotalAmount);
 
@@ -284,12 +317,15 @@ public sealed class ProfitReportService : IProfitReportService
             Amount = -e.Amount
         }));
 
-        ledgerItems.AddRange(purchases.Select(p => new LedgerRow
+        if (_partnersEnabled)
         {
-            Date = p.Date,
-            Description = $"{p.PartnerName}: {p.Notes}",
-            Amount = -p.Amount
-        }));
+            ledgerItems.AddRange(purchases.Select(p => new LedgerRow
+            {
+                Date = p.Date,
+                Description = $"{p.PartnerName}: {p.Notes}",
+                Amount = -p.Amount
+            }));
+        }
 
         ledgerItems = ledgerItems.OrderBy(x => x.Date).ToList();
         foreach (var row in ledgerItems)

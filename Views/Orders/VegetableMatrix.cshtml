@@ -1,9 +1,14 @@
 @model HazelInvoice.ViewModels.VegetableMatrixViewModel
+@using HazelInvoice.Configuration
+@using Microsoft.Extensions.Options
+@inject IOptions<FeaturesOptions> Features
 
 @{
     ViewData["Title"] = "Vegetable Order Matrix";
     ViewData["NotePurpose"] = "Daily vegetable order matrix by outlet and product.";
     ViewData["NoteInstructions"] = "Enter quantities, review totals, then Save Changes or Print.";
+
+    var partnersEnabled = Features.Value.PartnersEnabled;
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/vegetable-matrix.css" asp-append-version="true" />
@@ -434,12 +439,16 @@
                 <div class="fw-bold mb-2">Who Purchased / Item Owner</div>
                 <div class="table-responsive">
                     @{
-                        var partnerNames = (Model.DetailPartnerNames ?? new List<string>())
-                            .Where(x => !string.IsNullOrWhiteSpace(x))
-                            .Select(x => x.Trim())
-                            .Distinct(StringComparer.OrdinalIgnoreCase)
-                            .OrderBy(x => x)
-                            .ToList();
+                        // Partners are an optional module. In solo-owner mode we force this empty so
+                        // the details table doesn't show partner columns even if legacy data exists.
+                        var partnerNames = partnersEnabled
+                            ? (Model.DetailPartnerNames ?? new List<string>())
+                                .Where(x => !string.IsNullOrWhiteSpace(x))
+                                .Select(x => x.Trim())
+                                .Distinct(StringComparer.OrdinalIgnoreCase)
+                                .OrderBy(x => x)
+                                .ToList()
+                            : new List<string>();
                         var partnerCount = partnerNames.Count;
                         var seenPartnerProductIds = new HashSet<int>();
                     }
@@ -571,6 +580,8 @@
                                 <td class="amt">₱@Model.DetailTotalExpenses.ToString("N2")</td>
                             </tr>
                         </tbody>
+                        @if (partnersEnabled)
+                        {
                         <thead>
                             <tr><th colspan="2">PARTNER CASH PURCHASES</th></tr>
                         </thead>
@@ -726,15 +737,19 @@
                                 <td class="amt">₱@Model.DetailTotalPartnerSalesAttributed.ToString("N2")</td>
                             </tr>
                         </tbody>
+                        }
                         <tfoot>
                             <tr class="sales-row">
                                 <td class="text-start">TOTAL SALES</td>
                                 <td class="amt">₱@Model.DetailTotalSales.ToString("N2")</td>
                             </tr>
-                            <tr class="sales-row">
-                                <td class="text-start">SALES + PARTNER PURCHASES</td>
-                                <td class="amt">₱@Model.DetailSalesSubTotal.ToString("N2")</td>
-                            </tr>
+                            @if (partnersEnabled)
+                            {
+                                <tr class="sales-row">
+                                    <td class="text-start">SALES + PARTNER PURCHASES</td>
+                                    <td class="amt">₱@Model.DetailSalesSubTotal.ToString("N2")</td>
+                                </tr>
+                            }
                             <tr class="subtotal-row">
                                 <td class="text-start">SUBTOTAL</td>
                                 <td class="amt">₱@Model.DetailSubTotal.ToString("N2")</td>

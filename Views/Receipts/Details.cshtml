@@ -1,8 +1,10 @@
 @model HazelInvoice.Models.Receipt
+@inject Microsoft.Extensions.Options.IOptions<HazelInvoice.Configuration.FeaturesOptions> Features
 
 @{
     ViewData["Title"] = "Receipt Details";
     var partners = ViewBag.Partners as List<string> ?? new List<string>();
+    var partnersEnabled = Features.Value.PartnersEnabled;
 
     string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
     {
@@ -63,7 +65,10 @@
                             <th>Item</th>
                             <th class="text-center">Qty</th>
                             <th class="text-center">Unit</th>
-                            <th class="text-center">Partner</th>
+                            @if (partnersEnabled)
+                            {
+                                <th class="text-center">Owner</th>
+                            }
                             <th class="text-end">Price</th>
                             <th class="text-end">Amount</th>
                         </tr>
@@ -75,23 +80,12 @@
                                 <td class="fw-bold">@line.ItemName</td>
                                 <td class="text-center">@line.Quantity.ToString("0.###")</td>
                                 <td class="text-center">@line.Unit</td>
-                                <td class="text-center">
-                                    <form asp-action="UpdateLinePartner" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="receiptId" value="@Model.Id" />
-                                        <input type="hidden" name="lineId" value="@line.Id" />
-                                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                        <select name="partnerName" class="form-select form-select-sm" style="border-radius:0; font-weight:800; display:inline-block; width:auto;"
-                                                onchange="this.form.submit()">
-                                            <option value="">--</option>
-                                            @foreach (var pn in partners)
-                                            {
-                                                var selected = string.Equals(pn, line.PartnerName, StringComparison.OrdinalIgnoreCase) ? "selected" : null;
-                                                <option value="@pn" selected="@selected">@pn</option>
-                                            }
-                                        </select>
-                                    </form>
-                                </td>
+                                @if (partnersEnabled)
+                                {
+                                    <td class="text-center">
+                                        <span class="fw-bold">@(string.IsNullOrWhiteSpace(line.PartnerName) ? "-" : line.PartnerName)</span>
+                                    </td>
+                                }
                                 <td class="text-end">@line.Price.ToString("N2")</td>
                                 <td class="text-end fw-bold">@line.Amount.ToString("N2")</td>
                             </tr>
@@ -99,11 +93,11 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" class="text-end fw-bold">Total</td>
+                            <td colspan="@(partnersEnabled ? 5 : 4)" class="text-end fw-bold">Total</td>
                             <td class="text-end fw-bold invoice-summary-total">₱@Model.TotalAmount.ToString("N2")</td>
                         </tr>
                         <tr>
-                            <td colspan="5" class="text-end fw-bold">Paid</td>
+                            <td colspan="@(partnersEnabled ? 5 : 4)" class="text-end fw-bold">Paid</td>
                             <td class="text-end fw-bold text-success">₱@Model.PaidAmount.ToString("N2")</td>
                         </tr>
                     </tfoot>

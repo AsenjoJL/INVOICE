@@ -1,8 +1,13 @@
 @model HazelInvoice.ViewModels.ProfitSummaryViewModel
+@using HazelInvoice.Configuration
+@using Microsoft.Extensions.Options
+@inject IOptions<FeaturesOptions> Features
 @{
     ViewData["Title"] = "Profit & Sales Summary";
     ViewData["NotePurpose"] = "Summarizes sales, fees, deductions, capital, and profit distribution.";
     ViewData["NoteInstructions"] = "Adjust the date range and fee inputs, then use the buttons to add deductions, capital, or purchases.";
+
+    var partnersEnabled = Features.Value.PartnersEnabled;
 }
 
 <style>
@@ -735,7 +740,10 @@
         <div class="d-flex gap-2">
             <button class="btn btn-outline-danger btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#deductionModal"><i class="bi bi-dash-circle"></i> Deduction</button>
             <button class="btn btn-outline-info btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#capitalModal"><i class="bi bi-cash-stack"></i> Capital</button>
-            <button class="btn btn-outline-secondary btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#purchaseModal"><i class="bi bi-bag-plus"></i> Purchase</button>
+            @if (partnersEnabled)
+            {
+                <button class="btn btn-outline-secondary btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#purchaseModal"><i class="bi bi-bag-plus"></i> Purchase</button>
+            }
             <a href="#" onclick="return window.hazelPrint && window.hazelPrint.prepareAndPrint ? window.hazelPrint.prepareAndPrint() : (window.print(), false)" class="btn btn-dark btn-sm action-btn"><i class="bi bi-printer"></i> Print</a>
         </div>
     </div>
@@ -757,10 +765,13 @@
                 <label class="small fw-bold text-muted">FEE %</label>
                 <input type="number" step="0.1" name="percentFee" class="form-control form-control-sm text-center fw-bold" value="@Model.PercentFee" />
             </div>
-            <div class="col-md-1">
-                <label class="small fw-bold text-muted">P1 SHARE %</label>
-                <input type="number" step="1" name="split1" class="form-control form-control-sm text-center fw-bold" value="@Model.Partner1SharePercent" />
-            </div>
+            @if (partnersEnabled)
+            {
+                <div class="col-md-1">
+                    <label class="small fw-bold text-muted">P1 SHARE %</label>
+                    <input type="number" step="1" name="split1" class="form-control form-control-sm text-center fw-bold" value="@Model.Partner1SharePercent" />
+                </div>
+            }
             <div class="col-md-2">
                 <div class="form-check pt-4">
                     <input class="form-check-input" type="checkbox" name="includeUnpaid" value="true" @(Model.IncludeUnpaid ? "checked" : "") id="checkUnpaid">
@@ -1106,51 +1117,53 @@
                  </div>
             </div>
             
-            <!-- PARTNERS SPLIT -->
-            <div class="group-title mt-4"><i class="bi bi-people"></i> Partner Distribution</div>
-            <form method="get" class="d-flex flex-wrap align-items-center gap-2 mt-2 mb-2">
-                <input type="hidden" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
-                <input type="hidden" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
-                <input type="hidden" name="includeUnpaid" value="@(Model.IncludeUnpaid ? "true" : "false")" />
-                <input type="hidden" name="percentFee" value="@Model.PercentFee" />
-                <label class="small fw-bold text-muted mb-0">P1 SHARE %</label>
-                <input type="number" step="1" min="0" max="100" name="split1" class="form-control form-control-sm text-center fw-bold" style="width: 90px;" value="@Model.Partner1SharePercent" />
-                <span class="small text-muted">P2 = @Model.Partner2SharePercent.ToString("0")%</span>
-                <button type="submit" class="btn btn-outline-primary btn-sm fw-bold">Apply Share</button>
-            </form>
-            <div class="row g-3 mt-2">
-                <!-- Partner 1 -->
-                <div class="col-md-6">
-                    <div class="card h-100 border-dark report-card">
-                        <div class="card-header split-card-header d-flex justify-content-between">
-                            <span>@Model.Partner1Name</span>
-                            <span class="badge split-badge">@Model.Partner1SharePercent.ToString("0")% SHARE</span>
-                        </div>
-                        <div class="card-body p-0">
-                            <table class="table-excel mb-0">
-                                <tr>
-                                    <td class="fw-bold bg-light">Profit Share</td>
-                                    <td class="num-col fw-bold val-pos fs-5">₱@Model.Partner1ShareAmount.ToString("N2")</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2" class="text-muted small fw-bold bg-light border-top text-uppercase ps-3">Less Purchases:</td>
-                                </tr>
-                                @foreach(var p in Model.PartnerPurchases.Where(x => x.PartnerName == Model.Partner1Name)) {
-                                <tr>
-                                    <td class="ps-4">@p.Notes <small class="text-muted">(@p.Date.ToString("MM/dd"))</small></td>
-                                    <td class="num-col val-neg">(@p.Amount.ToString("N2"))</td>
-                                </tr>
-                                }
-                                <tr class="final-payout-row">
-                                    <td class="fw-black">FINAL PAYOUT</td>
-                                    <td class="num-col fw-black fs-4">₱@Model.Partner1Final.ToString("N2")</td>
-                                </tr>
-                            </table>
+            @if (partnersEnabled)
+            {
+                <!-- PARTNERS SPLIT -->
+                <div class="group-title mt-4"><i class="bi bi-people"></i> Partner Distribution</div>
+                <form method="get" class="d-flex flex-wrap align-items-center gap-2 mt-2 mb-2">
+                    <input type="hidden" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="includeUnpaid" value="@(Model.IncludeUnpaid ? "true" : "false")" />
+                    <input type="hidden" name="percentFee" value="@Model.PercentFee" />
+                    <label class="small fw-bold text-muted mb-0">P1 SHARE %</label>
+                    <input type="number" step="1" min="0" max="100" name="split1" class="form-control form-control-sm text-center fw-bold" style="width: 90px;" value="@Model.Partner1SharePercent" />
+                    <span class="small text-muted">P2 = @Model.Partner2SharePercent.ToString("0")%</span>
+                    <button type="submit" class="btn btn-outline-primary btn-sm fw-bold">Apply Share</button>
+                </form>
+                <div class="row g-3 mt-2">
+                    <!-- Partner 1 -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-dark report-card">
+                            <div class="card-header split-card-header d-flex justify-content-between">
+                                <span>@Model.Partner1Name</span>
+                                <span class="badge split-badge">@Model.Partner1SharePercent.ToString("0")% SHARE</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table-excel mb-0">
+                                    <tr>
+                                        <td class="fw-bold bg-light">Profit Share</td>
+                                        <td class="num-col fw-bold val-pos fs-5">₱@Model.Partner1ShareAmount.ToString("N2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="text-muted small fw-bold bg-light border-top text-uppercase ps-3">Less Purchases:</td>
+                                    </tr>
+                                    @foreach(var p in Model.PartnerPurchases.Where(x => x.PartnerName == Model.Partner1Name)) {
+                                    <tr>
+                                        <td class="ps-4">@p.Notes <small class="text-muted">(@p.Date.ToString("MM/dd"))</small></td>
+                                        <td class="num-col val-neg">(@p.Amount.ToString("N2"))</td>
+                                    </tr>
+                                    }
+                                    <tr class="final-payout-row">
+                                        <td class="fw-black">FINAL PAYOUT</td>
+                                        <td class="num-col fw-black fs-4">₱@Model.Partner1Final.ToString("N2")</td>
+                                    </tr>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <!-- Partner 2 -->
-                <div class="col-md-6">
+                    <!-- Partner 2 -->
+                    <div class="col-md-6">
                      <div class="card h-100 border-dark report-card">
                         <div class="card-header split-card-header d-flex justify-content-between">
                             <span>@Model.Partner2Name</span>
@@ -1180,6 +1193,7 @@
                     </div>
                 </div>
             </div>
+            }
         </div>
 
         <!-- RIGHT: LEDGER -->
@@ -1259,93 +1273,94 @@
                 </div>
             </div>
 
-            <!-- PARTNER PURCHASES (Grouped by Partner) -->
-            <div class="group-title mt-4"><i class="bi bi-bag-check text-primary"></i> Partner Purchases</div>
-            @{
+            @if (partnersEnabled)
+            {
                 var purchasesByPartner = Model.PartnerPurchases
                     .OrderBy(p => p.Date)
                     .GroupBy(p => string.IsNullOrWhiteSpace(p.PartnerName) ? "Unknown" : p.PartnerName)
                     .ToList();
-            }
-            <div class="row g-3 mt-2">
-                @if (!purchasesByPartner.Any())
-                {
-                    <div class="col-12">
-                        <div class="text-center text-muted fst-italic py-3">No partner purchases recorded</div>
-                    </div>
-                }
-                else
-                {
-                    foreach (var group in purchasesByPartner)
-                    {
-                        var total = group.Sum(x => x.Amount);
-                        var partnerName = group.Key;
-                        var shareAmount = 0m;
-                        if (string.Equals(partnerName, Model.Partner1Name, System.StringComparison.OrdinalIgnoreCase))
-                        {
-                            shareAmount = Model.Partner1ShareAmount;
-                        }
-                        else if (string.Equals(partnerName, Model.Partner2Name, System.StringComparison.OrdinalIgnoreCase))
-                        {
-                            shareAmount = Model.Partner2ShareAmount;
-                        }
-                        var partnerExpenses = Model.Expenses
-                            .Where(e => string.Equals(e.Vendor, partnerName, System.StringComparison.OrdinalIgnoreCase))
-                            .Sum(e => e.Amount);
-                        var totalTaken = total;
-                        var sharePlus = shareAmount + total + partnerExpenses;
-                        <div class="col-12">
-                            <table class="purchase-ledger">
-                                <thead>
-                                    <tr>
-                                        <th class="purchase-ledger-title" colspan="3">@group.Key.ToUpper() PURCHASES</th>
-                                    </tr>
-                                    <tr>
-                                        <th>DESCRIPTION</th>
-                                        <th>DATE</th>
-                                        <th>AMOUNT</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var p in group)
-                                    {
-                                        <tr>
-                                            <td>@p.Notes</td>
-                                            <td>@p.Date.ToString("MM/dd/yyyy")</td>
-                                            <td class="num-col">₱@p.Amount.ToString("N2")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td class="fw-bold">TOTAL PURCHASES</td>
-                                        <td></td>
-                                        <td class="num-col fw-bold">₱@total.ToString("N2")</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
 
-                            <div class="partner-summary">
-                                <table class="partner-summary-table">
-                                    <tr>
-                                        <td class="partner-summary-label">The money you took from the collections.</td>
-                                        <td class="partner-summary-value">₱@totalTaken.ToString("N2")</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="partner-summary-label">Your share of profit and the purchases and expenses you paid for.</td>
-                                        <td class="partner-summary-value">₱@sharePlus.ToString("N2")</td>
-                                    </tr>
-                                </table>
-                                <div class="partner-summary-total">₱@sharePlus.ToString("N2")</div>
-                            </div>
+                <!-- PARTNER PURCHASES (Grouped by Partner) -->
+                <div class="group-title mt-4"><i class="bi bi-bag-check text-primary"></i> Partner Purchases</div>
+                <div class="row g-3 mt-2">
+                    @if (!purchasesByPartner.Any())
+                    {
+                        <div class="col-12">
+                            <div class="text-center text-muted fst-italic py-3">No partner purchases recorded</div>
                         </div>
                     }
-                }
-            </div>
+                    else
+                    {
+                        foreach (var group in purchasesByPartner)
+                        {
+                            var total = group.Sum(x => x.Amount);
+                            var partnerName = group.Key;
+                            var shareAmount = 0m;
+                            if (string.Equals(partnerName, Model.Partner1Name, System.StringComparison.OrdinalIgnoreCase))
+                            {
+                                shareAmount = Model.Partner1ShareAmount;
+                            }
+                            else if (string.Equals(partnerName, Model.Partner2Name, System.StringComparison.OrdinalIgnoreCase))
+                            {
+                                shareAmount = Model.Partner2ShareAmount;
+                            }
+                            var partnerExpenses = Model.Expenses
+                                .Where(e => string.Equals(e.Vendor, partnerName, System.StringComparison.OrdinalIgnoreCase))
+                                .Sum(e => e.Amount);
+                            var totalTaken = total;
+                            var sharePlus = shareAmount + total + partnerExpenses;
+                            <div class="col-12">
+                                <table class="purchase-ledger">
+                                    <thead>
+                                        <tr>
+                                            <th class="purchase-ledger-title" colspan="3">@group.Key.ToUpper() PURCHASES</th>
+                                        </tr>
+                                        <tr>
+                                            <th>DESCRIPTION</th>
+                                            <th>DATE</th>
+                                            <th>AMOUNT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var p in group)
+                                        {
+                                            <tr>
+                                                <td>@p.Notes</td>
+                                                <td>@p.Date.ToString("MM/dd/yyyy")</td>
+                                                <td class="num-col">₱@p.Amount.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td class="fw-bold">TOTAL PURCHASES</td>
+                                            <td></td>
+                                            <td class="num-col fw-bold">₱@total.ToString("N2")</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
 
-            <!-- PARTNER-ATTRIBUTED SALES (From Receipt Lines) -->
-            <div class="group-title mt-4"><i class="bi bi-tags text-primary"></i> Partner Item Purchases (From Sales)</div>
-            <div class="row g-3 mt-2">
+                                <div class="partner-summary">
+                                    <table class="partner-summary-table">
+                                        <tr>
+                                            <td class="partner-summary-label">The money you took from the collections.</td>
+                                            <td class="partner-summary-value">₱@totalTaken.ToString("N2")</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="partner-summary-label">Your share of profit and the purchases and expenses you paid for.</td>
+                                            <td class="partner-summary-value">₱@sharePlus.ToString("N2")</td>
+                                        </tr>
+                                    </table>
+                                    <div class="partner-summary-total">₱@sharePlus.ToString("N2")</div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <!-- PARTNER-ATTRIBUTED SALES (From Receipt Lines) -->
+                <div class="group-title mt-4"><i class="bi bi-tags text-primary"></i> Partner Item Purchases (From Sales)</div>
+                <div class="row g-3 mt-2">
                 @if (Model.PartnerSalesAttributions == null || !Model.PartnerSalesAttributions.Any())
                 {
                     <div class="col-12">
@@ -1387,6 +1402,7 @@
                     }
                 }
             </div>
+            }
 
             @{
                 var weeklyNet = Model.TotalGrossSales - Model.TotalFees;
@@ -1516,48 +1532,51 @@
                     </tr>
                 </table>
             </div>
-            <div class="final-share-summary mt-2">
-                <table class="final-share-summary-table">
-                    <tbody>
-                        <tr>
-                            <td class="summary-total" rowspan="2">₱@Model.NetProfit.ToString("N2")</td>
-                            <td class="summary-amount">₱@Model.Partner1ShareAmount.ToString("N2")</td>
-                            <td>@Model.Partner1SharePercent.ToString("0.00")%</td>
-                            <td class="summary-amount">₱@Model.Partner1ShareAmount.ToString("N2")</td>
-                        </tr>
-                        <tr>
-                            <td class="summary-amount">₱@Model.Partner2ShareAmount.ToString("N2")</td>
-                            <td>@Model.Partner2SharePercent.ToString("0.00")%</td>
-                            <td class="summary-amount">₱@Model.Partner2ShareAmount.ToString("N2")</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="final-shared-wrap mt-2">
-                <table class="final-shared-table">
-                    <thead>
-                        <tr><th colspan="2">FINAL SHARED NET PROFIT</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr class="final-row-p1">
-                            <td>@Model.Partner1Name.ToUpper()</td>
-                            <td>₱@Model.Partner1Final.ToString("N2")</td>
-                        </tr>
-                        <tr class="final-row-p2">
-                            <td>@Model.Partner2Name.ToUpper()</td>
-                            <td>₱@Model.Partner2Final.ToString("N2")</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="final-note-row">
-                    <div class="final-note-text">
-                        Please note that starting October, I will begin deducting small amounts OF WHAT you owed.
-                    </div>
-                    <div class="final-note-amount">₱@Model.NoteDeductionAmount.ToString("N2")</div>
-                    <div class="final-note-balance">₱@Model.NoteRemainingBalance.ToString("N2")</div>
+            @if (partnersEnabled)
+            {
+                <div class="final-share-summary mt-2">
+                    <table class="final-share-summary-table">
+                        <tbody>
+                            <tr>
+                                <td class="summary-total" rowspan="2">₱@Model.NetProfit.ToString("N2")</td>
+                                <td class="summary-amount">₱@Model.Partner1ShareAmount.ToString("N2")</td>
+                                <td>@Model.Partner1SharePercent.ToString("0.00")%</td>
+                                <td class="summary-amount">₱@Model.Partner1ShareAmount.ToString("N2")</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-amount">₱@Model.Partner2ShareAmount.ToString("N2")</td>
+                                <td>@Model.Partner2SharePercent.ToString("0.00")%</td>
+                                <td class="summary-amount">₱@Model.Partner2ShareAmount.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+                <div class="final-shared-wrap mt-2">
+                    <table class="final-shared-table">
+                        <thead>
+                            <tr><th colspan="2">FINAL SHARED NET PROFIT</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr class="final-row-p1">
+                                <td>@Model.Partner1Name.ToUpper()</td>
+                                <td>₱@Model.Partner1Final.ToString("N2")</td>
+                            </tr>
+                            <tr class="final-row-p2">
+                                <td>@Model.Partner2Name.ToUpper()</td>
+                                <td>₱@Model.Partner2Final.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="final-note-row">
+                        <div class="final-note-text">
+                            Please note that starting October, I will begin deducting small amounts OF WHAT you owed.
+                        </div>
+                        <div class="final-note-amount">₱@Model.NoteDeductionAmount.ToString("N2")</div>
+                        <div class="final-note-balance">₱@Model.NoteRemainingBalance.ToString("N2")</div>
+                    </div>
+                </div>
+            }
         </div>
         </div>
     </div>
@@ -1603,23 +1622,26 @@
     </div>
 </div>
 
-<!-- ADD PURCHASE -->
-<div class="modal fade report-modal report-modal-purchase" id="purchaseModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <form asp-action="AddPurchase" method="post" class="modal-content">
-             @Html.AntiForgeryToken()
-             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-            <div class="modal-header"><h6 class="modal-title">Partner Purchase</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <select name="PartnerName" class="form-select mb-2 fw-bold">
-                    <option value="@Model.Partner1Name">@Model.Partner1Name</option>
-                    <option value="@Model.Partner2Name">@Model.Partner2Name</option>
-                </select>
-                <input type="text" name="Notes" class="form-control mb-2 fw-bold" required placeholder="Item / Reason" />
-                <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
-                <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
-            </div>
-            <div class="modal-footer"><button type="submit" class="btn report-modal-submit">Save Purchase</button></div>
-        </form>
+@if (partnersEnabled)
+{
+    <!-- ADD PURCHASE -->
+    <div class="modal fade report-modal report-modal-purchase" id="purchaseModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <form asp-action="AddPurchase" method="post" class="modal-content">
+                 @Html.AntiForgeryToken()
+                 <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                <div class="modal-header"><h6 class="modal-title">Partner Purchase</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <select name="PartnerName" class="form-select mb-2 fw-bold">
+                        <option value="@Model.Partner1Name">@Model.Partner1Name</option>
+                        <option value="@Model.Partner2Name">@Model.Partner2Name</option>
+                    </select>
+                    <input type="text" name="Notes" class="form-control mb-2 fw-bold" required placeholder="Item / Reason" />
+                    <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
+                    <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn report-modal-submit">Save Purchase</button></div>
+            </form>
+        </div>
     </div>
-</div>
+}
