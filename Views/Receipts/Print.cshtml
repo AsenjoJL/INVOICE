@@ -458,7 +458,13 @@
             .total-row { margin-top: 4px; }
             /* Requested: total label + total amount in 14 font size */
             .total-row .label,
-            .total-row .amount { font-size: 14pt; line-height: 1; }
+            .total-row .amount {
+                font-size: 14pt;
+                line-height: 1;
+                text-decoration: underline;
+                text-underline-offset: 2px;
+                text-decoration-thickness: 2px;
+            }
             .ack-block { margin-top: 4px; }
             .footer-note { margin-top: 0; font-size: 8pt; }
             .received-line { margin-top: 5px; font-size: 9pt; }
