@@ -1986,6 +1986,19 @@ h6 {
   transform: translateY(-2px);
 }
 
+.invoice-btn-danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  box-shadow: 0 8px 18px rgba(153, 27, 27, 0.18);
+}
+
+.invoice-btn-danger:hover {
+  background: #fecdd3;
+  color: #7f1d1d;
+  transform: translateY(-1px);
+}
+
 .invoice-btn-ghost {
   border: 1px solid rgba(255, 255, 255, 0.4);
   color: #fff;

@@ -5,6 +5,7 @@
     ViewData["Title"] = "Receipt Details";
     var partners = ViewBag.Partners as List<string> ?? new List<string>();
     var partnersEnabled = Features.Value.PartnersEnabled;
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 
     string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
     {
@@ -24,6 +25,17 @@
         </div>
         <div class="invoice-actions">
             <a asp-action="Print" asp-route-id="@Model.Id" class="invoice-btn invoice-btn-primary"><i class="bi bi-printer"></i> Print</a>
+            <form method="post"
+                  asp-action="Delete"
+                  asp-route-id="@Model.Id"
+                  asp-route-returnUrl="@Url.Action("Index", "Receipts")"
+                  class="d-inline">
+                <button type="submit"
+                        class="invoice-btn invoice-btn-danger"
+                        onclick="return confirm('Delete this receipt? Sales, profit, and stock will be updated.');">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </form>
             <a asp-action="Index" class="invoice-btn invoice-btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
         </div>
     </div>

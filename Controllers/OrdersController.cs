@@ -123,7 +123,7 @@ public class OrdersController : Controller
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
 
-        var matrixByCustomer = BuildMatrixInputsByCustomer(
+        var matrixByCustomer = OrderImportHelpers.BuildMatrixInputsByCustomer(
             model.MatrixQuantities,
             out var affectedProductIdsSet,
             out var affectedCustomerIdsSet);
@@ -494,11 +494,11 @@ public class OrdersController : Controller
         var productMap = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
         foreach (var p in products)
         {
-            var nameKey = NormalizeKey(p.Name);
+            var nameKey = OrderImportHelpers.NormalizeKey(p.Name);
             if (!string.IsNullOrWhiteSpace(nameKey))
                 productMap[nameKey] = p;
 
-            var skuKey = NormalizeKey(p.SKU);
+            var skuKey = OrderImportHelpers.NormalizeKey(p.SKU);
             if (!string.IsNullOrWhiteSpace(skuKey) && !productMap.ContainsKey(skuKey))
                 productMap[skuKey] = p;
         }
@@ -515,11 +515,11 @@ public class OrdersController : Controller
             if (string.IsNullOrWhiteSpace(productNameRaw))
                 continue;
 
-            var nameKey = NormalizeKey(productNameRaw);
+            var nameKey = OrderImportHelpers.NormalizeKey(productNameRaw);
             if (string.IsNullOrWhiteSpace(nameKey) || nameKey == "grandtotal")
                 continue;
 
-            if (!TryResolveProductByName(productNameRaw, productMap, out var product))
+            if (!OrderImportHelpers.TryResolveProductByName(productNameRaw, productMap, out var product))
             {
                 unmatchedProducts.Add(productNameRaw.Trim());
                 continue;
@@ -533,7 +533,7 @@ public class OrdersController : Controller
             foreach (var oc in matchedOutletCols)
             {
                 var qtyRaw = sheet.GetCell(r, oc.Key);
-                var qty = TryParseQuantityLoose(qtyRaw, out var parsedQty) ? parsedQty : 0m;
+                var qty = OrderImportHelpers.TryParseQuantityLoose(qtyRaw, out var parsedQty) ? parsedQty : 0m;
                 if (qty != decimal.Truncate(qty))
                     fractionalQtyCount++;
                 if (qty < 0) qty = 0m;
@@ -1132,7 +1132,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     {
         for (var r = 1; r <= Math.Min(sheet.MaxRow, 50); r++)
         {
-            if (NormalizeKey(sheet.GetCell(r, 1)) == "vegetables")
+            if (OrderImportHelpers.NormalizeKey(sheet.GetCell(r, 1)) == "vegetables")
                 return r;
         }
 
@@ -1141,22 +1141,14 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
 
     private static int FindColumnByHeader(SimpleXlsxSheet sheet, int headerRow, string header)
     {
-        var key = NormalizeKey(header);
+        var key = OrderImportHelpers.NormalizeKey(header);
         for (var c = 1; c <= sheet.MaxCol; c++)
         {
-            if (NormalizeKey(sheet.GetCell(headerRow, c)) == key)
+            if (OrderImportHelpers.NormalizeKey(sheet.GetCell(headerRow, c)) == key)
                 return c;
         }
 
         return -1;
-    }
-
-    private static string NormalizeKey(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
-
-        return Regex.Replace(raw.Trim().ToLowerInvariant(), @"[^a-z0-9]+", "");
     }
 
     private static bool TryResolveOutletByHeader(
@@ -1191,75 +1183,6 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         }
 
         return false;
-    }
-
-    private static bool TryResolveProductByName(
-        string productName,
-        Dictionary<string, Product> productMap,
-        out Product product)
-    {
-        product = default!;
-        var key = NormalizeKey(productName);
-        if (string.IsNullOrWhiteSpace(key))
-            return false;
-
-        if (productMap.TryGetValue(key, out product))
-            return true;
-
-        // Fallback: best contains/prefix match for minor naming variants.
-        var containMatches = productMap
-            .Where(kvp => kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                          key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase))
-            .Select(kvp => kvp.Value)
-            .DistinctBy(p => p.Id)
-            .ToList();
-
-        if (containMatches.Count == 1)
-        {
-            product = containMatches[0];
-            return true;
-        }
-        else if (containMatches.Count > 1)
-        {
-            // Pick the closest length match to reduce ambiguity (helps when Excel has generic name like "Black Pepper")
-            product = containMatches
-                .OrderBy(p => Math.Abs(NormalizeKey(p.Name).Length - key.Length))
-                .ThenBy(p => p.Name.Length)
-                .First();
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryParseQuantityLoose(string? raw, out decimal qty)
-    {
-        qty = 0m;
-        if (SimpleXlsxReader.TryParseDecimal(raw, out qty))
-            return true;
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        var cleaned = Regex.Replace(raw, @"[^0-9\./-]+", "");
-        if (string.IsNullOrWhiteSpace(cleaned))
-            return false;
-
-        // Handle simple fractions like 1/2 or 3/4
-        if (cleaned.Contains('/'))
-        {
-            var parts = cleaned.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length == 2 &&
-                decimal.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var num) &&
-                decimal.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var den) &&
-                den != 0)
-            {
-                qty = num / den;
-                return true;
-            }
-        }
-
-        return decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out qty);
     }
 
     private static int GetOutletOrderIndex(string? name)
@@ -1394,8 +1317,11 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                 byCustomer[customerId] = productMap;
             }
 
-            // Last writer wins in case of duplicate keys from malformed post.
-            productMap[productId] = kvp.Value;
+            // Accumulate quantities when the same product appears multiple times for an outlet (e.g., duplicate rows in Excel)
+            if (productMap.ContainsKey(productId))
+                productMap[productId] += kvp.Value;
+            else
+                productMap[productId] = kvp.Value;
         }
 
         return byCustomer;

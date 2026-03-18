@@ -313,6 +313,11 @@ public class ReceiptsController : Controller
 
         if (receipt == null) return NotFound();
 
+        receipt.Lines = receipt.Lines
+            .OrderBy(l => l.ItemName)
+            .ThenBy(l => l.Id)
+            .ToList();
+
         ViewBag.Partners = await _context.PartnerBalanceConfigs
             .AsNoTracking()
             .OrderBy(p => p.PartnerName)
@@ -320,6 +325,24 @@ public class ReceiptsController : Controller
             .ToListAsync(HttpContext.RequestAborted);
 
         return View(receipt);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id, string? returnUrl = null)
+    {
+        var deleted = await _receiptService.DeleteReceiptAsync(id, User?.Identity?.Name, HttpContext.RequestAborted);
+
+        if (!deleted) return NotFound();
+
+        TempData["Message"] = "Receipt deleted. Dashboard sales/profit and stock have been updated.";
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]

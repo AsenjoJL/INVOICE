@@ -1,3 +1,4 @@
+using System.Threading;
 using HazelInvoice.Data;
 using HazelInvoice.Models;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ namespace HazelInvoice.Services;
 public interface IReceiptService
 {
     Task<string> GenerateNextReceiptNumberAsync();
+    Task<bool> DeleteReceiptAsync(int id, string? deletedBy = null, CancellationToken ct = default);
 }
 
 public class ReceiptService : IReceiptService
@@ -17,6 +19,42 @@ public class ReceiptService : IReceiptService
     public ReceiptService(ApplicationDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<bool> DeleteReceiptAsync(int id, string? deletedBy = null, CancellationToken ct = default)
+    {
+        var strategy = _context.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync(ct);
+
+            var receipt = await _context.Receipts
+                .Include(r => r.Lines)
+                .Include(r => r.Payments)
+                .FirstOrDefaultAsync(r => r.Id == id, ct);
+
+            if (receipt == null)
+            {
+                await transaction.RollbackAsync(ct);
+                return false;
+            }
+
+            // Remove any stock movements tied to this receipt number
+            var stockMoves = await _context.ProductStockMovements
+                .Where(m => m.Reference == receipt.ReceiptNumber)
+                .ToListAsync(ct);
+            _context.ProductStockMovements.RemoveRange(stockMoves);
+
+            _context.Payments.RemoveRange(receipt.Payments);
+            _context.ReceiptLines.RemoveRange(receipt.Lines);
+            _context.Receipts.Remove(receipt);
+
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            return true;
+        });
     }
 
     public async Task<string> GenerateNextReceiptNumberAsync()

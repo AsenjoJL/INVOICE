@@ -5,6 +5,9 @@
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var searchTerm = (ViewBag.SearchTerm as string) ?? string.Empty;
     var zeroPriceCount = Model.Count(p => p.UnitCost == 0m);
+    var totalCount = Model.Count();
+    var activeCount = Model.Count(p => p.IsActive);
+    var inactiveCount = totalCount - activeCount;
     var categoryOptions = Model
         .Select(p => string.IsNullOrWhiteSpace(p.Category) ? "Uncategorized" : p.Category.Trim())
         .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -18,10 +21,12 @@
     <div class="product-header">
         <div class="product-header-top">
             <div class="product-header-main">
-                <h1>Product Listing</h1>
-                <div class="sub">Maintain pricing, units, and availability for all items.</div>
+                <div class="eyebrow">Catalog</div>
+                <h1>Products</h1>
+                <div class="sub">Minimal dashboard view to keep pricing and availability tidy.</div>
                 <div class="product-tools">
                     <form method="get" asp-action="Index" class="product-search-bar">
+                        <i class="bi bi-search search-icon"></i>
                         <input type="text"
                                id="searchInput"
                                name="q"
@@ -29,7 +34,7 @@
                                class="form-control form-control-sm search-input-width"
                                placeholder="Search name, SKU, category, unit..." />
 
-                        <select id="categoryFilter" class="form-select form-select-sm category-filter-width">
+                        <select id="categoryFilter" class="form-select form-select-sm category-filter-width" aria-label="Category filter">
                             <option value="">All Categories</option>
                             @foreach (var category in categoryOptions)
                             {
@@ -38,7 +43,7 @@
                         </select>
 
                         <button type="submit" class="btn btn-search">
-                            <i class="bi bi-search"></i> Search
+                            <span>Go</span>
                         </button>
 
                         @if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -60,11 +65,34 @@
             </div>
             <div class="product-actions">
                 <form asp-action="GenerateSkus" method="post">
-                    <button type="submit" class="btn btn-outline-light" onclick="return confirm('This will reset ALL product SKUs to V-001, V-002 sequence based on Name. Continue?');">
-                        <i class="bi bi-magic"></i> Set V-Series SKUs
+                    <button type="submit" class="btn btn-ghost" onclick="return confirm('This will reset ALL product SKUs to V-001, V-002 sequence based on Name. Continue?');">
+                        <i class="bi bi-magic"></i> V-Series SKUs
                     </button>
                 </form>
-                <a asp-action="Create" class="btn btn-light text-dark"><i class="bi bi-plus-lg"></i> Add New Product</a>
+                <a asp-action="Create" class="btn btn-primary-ghost"><i class="bi bi-plus-lg"></i> Add Product</a>
+            </div>
+        </div>
+
+        <div class="product-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total</div>
+                <div class="metric-value">@totalCount</div>
+                <div class="metric-chip">All products</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active</div>
+                <div class="metric-value text-success">@activeCount</div>
+                <div class="metric-chip chip-soft">Visible in orders</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Inactive</div>
+                <div class="metric-value text-muted">@inactiveCount</div>
+                <div class="metric-chip chip-dim">Hidden items</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Zero Price</div>
+                <div class="metric-value text-warning">@zeroPriceCount</div>
+                <div class="metric-chip chip-warn">Needs price</div>
             </div>
         </div>
 
@@ -75,7 +103,7 @@
     </div>
 
     <div class="filter-bar">
-        <button type="button" class="filter-pill active" data-status-filter="all">All Products</button>
+        <button type="button" class="filter-pill active" data-status-filter="all">All</button>
         <button type="button" class="filter-pill" data-status-filter="active">Active</button>
         <button type="button" class="filter-pill" data-status-filter="inactive">Inactive</button>
         <button type="button" class="filter-pill filter-pill-warning" data-status-filter="zero">

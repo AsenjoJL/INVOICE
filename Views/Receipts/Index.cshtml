@@ -6,6 +6,7 @@
     var currentPage = Model?.Page ?? 1;
     var pageSize = Model?.PageSize ?? 50;
     var query = Model?.Query ?? string.Empty;
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var totalPages = pageSize <= 0 ? 1 : (int)Math.Ceiling(receiptCount / (double)pageSize);
     if (totalPages < 1) totalPages = 1;
     var startRow = receiptCount == 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
@@ -40,6 +41,11 @@
             <a asp-controller="Orders" asp-action="ReceiptList" class="invoice-btn invoice-btn-ghost"><i class="bi bi-list-check"></i> Receipt List</a>
         </div>
     </div>
+
+    @if (TempData["Message"] is string message && !string.IsNullOrWhiteSpace(message))
+    {
+        <div class="alert alert-success mb-3">@message</div>
+    }
 
     <div class="invoice-card">
         <div class="invoice-card-header">
@@ -97,6 +103,18 @@
                                     <div class="btn-group">
                                         <a asp-action="Print" asp-route-id="@item.Id" class="invoice-icon-btn" title="Print"><i class="bi bi-printer"></i></a>
                                         <a asp-action="Details" asp-route-id="@item.Id" class="invoice-icon-btn" title="View"><i class="bi bi-eye"></i></a>
+                                        <form method="post"
+                                              asp-action="Delete"
+                                              asp-route-id="@item.Id"
+                                              asp-route-returnUrl="@returnUrl"
+                                              class="d-inline">
+                                            <button type="submit"
+                                                    class="invoice-icon-btn text-danger"
+                                                    title="Delete"
+                                                    onclick="return confirm('Delete this receipt? This will update sales, profit, and stock totals.');">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
