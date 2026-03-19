@@ -45,6 +45,12 @@
         background: #0a0a0a;
         color: #ffffff;
     }
+    .price-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
     .price-date-form {
         display: inline-block;
         background: #ffffff;
@@ -72,6 +78,43 @@
         border-radius: var(--ui-radius-md);
         box-shadow: none;
         overflow: hidden;
+    }
+    .price-table-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--price-line);
+        background: #ffffff;
+    }
+    .price-table-toolbar-copy {
+        min-width: min(100%, 540px);
+    }
+    .price-table-toolbar-label {
+        font-family: 'DM Mono', monospace;
+        font-size: 9px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--price-muted);
+    }
+    .price-table-toolbar-title {
+        margin: 0.45rem 0 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--price-text);
+    }
+    .price-table-toolbar-sub {
+        margin: 0.35rem 0 0;
+        color: var(--price-muted);
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    .price-save-btn {
+        min-width: 200px;
+        padding-inline: 1.35rem;
     }
     .price-table {
         margin: 0;
@@ -144,6 +187,15 @@
         color: var(--price-muted);
         border: 1px solid var(--price-line);
     }
+    @@media (max-width: 768px) {
+        .price-setup-header,
+        .price-table-toolbar {
+            align-items: flex-start !important;
+        }
+        .price-save-btn {
+            width: 100%;
+        }
+    }
 </style>
 
 <div class="container-fluid p-4 price-setup-page">
@@ -155,17 +207,23 @@
                 <span class="price-week-label">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd, yyyy")</span>
             </p>
         </div>
-        <div>
+        <div class="price-actions">
             <a asp-controller="Orders" asp-action="VegetableMatrix" class="btn price-btn price-btn-neutral">
                 <i class="bi bi-arrow-left"></i> Back to Matrix
             </a>
-            <button type="submit" form="versusForm" class="btn price-btn price-btn-primary ms-2 px-4">
-                <i class="bi bi-save me-1"></i> Save Changes
-            </button>
         </div>
     </div>
 
     <partial name="_PageNote" />
+
+    @if (TempData["SuccessMessage"] is string successMessage && !string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success mb-4">@successMessage</div>
+    }
+    @if (TempData["ErrorMessage"] is string errorMessage && !string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger mb-4">@errorMessage</div>
+    }
 
     <form method="get" class="mb-4 price-date-form">
         <label>View Prices For Date:</label>
@@ -187,6 +245,17 @@
                         </label>
                     </div>
                     <div class="text-muted small">If unchecked, cost changes apply only to the selected week.</div>
+                </div>
+
+                <div class="price-table-toolbar">
+                    <div class="price-table-toolbar-copy">
+                        <div class="price-table-toolbar-label">Table Actions</div>
+                        <h3 class="price-table-toolbar-title">Save changes before leaving this page.</h3>
+                        <p class="price-table-toolbar-sub">The edited weekly prices below will be applied to the selected week and reflected in new sales, orders, and pricing lookups.</p>
+                    </div>
+                    <button type="submit" class="btn price-btn price-btn-primary price-save-btn">
+                        <i class="bi bi-save me-1"></i> Save Changes
+                    </button>
                 </div>
                 
                 <div class="table-responsive" style="max-height: 70vh;">

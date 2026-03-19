@@ -45,27 +45,6 @@ public class WeeklyPricesController : Controller
         var weekStart = model.TargetDate.AddDays(-1 * diff).Date;
         var weekEnd = weekStart.AddDays(6).Date;
 
-        for (int i = 0; i < model.Items.Count; i++)
-        {
-            if (model.Items[i].Cost < 0)
-                ModelState.AddModelError($"Items[{i}].Cost", "Cost cannot be negative.");
-            if (model.Items[i].Markup < 0)
-                ModelState.AddModelError($"Items[{i}].Markup", "Markup cannot be negative.");
-            if (model.Items[i].BasePrice < 0)
-                ModelState.AddModelError($"Items[{i}].BasePrice", "Base price cannot be negative.");
-            if (model.Items[i].BasePrice < model.Items[i].Cost)
-                ModelState.AddModelError($"Items[{i}].BasePrice", "Base price cannot be lower than cost.");
-            if (model.Items[i].DeliveryPrice < model.Items[i].BasePrice)
-                ModelState.AddModelError($"Items[{i}].DeliveryPrice", "Delivery price cannot be lower than base price.");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            var vm = await BuildPriceVersusModelAsync(model.TargetDate, model.Items);
-            vm.ApplyToMasterCost = model.ApplyToMasterCost;
-            return View(vm);
-        }
-
         var pids = model.Items.Select(i => i.ProductId).Distinct().ToList();
 
         var productMap = await _context.Products
@@ -96,6 +75,8 @@ public class WeeklyPricesController : Controller
             _context.WeeklyPrices.RemoveRange(duplicateWeeklyPrices);
         }
 
+        var savedChanges = 0;
+
         foreach (var item in model.Items)
         {
             if (!productMap.TryGetValue(item.ProductId, out var prod)) continue;
@@ -104,17 +85,18 @@ public class WeeklyPricesController : Controller
             var masterMarkup = prod.Markup;
             var masterDeliveryFee = prod.DeliveryFee;
 
-            decimal cost = item.Cost;
-            decimal markup = item.Markup;
+            decimal cost = Math.Max(item.Cost, 0m);
+            decimal basePriceFromPost = Math.Max(item.BasePrice, cost);
+            decimal markup = Math.Max(item.Markup, basePriceFromPost - cost);
             decimal basePrice = cost + markup;
-            decimal deliveryPrice = item.DeliveryPrice > 0 ? item.DeliveryPrice : basePrice + masterDeliveryFee;
-            decimal deliveryFee = item.DeliveryFee ?? masterDeliveryFee;
-            deliveryFee = deliveryPrice - basePrice;
+            decimal deliveryPrice = Math.Max(item.DeliveryPrice, basePrice);
+            decimal deliveryFee = deliveryPrice - basePrice;
 
             if (model.ApplyToMasterCost && masterCost != cost)
             {
                 prod.UnitCost = cost;
                 masterCost = cost;
+                savedChanges++;
             }
 
             decimal? costOverride = null;
@@ -141,6 +123,7 @@ public class WeeklyPricesController : Controller
                 if (!shouldHaveWeekly)
                 {
                     _context.WeeklyPrices.Remove(wp);
+                    savedChanges++;
                     continue;
                 }
 
@@ -168,7 +151,10 @@ public class WeeklyPricesController : Controller
                 }
 
                 if (changed)
+                {
                     _context.Update(wp);
+                    savedChanges++;
+                }
             }
             else if (shouldHaveWeekly)
             {
@@ -184,6 +170,7 @@ public class WeeklyPricesController : Controller
                     Markup = markup
                 };
                 _context.Add(newWp);
+                savedChanges++;
             }
         }
 
@@ -192,6 +179,9 @@ public class WeeklyPricesController : Controller
         _cacheInvalidator.InvalidateProducts();
         _cacheInvalidator.InvalidateDashboard();
         _cacheInvalidator.InvalidateProfitReports();
+        TempData["SuccessMessage"] = savedChanges > 0
+            ? $"Saved changes for {savedChanges} price record(s)."
+            : "No price changes were detected.";
 
         return RedirectToAction(nameof(PriceVersus), new { date = model.TargetDate.ToString("yyyy-MM-dd") });
     }
