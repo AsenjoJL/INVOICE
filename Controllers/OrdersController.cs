@@ -71,9 +71,7 @@ public class OrdersController : Controller
     // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1&print=false&details=false
     public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1, bool print = false, bool details = false)
     {
-        // Default to tomorrow's delivery date when not specified.
-        // Most workflows enter orders today for delivery the next day.
-        var targetDate = (date ?? DateTime.Today.AddDays(1)).Date;
+        var targetDate = NormalizeOrderDate(date);
 
         if (print)
         {
@@ -115,7 +113,7 @@ public class OrdersController : Controller
     [HttpGet]
     public async Task<IActionResult> DownloadVegetableMatrixTemplate(DateTime? date)
     {
-        var targetDate = (date ?? DateTime.Today.AddDays(1)).Date;
+        var targetDate = NormalizeOrderDate(date);
         var bytes = await _vegetableMatrixTemplateService.BuildTemplateAsync(targetDate, HttpContext.RequestAborted);
 
         var fileName = $"VegetableOrderTemplate_{targetDate:yyyy-MM-dd}.xlsx";
@@ -127,6 +125,7 @@ public class OrdersController : Controller
     public async Task<IActionResult> SaveMatrix(VegetableMatrixViewModel model, bool doPrint = false)
     {
         if (model == null) return BadRequest("Model is null");
+        model.Date = NormalizeOrderDate(model.Date);
         model.ProductPrices ??= new Dictionary<int, decimal>();
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
@@ -409,22 +408,24 @@ public class OrdersController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ImportVegetableMatrixExcel(IFormFile? importFile, DateTime date, int page = 1, int productPage = 1, bool details = false)
     {
+        var targetDate = NormalizeOrderDate(date);
+
         if (importFile == null || importFile.Length == 0)
         {
             TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) file.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         if (importFile.Length > 20 * 1024 * 1024)
         {
             TempData["ErrorMessage"] = "File is too large. Maximum size is 20 MB.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         await using var stream = new MemoryStream();
@@ -438,14 +439,14 @@ public class OrdersController : Controller
         catch (Exception ex)
         {
             TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         var headerRow = FindHeaderRow(sheet);
         if (headerRow <= 0)
         {
             TempData["ErrorMessage"] = "Could not find header row. Expected a row containing 'Vegetables'.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         var priceCol = FindColumnByHeader(sheet, headerRow, "price");
@@ -467,7 +468,7 @@ public class OrdersController : Controller
         if (outletColumns.Count == 0)
         {
             TempData["ErrorMessage"] = "No outlet columns found in the Excel file.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         var customers = await _context.Customers
@@ -493,7 +494,7 @@ public class OrdersController : Controller
         if (matchedOutletCols.Count == 0)
         {
             TempData["ErrorMessage"] = "No Excel outlets matched your Outlet list.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         var products = await _context.Products
@@ -556,12 +557,12 @@ public class OrdersController : Controller
         if (matrix.Count == 0)
         {
             TempData["ErrorMessage"] = "No matched product/outlet quantities were found to import.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = date.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
         var vm = new VegetableMatrixViewModel
         {
-            Date = date.Date,
+            Date = targetDate,
             CurrentPage = page,
             ProductPage = productPage,
             ShowDetails = details,
@@ -580,7 +581,7 @@ public class OrdersController : Controller
         var fractionalNote = fractionalQtyCount > 0
             ? $" Fractional quantities detected: {fractionalQtyCount} cells."
             : string.Empty;
-        TempData["SuccessMessage"] = $"Excel imported: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{fractionalNote}";
+        TempData["SuccessMessage"] = $"Excel imported and receipts updated for {targetDate:MMM dd, yyyy}: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{fractionalNote}";
 
         return await SaveMatrix(vm, doPrint: false);
     }
@@ -588,7 +589,7 @@ public class OrdersController : Controller
     // OUTLET ORDER GET
     public async Task<IActionResult> VegetableOutletOrder(DateTime? date, int? customerId, bool allOutlets = false)
     {
-        var targetDate = (date ?? DateTime.Today).Date;
+        var targetDate = NormalizeOrderDate(date);
         var dayStart = targetDate;
         var dayEnd = targetDate.AddDays(1);
 
@@ -710,6 +711,7 @@ public class OrdersController : Controller
     public async Task<IActionResult> SaveOutletOrder(VegetableOutletOrderViewModel model)
     {
         if (model == null) return BadRequest("Model is null");
+        model.Date = NormalizeOrderDate(model.Date);
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
 
@@ -1214,6 +1216,17 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                 return i;
         }
         return int.MaxValue;
+    }
+
+    private static DateTime NormalizeOrderDate(DateTime? date)
+    {
+        if (date.HasValue && date.Value.Date > DateTime.MinValue.Date)
+        {
+            return date.Value.Date;
+        }
+
+        // Orders are usually encoded today for tomorrow's delivery.
+        return DateTime.Today.AddDays(1).Date;
     }
 
     private async Task UpdateWeeklyPricesFromPricesAsync(DateTime date, Dictionary<int, decimal>? postedPrices)

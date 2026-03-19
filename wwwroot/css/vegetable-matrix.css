@@ -24,11 +24,16 @@
 
 .matrix-page {
     background: var(--vm-bg);
+    min-width: 0;
 }
 
 .matrix-container {
-    height: 83vh;
+    height: calc(100vh - 290px);
+    min-height: 520px;
     overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
     border: 2px solid var(--vm-border);
     border-radius: var(--ui-radius-xl);
     box-shadow: none;
@@ -36,6 +41,7 @@
     position: relative;
     background: var(--vm-bg);
     margin: 0 12px 10px;
+    max-width: 100%;
 }
 
 .matrix-toolbar {
@@ -301,6 +307,7 @@
         border-collapse: separate;
         border-spacing: 0;
         width: 100%;
+        min-width: max-content;
         margin-bottom: 0;
     }
 
@@ -890,4 +897,25 @@
     .matrix-date-input,
     .excel-input {
         border-radius: var(--ui-radius-md) !important;
+    }
+
+    .content-area > .container-fluid.matrix-page {
+        max-width: none !important;
+        width: 100%;
+    }
+
+    @media (max-width: 991.98px) {
+        .matrix-container {
+            height: calc(100vh - 240px);
+            min-height: 420px;
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        .matrix-toolbar,
+        .matrix-info-panel,
+        .outlet-tabs-wrap {
+            margin-left: 0;
+            margin-right: 0;
+        }
     }

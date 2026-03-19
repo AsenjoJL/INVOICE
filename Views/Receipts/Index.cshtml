@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Receipts";
+    var nextDeliveryDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
     var receiptCount = Model?.TotalCount ?? 0;
     var currentPage = Model?.Page ?? 1;
     var pageSize = Model?.PageSize ?? 50;
@@ -38,7 +39,7 @@
             </div>
         </div>
         <div class="invoice-actions">
-            <a asp-action="Create" class="invoice-btn invoice-btn-primary"><i class="bi bi-plus-lg"></i> New Receipt</a>
+            <a asp-action="Create" asp-route-date="@nextDeliveryDate" class="invoice-btn invoice-btn-primary"><i class="bi bi-plus-lg"></i> New Receipt</a>
             <a asp-controller="Orders" asp-action="ReceiptList" class="invoice-btn invoice-btn-ghost"><i class="bi bi-list-check"></i> Receipt List</a>
         </div>
     </div>

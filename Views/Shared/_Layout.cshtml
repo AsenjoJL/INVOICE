@@ -21,6 +21,7 @@
     @{
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+        var nextDeliveryDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
         var pageTitle = (ViewData["Title"]?.ToString() ?? currentController).Trim();
         var pageSubtitle = currentController switch
         {
@@ -65,7 +66,7 @@
 
                 <div class="sidebar-section-title">Sales</div>
                 <a class="@NavClass("Receipts", "Index")" asp-area="" asp-controller="Receipts" asp-action="Index">Receipts</a>
-                <a class="@NavClass("Receipts", "Create")" asp-area="" asp-controller="Receipts" asp-action="Create">New Sale</a>
+                <a class="@NavClass("Receipts", "Create")" asp-area="" asp-controller="Receipts" asp-action="Create" asp-route-date="@nextDeliveryDate">New Sale</a>
                 <a class="@NavClass("Orders", "VegetableMatrix")" asp-area="" asp-controller="Orders" asp-action="VegetableMatrix">Vegetable Order</a>
                 <a class="@NavClass("ProfitReport", "Index")" asp-area="" asp-controller="ProfitReport" asp-action="Index">Profit &amp; Sales</a>
 

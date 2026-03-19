@@ -1,6 +1,7 @@
 @model HazelInvoice.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
+    var nextDeliveryDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
     string TrendBadgeClass(decimal value) => value > 0 ? "is-up" : (value < 0 ? "is-down" : "is-flat");
     string TrendIcon(decimal value) => value > 0 ? "bi-arrow-up-right" : (value < 0 ? "bi-arrow-down-right" : "bi-dash");
     string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";
@@ -19,7 +20,7 @@
         </div>
         <div class="dashboard-hero-side">
             <div class="dashboard-hero-actions">
-                <a href="/Receipts/Create" class="dash-btn dash-btn-dark"><i class="bi bi-plus-circle"></i> New Sale</a>
+                <a href="@Url.Action("Create", "Receipts", new { date = nextDeliveryDate })" class="dash-btn dash-btn-dark"><i class="bi bi-plus-circle"></i> New Sale</a>
                 <a href="/Orders/VegetableOutletOrder" class="dash-btn dash-btn-light"><i class="bi bi-basket2"></i> New Order</a>
             </div>
             <div class="dashboard-hero-highlight">
