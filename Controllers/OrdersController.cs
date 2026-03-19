@@ -1239,13 +1239,15 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
 
     private static DateTime NormalizeOrderDate(DateTime? date)
     {
+        var tomorrow = DateTime.Today.AddDays(1).Date;
+
         if (date.HasValue && date.Value.Date > DateTime.MinValue.Date)
         {
-            return date.Value.Date;
+            return date.Value.Date < tomorrow ? tomorrow : date.Value.Date;
         }
 
         // Orders are usually encoded today for tomorrow's delivery.
-        return DateTime.Today.AddDays(1).Date;
+        return tomorrow;
     }
 
     private async Task UpdateWeeklyPricesFromPricesAsync(DateTime date, Dictionary<int, decimal>? postedPrices)

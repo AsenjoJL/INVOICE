@@ -437,7 +437,9 @@ public class ReceiptsController : Controller
 
     private static DateTime NormalizeReceiptDate(DateTime input)
     {
-        return (input == default ? DateTime.Today.AddDays(1) : input).Date;
+        var tomorrow = DateTime.Today.AddDays(1).Date;
+        var normalized = (input == default ? tomorrow : input.Date);
+        return normalized < tomorrow ? tomorrow : normalized;
     }
 
     private async Task PopulateReceiptFormLookupsAsync(DateTime targetDate, CancellationToken ct)
