@@ -1,7 +1,8 @@
+@using HazelInvoice.Helpers
 @model HazelInvoice.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
-    var nextDeliveryDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
+    var nextDeliveryDate = BusinessDate.Tomorrow().ToString("yyyy-MM-dd");
     string TrendBadgeClass(decimal value) => value > 0 ? "is-up" : (value < 0 ? "is-down" : "is-flat");
     string TrendIcon(decimal value) => value > 0 ? "bi-arrow-up-right" : (value < 0 ? "bi-arrow-down-right" : "bi-dash");
     string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";

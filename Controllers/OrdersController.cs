@@ -6,6 +6,7 @@ using HazelInvoice.Services.Printing;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
+using HazelInvoice.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -409,6 +410,16 @@ public class OrdersController : Controller
         _cacheInvalidator.InvalidateDashboard();
         _cacheInvalidator.InvalidateProfitReports();
 
+        if (TempData.ContainsKey("AfterImportShowReceipts"))
+        {
+            TempData.Remove("AfterImportShowReceipts");
+            return RedirectToAction(nameof(ReceiptList), new
+            {
+                date = model.Date.ToString("yyyy-MM-dd"),
+                status = PaymentStatus.Unpaid.ToString()
+            });
+        }
+
         return RedirectToAction(nameof(VegetableMatrix), new
         {
             date = model.Date.ToString("yyyy-MM-dd"),
@@ -601,6 +612,7 @@ public class OrdersController : Controller
             ? $" Fractional quantities detected: {fractionalQtyCount} cells."
             : string.Empty;
         TempData["SuccessMessage"] = $"Excel imported and receipts updated for {targetDate:MMM dd, yyyy}: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{fractionalNote}";
+        TempData["AfterImportShowReceipts"] = "true";
 
         return await SaveMatrix(vm, doPrint: false);
     }
@@ -1238,17 +1250,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     }
 
     private static DateTime NormalizeOrderDate(DateTime? date)
-    {
-        var tomorrow = DateTime.Today.AddDays(1).Date;
-
-        if (date.HasValue && date.Value.Date > DateTime.MinValue.Date)
-        {
-            return date.Value.Date < tomorrow ? tomorrow : date.Value.Date;
-        }
-
-        // Orders are usually encoded today for tomorrow's delivery.
-        return tomorrow;
-    }
+        => BusinessDate.NormalizeNextDeliveryDate(date);
 
     private async Task UpdateWeeklyPricesFromPricesAsync(DateTime date, Dictionary<int, decimal>? postedPrices)
     {

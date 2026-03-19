@@ -1,8 +1,9 @@
+@using HazelInvoice.Helpers
 @model HazelInvoice.ViewModels.ReceiptsIndexViewModel
 
 @{
     ViewData["Title"] = "Receipts";
-    var nextDeliveryDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
+    var nextDeliveryDate = BusinessDate.Tomorrow().ToString("yyyy-MM-dd");
     var receiptCount = Model?.TotalCount ?? 0;
     var currentPage = Model?.Page ?? 1;
     var pageSize = Model?.PageSize ?? 50;

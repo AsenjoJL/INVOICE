@@ -6,6 +6,7 @@ using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
+using HazelInvoice.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -436,11 +437,7 @@ public class ReceiptsController : Controller
     }
 
     private static DateTime NormalizeReceiptDate(DateTime input)
-    {
-        var tomorrow = DateTime.Today.AddDays(1).Date;
-        var normalized = (input == default ? tomorrow : input.Date);
-        return normalized < tomorrow ? tomorrow : normalized;
-    }
+        => BusinessDate.NormalizeNextDeliveryDate(input);
 
     private async Task PopulateReceiptFormLookupsAsync(DateTime targetDate, CancellationToken ct)
     {

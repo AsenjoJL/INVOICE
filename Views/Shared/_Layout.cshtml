@@ -14,6 +14,7 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    @using HazelInvoice.Helpers
     @inject Microsoft.Extensions.Options.IOptions<HazelInvoice.Configuration.FeaturesOptions> Features
     <div id="hazel-af-token" style="display:none">
         @Html.AntiForgeryToken()
@@ -21,7 +22,7 @@
     @{
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
-        var nextDeliveryDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
+        var nextDeliveryDate = BusinessDate.Tomorrow().ToString("yyyy-MM-dd");
         var pageTitle = (ViewData["Title"]?.ToString() ?? currentController).Trim();
         var pageSubtitle = currentController switch
         {
