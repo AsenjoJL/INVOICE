@@ -1,4 +1,5 @@
 using HazelInvoice.Data;
+using HazelInvoice.Helpers;
 using HazelInvoice.Services.Dashboard;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,7 @@ public class DashboardController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var model = await _metrics.BuildAsync(DateTime.Today, HttpContext.RequestAborted);
+        var model = await _metrics.BuildAsync(BusinessDate.Today(), HttpContext.RequestAborted);
         return View(model);
     }
 

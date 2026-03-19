@@ -6,6 +6,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HazelInvoice.Data;
+using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.Services.Reports;
@@ -31,8 +32,9 @@ public class ProfitReportController : Controller
     // GET: ProfitReport
     public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, bool includeUnpaid = true, decimal percentFee = 1.0m, decimal split1 = 40m)
     {
-        var start = startDate ?? DateTime.Today.AddDays(-14);
-        var end = endDate ?? DateTime.Today;
+        var businessToday = BusinessDate.Today();
+        var start = startDate ?? businessToday.AddDays(-14);
+        var end = endDate ?? businessToday;
 
         var vm = await _profitReportService.BuildAsync(
             new ProfitReportQueryOptions(
@@ -96,7 +98,7 @@ public class ProfitReportController : Controller
 
         if (model.Date == default)
         {
-            model.Date = DateTime.Today;
+            model.Date = BusinessDate.Today();
         }
 
         if (model.Amount > 0)

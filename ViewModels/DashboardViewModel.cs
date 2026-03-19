@@ -18,6 +18,8 @@ public class DashboardViewModel
     public decimal TotalSalesAllTime { get; set; }
     public decimal GrossProfit { get; set; }
     public decimal NetProfit { get; set; }
+    public decimal GrossProfitMonth { get; set; }
+    public decimal NetProfitMonth { get; set; }
     public decimal CashBalance { get; set; }
     public decimal UnpaidAmount { get; set; }
     public int UnpaidInvoiceCount { get; set; }

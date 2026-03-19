@@ -243,10 +243,12 @@ public class DashboardMetricsService : IDashboardMetricsService
                 CostPrevMonth = 0m
             };
 
-        vm.GrossProfit = profitAgg.RevenueAllTime - profitAgg.CostAllTime;
-        vm.NetProfit = vm.GrossProfit - expenseAgg.ExpenseAllTime;
         var grossMonth = profitAgg.RevenueMonth - profitAgg.CostMonth;
         var grossPrev = profitAgg.RevenuePrevMonth - profitAgg.CostPrevMonth;
+        vm.GrossProfit = profitAgg.RevenueAllTime - profitAgg.CostAllTime;
+        vm.NetProfit = vm.GrossProfit - expenseAgg.ExpenseAllTime;
+        vm.GrossProfitMonth = grossMonth;
+        vm.NetProfitMonth = grossMonth - expenseAgg.ExpenseMonthly;
         vm.GrossProfitTrendPercent = TrendPercent(grossMonth, grossPrev);
 
         // ---- Charts / Lists ----

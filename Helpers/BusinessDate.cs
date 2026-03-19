@@ -4,10 +4,12 @@ public static class BusinessDate
 {
     private static readonly Lazy<TimeZoneInfo> TimeZone = new(ResolveTimeZone);
 
+    public static DateTime Now()
+        => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone.Value);
+
     public static DateTime Today()
     {
-        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone.Value);
-        return localNow.Date;
+        return Now().Date;
     }
 
     public static DateTime Tomorrow()

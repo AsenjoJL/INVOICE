@@ -2,6 +2,7 @@
 @model HazelInvoice.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
+    var businessNow = BusinessDate.Now();
     var nextDeliveryDate = BusinessDate.Tomorrow().ToString("yyyy-MM-dd");
     string TrendBadgeClass(decimal value) => value > 0 ? "is-up" : (value < 0 ? "is-down" : "is-flat");
     string TrendIcon(decimal value) => value > 0 ? "bi-arrow-up-right" : (value < 0 ? "bi-arrow-down-right" : "bi-dash");
@@ -15,8 +16,8 @@
             <h1 class="dashboard-hero-title">Admin Console</h1>
             <p class="dashboard-hero-text">Track sales, expenses, margins, cash flow, and daily outlet movement from one command center.</p>
             <div class="dashboard-hero-meta">
-                <span><i class="bi bi-calendar3"></i> @DateTime.Now.ToString("dddd, MMMM dd, yyyy")</span>
-                <span><i class="bi bi-clock-history"></i> @DateTime.Now.ToString("h:mm tt")</span>
+                <span><i class="bi bi-calendar3"></i> @businessNow.ToString("dddd, MMMM dd, yyyy")</span>
+                <span><i class="bi bi-clock-history"></i> @businessNow.ToString("h:mm tt")</span>
             </div>
         </div>
         <div class="dashboard-hero-side">
@@ -78,11 +79,11 @@
         <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100 is-warning kpi-card-priority">
                 <div class="metric-head">
-                    <div class="metric-label">Gross Profit</div>
+                    <div class="metric-label">Gross Profit Month</div>
                     <span class="kpi-trend @TrendBadgeClass(Model.GrossProfitTrendPercent)"><i class="bi @TrendIcon(Model.GrossProfitTrendPercent)"></i> @TrendText(Model.GrossProfitTrendPercent)</span>
                 </div>
-                <div class="metric-value">₱@Model.GrossProfit.ToString("N0")</div>
-                <div class="metric-state">@(Model.GrossProfit == 0 ? "No realized margin" : "Revenue minus item cost")</div>
+                <div class="metric-value">₱@Model.GrossProfitMonth.ToString("N0")</div>
+                <div class="metric-state">@(Model.GrossProfitMonth == 0 ? "No realized margin this month" : "Current month revenue minus item cost")</div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
@@ -141,6 +142,16 @@
                 </div>
                 <div class="metric-value">₱@Model.ExpenseMonthly.ToString("N0")</div>
                 <div class="metric-state">@(Model.ExpenseMonthly == 0 ? "No monthly expenses yet" : "Current month spending")</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-success">
+                <div class="metric-head">
+                    <div class="metric-label">Net Profit Month</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.GrossProfitTrendPercent)"><i class="bi @TrendIcon(Model.GrossProfitTrendPercent)"></i> @TrendText(Model.GrossProfitTrendPercent)</span>
+                </div>
+                <div class="metric-value">₱@Model.NetProfitMonth.ToString("N0")</div>
+                <div class="metric-state">@(Model.NetProfitMonth == 0 ? "Gross profit less this month's expenses" : "Current month net result")</div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">

@@ -1,4 +1,5 @@
 @model HazelInvoice.ViewModels.ProfitSummaryViewModel
+@using HazelInvoice.Helpers
 @using HazelInvoice.Configuration
 @using Microsoft.Extensions.Options
 @inject IOptions<FeaturesOptions> Features
@@ -8,6 +9,7 @@
     ViewData["NoteInstructions"] = "Adjust the date range and fee inputs, then use the buttons to add deductions, capital, or purchases. Historical profit uses saved receipt snapshots, so later price setup changes affect future sales only.";
 
     var partnersEnabled = Features.Value.PartnersEnabled;
+    var businessToday = BusinessDate.Today();
 }
 
 <style>
@@ -1671,7 +1673,7 @@
                     <option value="Note">Note (Separate deduction)</option>
                 </select>
                 <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
-                <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                <input type="date" name="Date" class="form-control mb-2" value="@businessToday.ToString("yyyy-MM-dd")" required />
             </div>
             <div class="modal-footer"><button type="submit" class="btn report-modal-submit">Save Deduction</button></div>
         </form>
@@ -1689,7 +1691,7 @@
                 <input type="text" name="FundName" class="form-control mb-2 fw-bold" required placeholder="Fund Name (e.g. Hazel Capital)" />
                 <input type="text" name="Description" class="form-control mb-2" placeholder="Notes (Optional)" />
                 <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
-                <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                <input type="date" name="Date" class="form-control mb-2" value="@businessToday.ToString("yyyy-MM-dd")" required />
             </div>
             <div class="modal-footer"><button type="submit" class="btn report-modal-submit">Save Capital</button></div>
         </form>
@@ -1712,7 +1714,7 @@
                     </select>
                     <input type="text" name="Notes" class="form-control mb-2 fw-bold" required placeholder="Item / Reason" />
                     <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
-                    <input type="date" name="Date" class="form-control mb-2" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                    <input type="date" name="Date" class="form-control mb-2" value="@businessToday.ToString("yyyy-MM-dd")" required />
                 </div>
                 <div class="modal-footer"><button type="submit" class="btn report-modal-submit">Save Purchase</button></div>
             </form>
