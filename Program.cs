@@ -7,6 +7,7 @@ using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Reports;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Expenses;
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
 using Microsoft.AspNetCore.Identity;
@@ -50,6 +51,7 @@ builder.Services.AddScoped<HazelInvoice.Services.IReceiptService, HazelInvoice.S
 builder.Services.AddScoped<IReceiptQueryService, ReceiptQueryService>();
 builder.Services.AddSingleton<IAppCacheInvalidator, AppCacheInvalidator>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
+builder.Services.AddScoped<IExpenseCategoryCatalogService, ExpenseCategoryCatalogService>();
 
 // Dashboard metrics (keep controllers thin / scalable)
 builder.Services.AddScoped<IDashboardMetricsService, DashboardMetricsService>();

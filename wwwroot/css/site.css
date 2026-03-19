@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 :root {
   --ink: #0f172a;
@@ -3665,6 +3665,437 @@ body {
   .admin-page-footerbar,
   .invoice-ui .invoice-hero.admin-page-hero {
     border-radius: 22px !important;
+  }
+}
+
+/* Editorial monochrome system */
+:root {
+  --editorial-bg: #ffffff;
+  --editorial-text: #0a0a0a;
+  --editorial-line: #e8e8e8;
+  --editorial-muted: #888888;
+}
+
+html,
+body {
+  background: var(--editorial-bg) !important;
+  color: var(--editorial-text) !important;
+  font-family: 'DM Sans', sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+.btn,
+.table,
+.card,
+.admin-page-title,
+.dashboard-hero-title,
+.invoice-title,
+.order-title {
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+.sidebar-section-title,
+.admin-kicker,
+.admin-section-kicker,
+.dashboard-hero-kicker,
+.metric-label,
+.surface-card-title,
+.invoice-card-title,
+.table-admin thead th,
+.invoice-table thead th,
+.outlet-table thead th,
+.supplier-table thead th,
+.purchase-table thead th,
+.expense-table thead th,
+.payroll-table thead th,
+.workforce-table thead th,
+.product-table thead th,
+.order-table thead th,
+.form-label,
+.form-floating > label,
+.page-note .note-title,
+.section-chip,
+.dash-chip,
+.title-chip,
+.admin-page-label,
+.expense-page-label {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 9px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  color: var(--editorial-muted) !important;
+  font-weight: 500 !important;
+}
+
+.app-shell {
+  background: #ffffff;
+}
+
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: #ffffff !important;
+  border-right: 1px solid var(--editorial-line) !important;
+  color: var(--editorial-text) !important;
+  box-shadow: none !important;
+}
+
+.sidebar-header {
+  padding: 34px 16px 28px;
+}
+
+.sidebar-brand {
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
+}
+
+.sidebar-brand::before {
+  display: none !important;
+}
+
+.sidebar-subtitle {
+  margin-top: 6px;
+  font-family: 'DM Mono', monospace !important;
+  font-size: 9px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  color: var(--editorial-muted) !important;
+}
+
+.sidebar-nav {
+  gap: 24px !important;
+  padding: 0 16px 32px !important;
+}
+
+.sidebar-section-title {
+  margin: 0 0 10px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.sidebar-link {
+  display: block;
+  margin: 0;
+  padding: 7px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--editorial-text) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  line-height: 1.45;
+}
+
+.sidebar-link i,
+.sidebar-footer {
+  display: none !important;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+  color: var(--editorial-text) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  border-color: transparent !important;
+}
+
+.sidebar-link.active {
+  font-weight: 700 !important;
+}
+
+.sidebar-link.active::before {
+  display: none !important;
+}
+
+.content-area {
+  padding: 34px 48px 48px !important;
+  background: #ffffff !important;
+}
+
+.content-area > .container,
+.content-area > .container-fluid {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.admin-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding: 0 0 22px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--editorial-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.admin-topbar-actions {
+  gap: 0 !important;
+}
+
+.admin-mode-pills {
+  display: none !important;
+}
+
+.admin-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.admin-page-title,
+.dashboard-hero-title,
+.invoice-title,
+.order-title,
+.dash-title,
+.expense-title,
+.purchase-title,
+.workforce-title,
+.product-header h1,
+.outlet-header h1,
+.supplier-header h1,
+.payroll-header h1,
+.dashboard-section-heading h2 {
+  color: var(--editorial-text) !important;
+  font-size: 22px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.admin-page-subtitle,
+.dashboard-hero-text,
+.dashboard-section-heading p,
+.dash-meta,
+.dashboard-meta,
+.expense-sub,
+.purchase-sub,
+.workforce-sub,
+.invoice-sub,
+.order-sub,
+.sub,
+.metric-state,
+.page-note .note-text,
+.summary-note {
+  color: var(--editorial-muted) !important;
+  font-size: 15px !important;
+}
+
+.admin-mode-pill,
+.dashboard-module-pill,
+.dashboard-inline-link,
+.dashboard-table-link,
+.invoice-tag,
+.section-chip,
+.dash-chip,
+.title-chip,
+.quick-action,
+.admin-mini-btn,
+.admin-account-logout {
+  background: #ffffff !important;
+  border: 1px solid var(--editorial-line) !important;
+  border-radius: 0 !important;
+  color: var(--editorial-text) !important;
+  box-shadow: none !important;
+}
+
+.admin-mode-pill.active,
+.dashboard-module-pill.active,
+.admin-mini-btn-primary,
+.admin-action-btn,
+.btn-primary,
+.invoice-btn-primary,
+.invoice-btn-solid,
+.dash-btn-primary,
+.dash-btn-dark {
+  background: #0a0a0a !important;
+  border: 1px solid #0a0a0a !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.admin-action-btn:hover,
+.btn-primary:hover,
+.invoice-btn-primary:hover,
+.invoice-btn-solid:hover,
+.dash-btn-primary:hover,
+.dash-btn-dark:hover {
+  background: #0a0a0a !important;
+  color: #ffffff !important;
+}
+
+.dash-btn-light,
+.invoice-btn-ghost,
+.invoice-btn-outline,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-light,
+.expense-secondary-btn {
+  background: #ffffff !important;
+  border: 1px solid var(--editorial-line) !important;
+  color: var(--editorial-text) !important;
+  box-shadow: none !important;
+}
+
+.admin-account-card,
+.admin-page-hero,
+.admin-filter-strip,
+.admin-page-footerbar,
+.surface-card,
+.card,
+.admin-surface-card,
+.metric-card,
+.order-table-card,
+.invoice-card,
+.product-card,
+.purchase-card,
+.expense-card,
+.payroll-table-card,
+.workforce-card,
+.outlet-card,
+.supplier-card,
+.dashboard-hero-panel,
+.order-hero,
+.order-toolbar,
+.page-note,
+.summary-card,
+.dashboard-shortcuts,
+.dashboard-hero-highlight,
+.matrix-page .outlet-tabs-wrap,
+.matrix-page .matrix-info-panel,
+.matrix-page .matrix-container,
+.matrix-toolbar-upgraded,
+.receiptlist-min .invoice-hero.admin-page-hero,
+.orders-summary-page .admin-page-hero {
+  background: #ffffff !important;
+  border: 1px solid var(--editorial-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.dashboard-hero-panel,
+.order-hero,
+.order-toolbar,
+.dashboard-shortcuts,
+.dashboard-module-bar,
+.admin-page-hero,
+.admin-filter-strip {
+  padding: 20px !important;
+}
+
+.metric-value,
+.kpi-value,
+.invoice-summary-total,
+.dashboard-hero-highlight strong {
+  color: var(--editorial-text) !important;
+  font-size: 32px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.table-admin thead th,
+.invoice-table thead th,
+.outlet-table thead th,
+.supplier-table thead th,
+.purchase-table thead th,
+.expense-table thead th,
+.payroll-table thead th,
+.workforce-table thead th,
+.product-table thead th,
+.order-table thead th {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--editorial-line) !important;
+}
+
+.table-admin td,
+.invoice-table tbody td,
+.outlet-table td,
+.supplier-table td,
+.purchase-table td,
+.expense-table td,
+.payroll-table td,
+.workforce-table td,
+.product-table td,
+.order-table tbody td {
+  border-color: var(--editorial-line) !important;
+  color: var(--editorial-text) !important;
+  font-size: 15px !important;
+}
+
+.table-hover tbody tr:hover,
+.table-admin tbody tr:hover,
+.invoice-table tbody tr:hover,
+.outlet-table tbody tr:hover,
+.supplier-table tbody tr:hover,
+.purchase-table tbody tr:hover,
+.expense-table tbody tr:hover,
+.payroll-table tbody tr:hover,
+.workforce-table tbody tr:hover,
+.product-table tbody tr:hover,
+.order-table tbody tr:hover {
+  background: #fafafa !important;
+}
+
+.form-control,
+.form-select,
+.input-group-text,
+.content-area .form-control,
+.content-area .form-select {
+  min-height: 44px;
+  background: #ffffff !important;
+  border: 1px solid var(--editorial-line) !important;
+  border-radius: 0 !important;
+  color: var(--editorial-text) !important;
+  font-size: 15px !important;
+  box-shadow: none !important;
+}
+
+.form-control:focus,
+.form-select:focus,
+.content-area .form-control:focus,
+.content-area .form-select:focus {
+  border-color: #d4d4d4 !important;
+  box-shadow: none !important;
+}
+
+.btn,
+.content-area .btn {
+  min-height: 42px;
+  border-radius: 0 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+
+.status-pill,
+.payroll-status,
+.workforce-status,
+.badge {
+  border-radius: 999px !important;
+  font-family: 'DM Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.08em !important;
+}
+
+@media (max-width: 991.98px) {
+  .sidebar.offcanvas-start {
+    width: 280px;
+  }
+
+  .content-area {
+    padding: 24px !important;
   }
 }
 

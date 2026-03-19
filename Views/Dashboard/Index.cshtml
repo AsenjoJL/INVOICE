@@ -153,6 +153,52 @@
         </div>
     </div>
 
+    <section class="dashboard-section-heading">
+        <div>
+            <h2>Expense Breakdown</h2>
+            <p>Expense totals grouped by your daily, weekly, monthly, and uncategorized records.</p>
+        </div>
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Daily Expenses</div>
+                </div>
+                <div class="metric-value">₱@Model.DailyExpenseTotal.ToString("N0")</div>
+                <div class="metric-state">Running total for daily expense categories</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Weekly Expenses</div>
+                </div>
+                <div class="metric-value">₱@Model.WeeklyExpenseTotal.ToString("N0")</div>
+                <div class="metric-state">Running total for weekly expense categories</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Monthly Expenses</div>
+                </div>
+                <div class="metric-value">₱@Model.MonthlyExpenseTotal.ToString("N0")</div>
+                <div class="metric-state">Running total for monthly expense categories</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Other Expenses</div>
+                </div>
+                <div class="metric-value">₱@Model.OtherExpenseTotal.ToString("N0")</div>
+                <div class="metric-state">Expenses outside the preset schedule groups</div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
             <div class="surface-card h-100">

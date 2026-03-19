@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Memory;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Expenses;
 
 namespace HazelInvoice.Services.Dashboard;
 
@@ -14,17 +15,20 @@ public class DashboardMetricsService : IDashboardMetricsService
     private readonly ILogger<DashboardMetricsService> _logger;
     private readonly IMemoryCache _cache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly IExpenseCategoryCatalogService _expenseCategoryCatalog;
 
     public DashboardMetricsService(
         ApplicationDbContext db,
         ILogger<DashboardMetricsService> logger,
         IMemoryCache cache,
-        IAppCacheInvalidator cacheInvalidator)
+        IAppCacheInvalidator cacheInvalidator,
+        IExpenseCategoryCatalogService expenseCategoryCatalog)
     {
         _db = db;
         _logger = logger;
         _cache = cache;
         _cacheInvalidator = cacheInvalidator;
+        _expenseCategoryCatalog = expenseCategoryCatalog;
     }
 
     public async Task<DashboardViewModel> BuildAsync(DateTime today, CancellationToken ct = default)
@@ -121,6 +125,12 @@ public class DashboardMetricsService : IDashboardMetricsService
         vm.UnpaidTrendPercent = TrendPercent(receiptsAgg.UnpaidToday, receiptsAgg.UnpaidYesterday);
 
         // ---- Expenses + Payments aggregates ----
+        var expenseGroupMap = await _expenseCategoryCatalog.GetGroupMapAsync(ct);
+        var dailyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Daily).Select(x => x.Key).ToArray();
+        var weeklyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Weekly).Select(x => x.Key).ToArray();
+        var monthlyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Monthly).Select(x => x.Key).ToArray();
+        var categorizedExpenseNames = expenseGroupMap.Keys.ToArray();
+
         var expenseAgg = await _db.Expenses
             .AsNoTracking()
             .GroupBy(_ => 1)
@@ -131,7 +141,11 @@ public class DashboardMetricsService : IDashboardMetricsService
                 ExpenseMonthly = g.Where(e => e.Date >= monthStart && e.Date < monthEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
                 ExpensePrevMonth = g.Where(e => e.Date >= prevMonthStart && e.Date < prevMonthEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
                 ExpenseAllTime = g.Sum(e => (decimal?)e.Amount) ?? 0m,
-                ExpenseBeforeToday = g.Where(e => e.Date < dayStart).Sum(e => (decimal?)e.Amount) ?? 0m
+                ExpenseBeforeToday = g.Where(e => e.Date < dayStart).Sum(e => (decimal?)e.Amount) ?? 0m,
+                DailyExpenseTotal = g.Where(e => dailyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
+                WeeklyExpenseTotal = g.Where(e => weeklyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
+                MonthlyExpenseBucketTotal = g.Where(e => monthlyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
+                OtherExpenseTotal = g.Where(e => !categorizedExpenseNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m
             })
             .SingleOrDefaultAsync(ct)
             ?? new
@@ -141,7 +155,11 @@ public class DashboardMetricsService : IDashboardMetricsService
                 ExpenseMonthly = 0m,
                 ExpensePrevMonth = 0m,
                 ExpenseAllTime = 0m,
-                ExpenseBeforeToday = 0m
+                ExpenseBeforeToday = 0m,
+                DailyExpenseTotal = 0m,
+                WeeklyExpenseTotal = 0m,
+                MonthlyExpenseBucketTotal = 0m,
+                OtherExpenseTotal = 0m
             };
 
         var paymentAgg = await _db.Payments
@@ -157,6 +175,10 @@ public class DashboardMetricsService : IDashboardMetricsService
 
         vm.ExpenseToday = expenseAgg.ExpenseToday;
         vm.ExpenseMonthly = expenseAgg.ExpenseMonthly;
+        vm.DailyExpenseTotal = expenseAgg.DailyExpenseTotal;
+        vm.WeeklyExpenseTotal = expenseAgg.WeeklyExpenseTotal;
+        vm.MonthlyExpenseTotal = expenseAgg.MonthlyExpenseBucketTotal;
+        vm.OtherExpenseTotal = expenseAgg.OtherExpenseTotal;
         vm.TotalExpenseAllTime = expenseAgg.ExpenseAllTime;
         vm.ExpenseTodayTrendPercent = TrendPercent(expenseAgg.ExpenseToday, expenseAgg.ExpenseYesterday);
         vm.ExpenseMonthlyTrendPercent = TrendPercent(expenseAgg.ExpenseMonthly, expenseAgg.ExpensePrevMonth);

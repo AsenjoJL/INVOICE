@@ -1,12 +1,17 @@
 @model HazelInvoice.Models.Expense
 @using HazelInvoice.Models
+@using System.Text.Json
 @{
     ViewData["Title"] = "Record Expense";
 
     var categoryGroups = (ViewBag.CategoryGroups as IEnumerable<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>)
         ?? Enumerable.Empty<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>();
-    var vendorOptions = (ViewBag.VendorOptions as List<string>) ?? new List<string>();
+    var categoryDefinitions = (ViewBag.CategoryDefinitions as IEnumerable<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryDefinitionViewModel>)
+        ?? Enumerable.Empty<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryDefinitionViewModel>();
+    var categoryOptions = categoryGroups.SelectMany(group => group.Items).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item).ToList();
     var paymentOptions = Enum.GetNames<PaymentMethod>();
+    var groupOptions = Enum.GetValues<ExpenseCategoryGroup>();
+    var selectedCategoryGroup = (ViewBag.SelectedCategoryGroup as string) ?? ExpenseCategoryGroup.Other.ToString();
     var selectedPayment = Model?.PaymentMethod.ToString() ?? PaymentMethod.Cash.ToString();
     var dateValue = Model is not null && Model.Date != default
         ? Model.Date.ToString("yyyy-MM-dd")
@@ -52,9 +57,6 @@
                     @Html.AntiForgeryToken()
                     <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
 
-                    <input type="hidden" asp-for="Category" id="categoryValue" />
-                    <input type="hidden" asp-for="Vendor" id="vendorValue" />
-
                     <div class="expense-form-shell">
                         <div class="expense-form-grid">
                             <div class="expense-field">
@@ -78,45 +80,30 @@
 
                             <div class="expense-field">
                                 <div class="expense-field-head">
-                                    <label class="expense-page-label" for="categorySelect">Category</label>
+                                    <label asp-for="Category" class="expense-page-label">Category</label>
                                 </div>
-                                <select id="categorySelect" class="expense-field-select">
-                                    <option value="">Select category</option>
-                                    @foreach (var group in categoryGroups)
+                                <input asp-for="Category" id="expenseCategory" class="expense-field-input" list="expenseCategoryList" placeholder="Type or choose a category" autocomplete="off" />
+                                <datalist id="expenseCategoryList">
+                                    @foreach (var category in categoryOptions)
                                     {
-                                        if (group.Items.Count == 0)
-                                        {
-                                            continue;
-                                        }
-
-                                        <optgroup label="@group.Label">
-                                            @foreach (var item in group.Items)
-                                            {
-                                                <option value="@item">@item</option>
-                                            }
-                                        </optgroup>
+                                        <option value="@category"></option>
                                     }
-                                    <option value="__other__">Other...</option>
-                                </select>
-                                <input id="categoryOther" class="expense-field-input mt-3 d-none" placeholder="Enter category" />
-                                <div class="expense-help">Choose from your daily, weekly, or monthly expense list.</div>
+                                </datalist>
+                                <div class="expense-help">You can type a new category or choose from the daily, weekly, and monthly list.</div>
                                 <span asp-validation-for="Category" class="field-validation-error"></span>
                             </div>
 
                             <div class="expense-field">
                                 <div class="expense-field-head">
-                                    <label class="expense-page-label" for="vendorSelect">Payee / Vendor</label>
+                                    <label for="categoryGroup" class="expense-page-label">Schedule</label>
                                 </div>
-                                <select id="vendorSelect" class="expense-field-select">
-                                    <option value="">Select vendor</option>
-                                    @foreach (var vendor in vendorOptions)
+                                <select id="categoryGroup" name="categoryGroup" class="expense-field-select">
+                                    @foreach (var group in groupOptions)
                                     {
-                                        <option value="@vendor">@vendor</option>
+                                        <option value="@group" selected="@(selectedCategoryGroup == group.ToString() ? "selected" : null)">@ExpenseCategoryCatalog.GetLabel(group)</option>
                                     }
-                                    <option value="__other__">Other...</option>
                                 </select>
-                                <input id="vendorOther" class="expense-field-input mt-3 d-none" placeholder="Enter payee or vendor" />
-                                <span asp-validation-for="Vendor" class="field-validation-error"></span>
+                                <div class="expense-help">This schedule controls how the category appears in the ledger, dashboard, and profit report.</div>
                             </div>
 
                             <div class="expense-field-wide">
@@ -160,48 +147,48 @@
 
 <script>
     (function () {
-        const categoryValue = document.getElementById('categoryValue');
-        const categorySelect = document.getElementById('categorySelect');
-        const categoryOther = document.getElementById('categoryOther');
-        const vendorValue = document.getElementById('vendorValue');
-        const vendorSelect = document.getElementById('vendorSelect');
-        const vendorOther = document.getElementById('vendorOther');
+        const amountInput = document.getElementById('expenseAmount');
+        const categoryInput = document.getElementById('expenseCategory');
+        const categoryGroup = document.getElementById('categoryGroup');
+        if (!amountInput) return;
 
-        function syncHiddenValue(select, otherInput, hiddenInput) {
-            if (select.value === '__other__') {
-                otherInput.classList.remove('d-none');
-                hiddenInput.value = otherInput.value || '';
+        const categoryLookup = new Map(
+            @Html.Raw(JsonSerializer.Serialize(categoryDefinitions.ToDictionary(
+                item => item.Name,
+                item => item.GroupValue,
+                StringComparer.OrdinalIgnoreCase)))
+        );
+
+        amountInput.addEventListener('blur', () => {
+            const raw = amountInput.value.trim();
+            if (!raw) {
                 return;
             }
 
-            otherInput.classList.add('d-none');
-            hiddenInput.value = select.value || '';
-        }
-
-        function initializeSelect(select, otherInput, hiddenInput) {
-            const current = hiddenInput.value || '';
-            if (!current) {
-                return;
+            const parsed = Number.parseFloat(raw);
+            if (!Number.isNaN(parsed)) {
+                amountInput.value = parsed.toFixed(2);
             }
+        });
 
-            const option = Array.from(select.options).find(item => item.value.toLowerCase() === current.toLowerCase());
-            if (option) {
-                select.value = option.value;
-                otherInput.classList.add('d-none');
-            } else {
-                select.value = '__other__';
-                otherInput.classList.remove('d-none');
-                otherInput.value = current;
-            }
+        if (categoryInput && categoryGroup) {
+            const syncGroup = () => {
+                const normalized = categoryInput.value.trim().toUpperCase();
+                if (!normalized) {
+                    categoryGroup.value = 'Other';
+                    return;
+                }
+
+                const existing = categoryLookup.get(normalized);
+                if (existing) {
+                    categoryGroup.value = existing;
+                }
+            };
+
+            categoryInput.addEventListener('change', syncGroup);
+            categoryInput.addEventListener('blur', syncGroup);
+            syncGroup();
         }
-
-        categorySelect.addEventListener('change', () => syncHiddenValue(categorySelect, categoryOther, categoryValue));
-        vendorSelect.addEventListener('change', () => syncHiddenValue(vendorSelect, vendorOther, vendorValue));
-        categoryOther.addEventListener('input', () => { categoryValue.value = categoryOther.value || ''; });
-        vendorOther.addEventListener('input', () => { vendorValue.value = vendorOther.value || ''; });
-
-        initializeSelect(categorySelect, categoryOther, categoryValue);
-        initializeSelect(vendorSelect, vendorOther, vendorValue);
     })();
 </script>
 

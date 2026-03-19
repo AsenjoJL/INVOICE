@@ -10,6 +10,30 @@ public static class DbInitializer
         // Ensure database is created
         await context.Database.MigrateAsync();
 
+        foreach (var (name, group) in ExpenseCategoryCatalog.Defaults)
+        {
+            var normalized = ExpenseCategoryCatalog.NormalizeName(name);
+            var existing = await context.ExpenseCategoryDefinitions
+                .FirstOrDefaultAsync(x => x.Name == normalized);
+
+            if (existing is null)
+            {
+                context.ExpenseCategoryDefinitions.Add(new ExpenseCategoryDefinition
+                {
+                    Name = normalized,
+                    Group = group,
+                    IsSystem = true
+                });
+            }
+            else if (existing.Group != group)
+            {
+                existing.Group = group;
+                existing.IsSystem = true;
+            }
+        }
+
+        await context.SaveChangesAsync();
+
         // 1. Seed Customers
         if (!await context.Customers.AnyAsync())
         {

@@ -12,6 +12,7 @@ using HazelInvoice.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Caching.Memory;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Expenses;
 
 namespace HazelInvoice.Services.Reports;
 
@@ -23,43 +24,27 @@ internal sealed record PartnerAttributedRow(string PartnerName, string ItemName,
 /// </summary>
 public sealed class ProfitReportService : IProfitReportService
 {
-    private static readonly Dictionary<string, string> ExpenseGroupByCategory = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["FOOD ALLOWANCE"] = "Daily Expenses",
-        ["DRIVER FEE"] = "Daily Expenses",
-        ["PLASTIC/SUPPLIES"] = "Daily Expenses",
-        ["DIESEL"] = "Daily Expenses",
-        ["DAILY DUES"] = "Daily Expenses",
-        ["CASH INTEREST"] = "Weekly Expenses",
-        ["PUSH CART"] = "Weekly Expenses",
-        ["TENT"] = "Weekly Expenses",
-        ["LABOR"] = "Weekly Expenses",
-        ["CARD INC"] = "Weekly Expenses",
-        ["ASIALINK CORP"] = "Monthly Expenses",
-        ["RAFI CORP"] = "Monthly Expenses",
-        ["BOARDING HOUSE"] = "Monthly Expenses",
-        ["PARKING FEE"] = "Monthly Expenses",
-        ["TRUCK MAINTENANCE"] = "Monthly Expenses"
-    };
-
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ProfitReportService> _logger;
     private readonly bool _partnersEnabled;
     private readonly IMemoryCache _cache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly IExpenseCategoryCatalogService _expenseCategoryCatalog;
 
     public ProfitReportService(
         ApplicationDbContext context,
         ILogger<ProfitReportService> logger,
         IOptions<FeaturesOptions> features,
         IMemoryCache cache,
-        IAppCacheInvalidator cacheInvalidator)
+        IAppCacheInvalidator cacheInvalidator,
+        IExpenseCategoryCatalogService expenseCategoryCatalog)
     {
         _context = context;
         _logger = logger;
         _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
         _cache = cache;
         _cacheInvalidator = cacheInvalidator;
+        _expenseCategoryCatalog = expenseCategoryCatalog;
     }
 
     public async Task<ProfitSummaryViewModel> BuildAsync(ProfitReportQueryOptions options, CancellationToken ct = default)
@@ -275,7 +260,8 @@ public sealed class ProfitReportService : IProfitReportService
         vm.TotalCapitalFund = capitals.Sum(c => c.Amount);
 
         vm.Expenses = expenses;
-        vm.ExpenseGroups = BuildExpenseGroups(expenses);
+        var expenseGroupMap = await _expenseCategoryCatalog.GetGroupMapAsync(ct);
+        vm.ExpenseGroups = BuildExpenseGroups(expenses, expenseGroupMap);
         vm.TotalExpenses = expenses.Sum(e => e.Amount);
 
         // Net Profit = Gross - Deductions - Expenses - Capital Funds (Retained)
@@ -420,22 +406,21 @@ public sealed class ProfitReportService : IProfitReportService
         return vm;
     }
 
-    private static List<ExpenseGroupViewModel> BuildExpenseGroups(List<Expense> expenses)
+    private static List<ExpenseGroupViewModel> BuildExpenseGroups(
+        List<Expense> expenses,
+        IReadOnlyDictionary<string, ExpenseCategoryGroup> expenseGroupMap)
     {
-        var grouped = new Dictionary<string, List<Expense>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Daily Expenses"] = new(),
-            ["Weekly Expenses"] = new(),
-            ["Monthly Expenses"] = new(),
-            ["Other Expenses"] = new()
-        };
+        var grouped = ExpenseCategoryCatalog.OrderedGroups.ToDictionary(
+            group => ExpenseCategoryCatalog.GetLabel(group),
+            _ => new List<Expense>(),
+            StringComparer.OrdinalIgnoreCase);
 
         foreach (var expense in expenses.OrderBy(e => e.Date).ThenBy(e => e.Category))
         {
-            var category = (expense.Category ?? string.Empty).Trim();
-            var groupName = ExpenseGroupByCategory.TryGetValue(category, out var mapped)
-                ? mapped
-                : "Other Expenses";
+            var category = ExpenseCategoryCatalog.NormalizeName(expense.Category);
+            var groupName = expenseGroupMap.TryGetValue(category, out var mapped)
+                ? ExpenseCategoryCatalog.GetLabel(mapped)
+                : ExpenseCategoryCatalog.GetLabel(ExpenseCategoryGroup.Other);
 
             grouped[groupName].Add(expense);
         }

@@ -1,8 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-
 :root {
-    --product-font: "Plus Jakarta Sans", "Inter", "Segoe UI", Arial, sans-serif;
-    --product-font-mono: "JetBrains Mono", "Consolas", "Courier New", monospace;
+    --product-font: "DM Sans", "Segoe UI", Arial, sans-serif;
+    --product-font-mono: "DM Mono", "Consolas", "Courier New", monospace;
     --product-bg: #f6f8fb;
     --product-surface: #ffffff;
     --product-text: #0f172a;
