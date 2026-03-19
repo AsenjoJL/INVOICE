@@ -41,9 +41,7 @@ public class WeeklyPricesController : Controller
             return RedirectToPriceVersus(model.TargetDate);
         }
 
-        var itemsToSave = singleProductId.HasValue
-            ? model.Items.Where(i => i.ProductId == singleProductId.Value).ToList()
-            : model.Items.ToList();
+        var itemsToSave = GetItemsToSave(model, singleProductId);
 
         if (itemsToSave.Count == 0)
         {
@@ -51,148 +49,53 @@ public class WeeklyPricesController : Controller
             return RedirectToPriceVersus(model.TargetDate);
         }
 
-        var (weekStart, weekEnd) = GetWeekRange(model.TargetDate);
-
-        var pids = itemsToSave.Select(i => i.ProductId).Distinct().ToList();
-
-        var productMap = await _context.Products
-            .Where(p => pids.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, p => p);
-
-        var existing = await _context.WeeklyPrices
-            .Where(w => pids.Contains(w.ProductId) &&
-                        w.EffectiveFrom <= model.TargetDate && w.EffectiveTo >= model.TargetDate)
-            .ToListAsync();
-
-        var existingGroups = existing
-            .GroupBy(w => w.ProductId)
-            .ToList();
-
-        var existingMap = existingGroups.ToDictionary(
-            g => g.Key,
-            g => g.OrderByDescending(w => w.EffectiveFrom)
-                  .ThenByDescending(w => w.Id)
-                  .First());
-
-        var duplicateWeeklyPrices = existingGroups
-            .SelectMany(g => g.OrderByDescending(w => w.EffectiveFrom).ThenByDescending(w => w.Id).Skip(1))
-            .ToList();
-
-        if (duplicateWeeklyPrices.Count > 0)
-        {
-            _context.WeeklyPrices.RemoveRange(duplicateWeeklyPrices);
-        }
-
-        var savedChanges = 0;
-
-        foreach (var item in itemsToSave)
-        {
-            if (!productMap.TryGetValue(item.ProductId, out var prod)) continue;
-
-            var normalized = NormalizePostedPricing(item, prod);
-            var masterCost = prod.UnitCost;
-            var masterMarkup = prod.Markup;
-            var masterDeliveryFee = prod.DeliveryFee;
-            var cost = normalized.Cost;
-            var markup = normalized.Markup;
-            var basePrice = normalized.BasePrice;
-            var deliveryPrice = normalized.DeliveryPrice;
-            var deliveryFee = normalized.DeliveryFee;
-
-            if (model.ApplyToMasterCost && masterCost != cost)
-            {
-                prod.UnitCost = cost;
-                masterCost = cost;
-                savedChanges++;
-            }
-
-            decimal? costOverride = null;
-            if (!model.ApplyToMasterCost && cost != masterCost)
-            {
-                costOverride = cost;
-            }
-
-            decimal? deliveryFeeOverride = null;
-            if (deliveryFee != masterDeliveryFee)
-            {
-                deliveryFeeOverride = deliveryFee;
-            }
-
-            var effectiveCost = costOverride ?? masterCost;
-            var effectiveDeliveryFee = deliveryFeeOverride ?? masterDeliveryFee;
-            basePrice = effectiveCost + markup;
-            deliveryPrice = basePrice + effectiveDeliveryFee;
-
-            var shouldHaveWeekly = costOverride.HasValue || markup != masterMarkup || deliveryFeeOverride.HasValue;
-
-            if (existingMap.TryGetValue(item.ProductId, out var wp))
-            {
-                if (!shouldHaveWeekly)
-                {
-                    _context.WeeklyPrices.Remove(wp);
-                    savedChanges++;
-                    continue;
-                }
-
-                bool changed = false;
-                if (wp.CostOverride != costOverride)
-                {
-                    wp.CostOverride = costOverride;
-                    changed = true;
-                }
-                if (wp.DeliveryFee != deliveryFeeOverride)
-                {
-                    wp.DeliveryFee = deliveryFeeOverride;
-                    changed = true;
-                }
-                if (wp.Markup != markup)
-                {
-                    wp.Markup = markup;
-                    changed = true;
-                }
-                if (wp.BasePrice != basePrice || wp.DeliveryPrice != deliveryPrice)
-                {
-                    wp.BasePrice = basePrice;
-                    wp.DeliveryPrice = deliveryPrice;
-                    changed = true;
-                }
-
-                if (changed)
-                {
-                    _context.Update(wp);
-                    savedChanges++;
-                }
-            }
-            else if (shouldHaveWeekly)
-            {
-                var newWp = new WeeklyPrice
-                {
-                    ProductId = item.ProductId,
-                    EffectiveFrom = weekStart,
-                    EffectiveTo = weekEnd,
-                    CostOverride = costOverride,
-                    DeliveryFee = deliveryFeeOverride,
-                    BasePrice = basePrice,
-                    DeliveryPrice = deliveryPrice,
-                    Markup = markup
-                };
-                _context.Add(newWp);
-                savedChanges++;
-            }
-        }
-
-        await _context.SaveChangesAsync();
-        _cacheInvalidator.InvalidateWeeklyPrices();
-        _cacheInvalidator.InvalidateProducts();
-        _cacheInvalidator.InvalidateDashboard();
-        _cacheInvalidator.InvalidateProfitReports();
-        TempData["SuccessMessage"] = savedChanges > 0
+        var saveResult = await SavePriceItemsAsync(model.TargetDate, model.ApplyToMasterCost, itemsToSave);
+        TempData["SuccessMessage"] = saveResult.SavedChanges > 0
             ? singleProductId.HasValue
                 ? "Saved the selected product price."
-                : $"Saved changes for {savedChanges} price record(s)."
+                : $"Saved changes for {saveResult.SavedChanges} price record(s)."
             : "No price changes were detected.";
 
         return RedirectToPriceVersus(model.TargetDate);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SavePriceRow(PriceVersusViewModel model, int singleProductId)
+    {
+        if (model.Items == null || model.Items.Count == 0)
+        {
+            return BadRequest(new { success = false, message = "No price row was submitted." });
+        }
+
+        var itemsToSave = GetItemsToSave(model, singleProductId);
+        if (itemsToSave.Count == 0)
+        {
+            return BadRequest(new { success = false, message = "No matching product row was found." });
+        }
+
+        var saveResult = await SavePriceItemsAsync(model.TargetDate, model.ApplyToMasterCost, itemsToSave);
+        var savedItem = saveResult.Items.First();
+
+        return Json(new
+        {
+            success = true,
+            changed = saveResult.SavedChanges > 0,
+            message = saveResult.SavedChanges > 0 ? "Saved the selected product price." : "No price changes were detected.",
+            item = new
+            {
+                savedItem.ProductId,
+                cost = savedItem.Cost.ToString("0.00"),
+                markup = savedItem.Markup.ToString("0.00"),
+                basePrice = savedItem.BasePrice.ToString("0.00"),
+                deliveryPrice = savedItem.DeliveryPrice.ToString("0.00"),
+                deliveryFee = (savedItem.DeliveryFee ?? 0m).ToString("0.00"),
+                hasWeeklyRecord = savedItem.HasWeeklyRecord,
+                masterCost = savedItem.MasterCost.ToString("0.00"),
+                masterMarkup = savedItem.MasterMarkup.ToString("0.00"),
+                masterDeliveryFee = savedItem.MasterDeliveryFee.ToString("0.00")
+            }
+        });
     }
 
     // GET: WeeklyPrices
@@ -419,6 +322,11 @@ public class WeeklyPricesController : Controller
         return _context.WeeklyPrices.Any(e => e.Id == id);
     }
 
+    private static List<PriceVersusItem> GetItemsToSave(PriceVersusViewModel model, int? singleProductId)
+        => singleProductId.HasValue
+            ? model.Items.Where(i => i.ProductId == singleProductId.Value).ToList()
+            : model.Items.ToList();
+
     private IActionResult RedirectToPriceVersus(DateTime targetDate)
         => RedirectToAction(nameof(PriceVersus), new { date = targetDate.ToString("yyyy-MM-dd") });
 
@@ -486,5 +394,167 @@ public class WeeklyPricesController : Controller
         }
 
         return (cost, markup, basePrice, deliveryPrice, deliveryFee);
+    }
+
+    private async Task<(int SavedChanges, List<PriceVersusItem> Items)> SavePriceItemsAsync(
+        DateTime targetDate,
+        bool applyToMasterCost,
+        List<PriceVersusItem> itemsToSave)
+    {
+        var (weekStart, weekEnd) = GetWeekRange(targetDate);
+
+        var pids = itemsToSave.Select(i => i.ProductId).Distinct().ToList();
+
+        var productMap = await _context.Products
+            .Where(p => pids.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p);
+
+        var existing = await _context.WeeklyPrices
+            .Where(w => pids.Contains(w.ProductId) &&
+                        w.EffectiveFrom <= targetDate && w.EffectiveTo >= targetDate)
+            .ToListAsync();
+
+        var existingGroups = existing
+            .GroupBy(w => w.ProductId)
+            .ToList();
+
+        var existingMap = existingGroups.ToDictionary(
+            g => g.Key,
+            g => g.OrderByDescending(w => w.EffectiveFrom)
+                  .ThenByDescending(w => w.Id)
+                  .First());
+
+        var duplicateWeeklyPrices = existingGroups
+            .SelectMany(g => g.OrderByDescending(w => w.EffectiveFrom).ThenByDescending(w => w.Id).Skip(1))
+            .ToList();
+
+        if (duplicateWeeklyPrices.Count > 0)
+        {
+            _context.WeeklyPrices.RemoveRange(duplicateWeeklyPrices);
+        }
+
+        var savedChanges = 0;
+        var savedItems = new List<PriceVersusItem>(itemsToSave.Count);
+
+        foreach (var item in itemsToSave)
+        {
+            if (!productMap.TryGetValue(item.ProductId, out var prod))
+            {
+                continue;
+            }
+
+            var normalized = NormalizePostedPricing(item, prod);
+            var masterCost = prod.UnitCost;
+            var masterMarkup = prod.Markup;
+            var masterDeliveryFee = prod.DeliveryFee;
+            var cost = normalized.Cost;
+            var markup = normalized.Markup;
+            var deliveryFee = normalized.DeliveryFee;
+
+            if (applyToMasterCost && masterCost != cost)
+            {
+                prod.UnitCost = cost;
+                masterCost = cost;
+                savedChanges++;
+            }
+
+            decimal? costOverride = null;
+            if (!applyToMasterCost && cost != masterCost)
+            {
+                costOverride = cost;
+            }
+
+            decimal? deliveryFeeOverride = null;
+            if (deliveryFee != masterDeliveryFee)
+            {
+                deliveryFeeOverride = deliveryFee;
+            }
+
+            var effectiveCost = costOverride ?? masterCost;
+            var effectiveDeliveryFee = deliveryFeeOverride ?? masterDeliveryFee;
+            var basePrice = effectiveCost + markup;
+            var deliveryPrice = basePrice + effectiveDeliveryFee;
+            var shouldHaveWeekly = costOverride.HasValue || markup != masterMarkup || deliveryFeeOverride.HasValue;
+
+            if (existingMap.TryGetValue(item.ProductId, out var wp))
+            {
+                if (!shouldHaveWeekly)
+                {
+                    _context.WeeklyPrices.Remove(wp);
+                    savedChanges++;
+                }
+                else
+                {
+                    var changed = false;
+                    if (wp.CostOverride != costOverride)
+                    {
+                        wp.CostOverride = costOverride;
+                        changed = true;
+                    }
+                    if (wp.DeliveryFee != deliveryFeeOverride)
+                    {
+                        wp.DeliveryFee = deliveryFeeOverride;
+                        changed = true;
+                    }
+                    if (wp.Markup != markup)
+                    {
+                        wp.Markup = markup;
+                        changed = true;
+                    }
+                    if (wp.BasePrice != basePrice || wp.DeliveryPrice != deliveryPrice)
+                    {
+                        wp.BasePrice = basePrice;
+                        wp.DeliveryPrice = deliveryPrice;
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        _context.Update(wp);
+                        savedChanges++;
+                    }
+                }
+            }
+            else if (shouldHaveWeekly)
+            {
+                var newWp = new WeeklyPrice
+                {
+                    ProductId = item.ProductId,
+                    EffectiveFrom = weekStart,
+                    EffectiveTo = weekEnd,
+                    CostOverride = costOverride,
+                    DeliveryFee = deliveryFeeOverride,
+                    BasePrice = basePrice,
+                    DeliveryPrice = deliveryPrice,
+                    Markup = markup
+                };
+                _context.Add(newWp);
+                savedChanges++;
+            }
+
+            savedItems.Add(new PriceVersusItem
+            {
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                Unit = item.Unit,
+                Cost = effectiveCost,
+                Markup = markup,
+                BasePrice = basePrice,
+                DeliveryPrice = deliveryPrice,
+                DeliveryFee = effectiveDeliveryFee,
+                MasterCost = masterCost,
+                MasterMarkup = masterMarkup,
+                MasterDeliveryFee = masterDeliveryFee,
+                HasWeeklyRecord = shouldHaveWeekly
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateWeeklyPrices();
+        _cacheInvalidator.InvalidateProducts();
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
+
+        return (savedChanges, savedItems);
     }
 }
