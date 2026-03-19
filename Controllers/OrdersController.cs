@@ -564,9 +564,7 @@ public class OrdersController : Controller
             }
 
             matchedProductIds.Add(product.Id);
-
-            if (priceCol > 0 && SimpleXlsxReader.TryParseDecimal(sheet.GetCell(r, priceCol), out var price) && price >= 0)
-                prices[product.Id] = price;
+            var rowQuantities = new List<(int CustomerId, decimal Qty)>();
 
             foreach (var oc in matchedOutletCols)
             {
@@ -576,7 +574,25 @@ public class OrdersController : Controller
                     fractionalQtyCount++;
                 if (qty < 0) qty = 0m;
 
-                matrix[$"{product.Id}_{oc.Value.Id}"] = qty;
+                rowQuantities.Add((oc.Value.Id, qty));
+            }
+
+            foreach (var rowQty in rowQuantities)
+            {
+                var key = $"{product.Id}_{rowQty.CustomerId}";
+                if (matrix.TryGetValue(key, out var existingQty))
+                    matrix[key] = existingQty + rowQty.Qty;
+                else
+                    matrix[key] = rowQty.Qty;
+            }
+
+            var rowHasPositiveQuantity = rowQuantities.Any(x => x.Qty > 0);
+            if (priceCol > 0 &&
+                SimpleXlsxReader.TryParseDecimal(sheet.GetCell(r, priceCol), out var price) &&
+                price >= 0 &&
+                (!prices.ContainsKey(product.Id) || rowHasPositiveQuantity))
+            {
+                prices[product.Id] = price;
             }
         }
 
