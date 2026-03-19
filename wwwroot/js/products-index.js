@@ -3,21 +3,25 @@
 
     const SCROLL_KEY = 'products:index:scrollY';
     const RESTORE_KEY = 'products:index:restore';
+    const STATE_KEY = 'products:index:viewState';
 
-    const shouldRestore = sessionStorage.getItem(RESTORE_KEY) === '1';
-    if (shouldRestore) {
-        const y = parseInt(sessionStorage.getItem(SCROLL_KEY) || '0', 10);
-        if (!Number.isNaN(y) && y > 0) {
-            window.requestAnimationFrame(() => window.scrollTo(0, y));
+    function getSavedState() {
+        try {
+            return JSON.parse(sessionStorage.getItem(STATE_KEY) || 'null');
+        } catch {
+            return null;
         }
-        sessionStorage.removeItem(RESTORE_KEY);
-        sessionStorage.removeItem(SCROLL_KEY);
     }
 
     document.querySelectorAll('.product-edit-link').forEach(link => {
         link.addEventListener('click', () => {
             sessionStorage.setItem(SCROLL_KEY, String(window.scrollY || 0));
             sessionStorage.setItem(RESTORE_KEY, '1');
+            const state = getSavedState() || {};
+            sessionStorage.setItem(STATE_KEY, JSON.stringify({
+                ...state,
+                scrollY: window.scrollY || 0
+            }));
         });
     });
 })();
@@ -65,6 +69,40 @@
         sortDir: SORT.ASC,
         selectedIds: new Set()
     };
+    const shouldRestore = sessionStorage.getItem('products:index:restore') === '1';
+
+    function loadViewState() {
+        if (!shouldRestore) return;
+
+        try {
+            const saved = JSON.parse(sessionStorage.getItem('products:index:viewState') || 'null');
+            if (!saved) return;
+
+            if (saved.activeStatusFilter) state.activeStatusFilter = saved.activeStatusFilter;
+            if (Number.isFinite(saved.currentPage) && saved.currentPage > 0) state.currentPage = saved.currentPage;
+            if (Number.isFinite(saved.pageSize) && saved.pageSize > 0) state.pageSize = saved.pageSize;
+            if (saved.sortKey) state.sortKey = saved.sortKey;
+            if (saved.sortDir) state.sortDir = saved.sortDir;
+
+            if (searchInput && typeof saved.searchTerm === 'string') searchInput.value = saved.searchTerm;
+            if (categoryFilter && typeof saved.categoryValue === 'string') categoryFilter.value = saved.categoryValue;
+            if (pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
+        } catch {
+        }
+    }
+
+    function saveViewState() {
+        sessionStorage.setItem('products:index:viewState', JSON.stringify({
+            activeStatusFilter: state.activeStatusFilter,
+            currentPage: state.currentPage,
+            pageSize: state.pageSize,
+            sortKey: state.sortKey,
+            sortDir: state.sortDir,
+            searchTerm: searchInput?.value || '',
+            categoryValue: categoryFilter?.value || '',
+            scrollY: window.scrollY || 0
+        }));
+    }
 
     function toNumber(value) {
         const n = Number(value);
@@ -168,6 +206,7 @@
 
         syncSelectAll(pageRows);
         updateBulkToolbar();
+        saveViewState();
     }
 
     statusTabs.forEach(tab => {
@@ -282,5 +321,33 @@
         });
     });
 
+    loadViewState();
+    statusTabs.forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.statusFilter === state.activeStatusFilter);
+    });
+    sortTriggers.forEach(t => {
+        t.classList.remove('active');
+        const icon = t.querySelector('.bi');
+        if (icon) icon.className = 'bi bi-arrow-down-up';
+    });
+    const activeSort = sortTriggers.find(t => t.dataset.sortKey === state.sortKey);
+    if (activeSort) {
+        activeSort.classList.add('active');
+        const activeIcon = activeSort.querySelector('.bi');
+        if (activeIcon) activeIcon.className = state.sortDir === SORT.ASC ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+    }
+
     refreshTable();
+
+    if (shouldRestore) {
+        const saved = (() => {
+            try { return JSON.parse(sessionStorage.getItem('products:index:viewState') || 'null'); } catch { return null; }
+        })();
+        const y = parseInt(String(saved?.scrollY ?? sessionStorage.getItem('products:index:scrollY') ?? '0'), 10);
+        if (!Number.isNaN(y) && y > 0) {
+            window.requestAnimationFrame(() => window.scrollTo(0, y));
+        }
+        sessionStorage.removeItem('products:index:restore');
+        sessionStorage.removeItem('products:index:scrollY');
+    }
 })();
