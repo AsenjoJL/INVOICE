@@ -126,42 +126,45 @@
     }
 
     .outlet-form-shell {
-        max-width: 760px;
+        max-width: 820px;
         margin: 0 auto;
     }
     .outlet-form-card {
         background: #fff;
-        border-radius: 0;
-        border: 2px solid #cbd5e1;
+        border-radius: 24px;
+        border: 1px solid #d8e0ea;
         overflow: hidden;
         box-shadow: none;
     }
     .outlet-form-banner {
         background: #ffffff;
-        color: #000000;
+        color: #111827;
         padding: 22px 28px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e5ebf2;
     }
     .outlet-form-kicker {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.15em;
         font-weight: 700;
-        opacity: 1;
-        color: #475569;
+        color: #0f766e;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: #eef3f8;
     }
     .outlet-form-banner h4 {
         font-family: 'Poppins', sans-serif;
         margin: 4px 0 6px;
         font-weight: 800;
-        font-size: 1.5rem;
-        color: #000000;
+        font-size: 1.35rem;
+        color: #111827;
     }
     .outlet-form-banner .subtitle {
         margin: 0;
-        opacity: 1;
-        font-size: 0.95rem;
-        color: #334155;
+        font-size: 0.88rem;
+        color: #7a8699;
         font-weight: 600;
     }
     .outlet-form-body {
@@ -170,9 +173,9 @@
     }
     .outlet-form-section {
         background: #fff;
-        border-radius: 0;
+        border-radius: 18px;
         padding: 18px 20px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #d8e0ea;
         box-shadow: none;
         margin-bottom: 16px;
     }
@@ -180,28 +183,29 @@
         margin-bottom: 0;
     }
     .outlet-form-section .section-title {
-        font-size: 0.8rem;
+        font-size: 0.74rem;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-weight: 700;
-        color: #64748b;
+        letter-spacing: 0.16em;
+        font-weight: 800;
+        color: #94a3b8;
         margin-bottom: 12px;
     }
     .outlet-form-card .form-control,
     .outlet-form-card .form-select {
-        border-radius: 0;
-        border-color: #cbd5e1;
+        border-radius: 14px;
+        border-color: #d8e0ea;
         background: #ffffff;
-        color: #0f172a;
+        color: #111827;
         font-weight: 600;
+        box-shadow: none;
     }
     .outlet-form-card .form-control:focus,
     .outlet-form-card .form-select:focus {
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+        border-color: #c4cfdb;
+        box-shadow: 0 0 0 3px rgba(216, 224, 234, 0.45);
     }
     .outlet-form-card .form-floating > label {
-        color: #64748b;
+        color: #94a3b8;
     }
     .outlet-form-actions {
         display: flex;
@@ -210,14 +214,23 @@
         flex-wrap: wrap;
     }
     .outlet-form-actions .btn {
-        border-radius: 0;
+        border-radius: 999px;
         font-weight: 700;
         padding: 10px 18px;
+        box-shadow: none;
     }
     .outlet-form-actions .btn-primary {
-        background: #0f766e;
-        border: 1px solid #0f766e;
+        background: #111827;
+        border: 1px solid #111827;
         box-shadow: none;
+    }
+    .outlet-form-actions .btn-outline-secondary {
+        border-color: #d8e0ea;
+        color: #111827;
+        background: #ffffff;
+    }
+    .outlet-form-actions .btn-outline-secondary:hover {
+        background: #f7f9fc;
     }
 
     .outlet-delete-card {
