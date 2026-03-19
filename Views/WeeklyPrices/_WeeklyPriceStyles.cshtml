@@ -12,7 +12,7 @@
         flex-wrap: wrap;
         background: #ffffff;
         border: 2px solid #cbd5e1;
-        border-radius: 0;
+        border-radius: var(--ui-radius-xl);
         box-shadow: none;
         padding: 1rem 1.2rem;
         margin-bottom: 1.2rem;
@@ -31,7 +31,7 @@
     }
 
     .weekly-btn {
-        border-radius: 0;
+        border-radius: var(--ui-radius-md);
         font-weight: 700;
         box-shadow: none !important;
     }
@@ -48,7 +48,7 @@
 
     .weekly-card {
         border: 2px solid #cbd5e1;
-        border-radius: 0;
+        border-radius: var(--ui-radius-xl);
         box-shadow: none;
         background: #ffffff;
         overflow: hidden;
@@ -109,7 +109,7 @@
     }
     .weekly-form-card {
         border: 2px solid #cbd5e1;
-        border-radius: 0;
+        border-radius: var(--ui-radius-xl);
         box-shadow: none;
         background: #ffffff;
         overflow: hidden;
@@ -124,7 +124,7 @@
     }
     .weekly-form-body .form-control,
     .weekly-form-body .form-select {
-        border-radius: 0;
+        border-radius: var(--ui-radius-md);
         border: 1px solid #cbd5e1;
         font-weight: 600;
         box-shadow: none;
@@ -138,7 +138,7 @@
         font-weight: 700;
     }
     .weekly-form-actions .btn {
-        border-radius: 0;
+        border-radius: var(--ui-radius-md);
         font-weight: 700;
     }
 
@@ -149,5 +149,18 @@
         .weekly-form-body {
             padding: 0.85rem;
         }
+    }
+
+    .weekly-header,
+    .weekly-card,
+    .weekly-form-card {
+        border-radius: var(--ui-radius-xl) !important;
+    }
+
+    .weekly-btn,
+    .weekly-form-body .form-control,
+    .weekly-form-body .form-select,
+    .weekly-form-actions .btn {
+        border-radius: var(--ui-radius-md) !important;
     }
 </style>

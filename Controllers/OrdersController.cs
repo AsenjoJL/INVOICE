@@ -127,6 +127,7 @@ public class OrdersController : Controller
     public async Task<IActionResult> SaveMatrix(VegetableMatrixViewModel model, bool doPrint = false)
     {
         if (model == null) return BadRequest("Model is null");
+        model.ProductPrices ??= new Dictionary<int, decimal>();
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
 
@@ -145,7 +146,7 @@ public class OrdersController : Controller
 
         var affectedProductIds = affectedProductIdsSet.ToList();
 
-        if (model.ProductPrices != null && model.ProductPrices.Any())
+        if (model.ProductPrices.Any())
         {
             affectedProductIds = affectedProductIds
                 .Union(model.ProductPrices.Keys)
@@ -1171,12 +1172,19 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         if (string.IsNullOrWhiteSpace(key))
             return false;
 
-        if (customerMap.TryGetValue(key, out customer))
+        if (customerMap.TryGetValue(key, out var matchedCustomer) && matchedCustomer != null)
+        {
+            customer = matchedCustomer;
             return true;
+        }
 
         if (OutletImportAliasMap.TryGetValue(key, out var aliasKey) &&
-            customerMap.TryGetValue(aliasKey, out customer))
+            customerMap.TryGetValue(aliasKey, out matchedCustomer) &&
+            matchedCustomer != null)
+        {
+            customer = matchedCustomer;
             return true;
+        }
 
         // Fallback: unique contains-match (e.g., "cebukit" vs "cebukitchen")
         var containMatches = customerMap

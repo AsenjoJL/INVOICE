@@ -53,7 +53,7 @@ public static class SimpleXlsxReader
         return result;
     }
 
-    public static bool TryParseDecimal(string raw, out decimal value)
+    public static bool TryParseDecimal(string? raw, out decimal value)
     {
         value = 0m;
         if (string.IsNullOrWhiteSpace(raw))
@@ -169,4 +169,3 @@ public static class SimpleXlsxReader
         return int.TryParse(reference[i..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row > 0;
     }
 }
-

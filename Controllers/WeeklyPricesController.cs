@@ -49,12 +49,14 @@ public class WeeklyPricesController : Controller
         {
             if (model.Items[i].Cost < 0)
                 ModelState.AddModelError($"Items[{i}].Cost", "Cost cannot be negative.");
+            if (model.Items[i].Markup < 0)
+                ModelState.AddModelError($"Items[{i}].Markup", "Markup cannot be negative.");
             if (model.Items[i].BasePrice < 0)
                 ModelState.AddModelError($"Items[{i}].BasePrice", "Base price cannot be negative.");
             if (model.Items[i].BasePrice < model.Items[i].Cost)
                 ModelState.AddModelError($"Items[{i}].BasePrice", "Base price cannot be lower than cost.");
-            if (model.Items[i].DeliveryFee.HasValue && model.Items[i].DeliveryFee.Value < 0)
-                ModelState.AddModelError($"Items[{i}].DeliveryFee", "Delivery fee cannot be negative.");
+            if (model.Items[i].DeliveryPrice < model.Items[i].BasePrice)
+                ModelState.AddModelError($"Items[{i}].DeliveryPrice", "Delivery price cannot be lower than base price.");
         }
 
         if (!ModelState.IsValid)
@@ -103,8 +105,11 @@ public class WeeklyPricesController : Controller
             var masterDeliveryFee = prod.DeliveryFee;
 
             decimal cost = item.Cost;
-            decimal markup = item.BasePrice - cost;
+            decimal markup = item.Markup;
+            decimal basePrice = cost + markup;
+            decimal deliveryPrice = item.DeliveryPrice > 0 ? item.DeliveryPrice : basePrice + masterDeliveryFee;
             decimal deliveryFee = item.DeliveryFee ?? masterDeliveryFee;
+            deliveryFee = deliveryPrice - basePrice;
 
             if (model.ApplyToMasterCost && masterCost != cost)
             {
@@ -119,15 +124,15 @@ public class WeeklyPricesController : Controller
             }
 
             decimal? deliveryFeeOverride = null;
-            if (item.DeliveryFee.HasValue && deliveryFee != masterDeliveryFee)
+            if (deliveryFee != masterDeliveryFee)
             {
                 deliveryFeeOverride = deliveryFee;
             }
 
             var effectiveCost = costOverride ?? masterCost;
             var effectiveDeliveryFee = deliveryFeeOverride ?? masterDeliveryFee;
-            var basePrice = effectiveCost + markup;
-            var deliveryPrice = basePrice + effectiveDeliveryFee;
+            basePrice = effectiveCost + markup;
+            deliveryPrice = basePrice + effectiveDeliveryFee;
 
             var shouldHaveWeekly = costOverride.HasValue || markup != masterMarkup || deliveryFeeOverride.HasValue;
 
@@ -185,6 +190,8 @@ public class WeeklyPricesController : Controller
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateWeeklyPrices();
         _cacheInvalidator.InvalidateProducts();
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
 
         return RedirectToAction(nameof(PriceVersus), new { date = model.TargetDate.ToString("yyyy-MM-dd") });
     }
@@ -431,9 +438,9 @@ public class WeeklyPricesController : Controller
             if (postedMap.TryGetValue(p.Id, out var posted))
             {
                 cost = posted.Cost;
-                markup = posted.BasePrice - posted.Cost;
-                if (posted.DeliveryFee.HasValue)
-                    deliveryFee = posted.DeliveryFee.Value;
+                markup = posted.Markup;
+                if (posted.DeliveryPrice > 0)
+                    deliveryFee = posted.DeliveryPrice - (posted.Cost + posted.Markup);
             }
 
             var basePrice = cost + markup;
@@ -445,6 +452,7 @@ public class WeeklyPricesController : Controller
                 Cost = cost,
                 Markup = markup,
                 BasePrice = basePrice,
+                DeliveryPrice = basePrice + deliveryFee,
                 DeliveryFee = deliveryFee,
                 MasterCost = masterCost,
                 MasterMarkup = masterMarkup,

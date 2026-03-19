@@ -177,7 +177,7 @@ public class PurchasesController : Controller
         purchase.PurchaseNumber = await GenerateNextPurchaseNumberAsync();
 
         var cleanedLines = new List<PurchaseLine>();
-        foreach (var line in purchase.Lines)
+        foreach (var line in purchase.Lines ?? Enumerable.Empty<PurchaseLine>())
         {
             if (line.Quantity <= 0) continue;
             if (line.Cost < 0) continue;

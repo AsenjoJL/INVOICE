@@ -6,16 +6,271 @@
     ViewData["NoteInstructions"] = "Select a printer, optionally Test Print, then Save. For silent kiosk printing, HazelInvoice will apply the saved printer as Windows default.";
 }
 
-<div class="container-fluid p-4 invoice-ui">
-    <div class="invoice-hero invoice-hero-plain">
-        <div>
-            <h1 class="invoice-title">Printer Settings</h1>
-            <p class="invoice-sub">Select the printer used for invoices.</p>
-        </div>
-        <div class="invoice-actions">
+<style>
+    .printer-settings-page {
+        --printer-ink: #0a0a0a;
+        --printer-muted: #888888;
+        --printer-border: #e8e8e8;
+        --printer-soft: #f8f8f8;
+        font-family: 'DM Sans', sans-serif;
+        color: var(--printer-ink);
+    }
+
+    .printer-settings-page .printer-shell,
+    .printer-settings-page .printer-panel,
+    .printer-settings-page .printer-tip-box {
+        background: #ffffff;
+        border: 1px solid var(--printer-border);
+        border-radius: var(--ui-radius-xl);
+        box-shadow: none;
+    }
+
+    .printer-settings-page .printer-shell {
+        padding: 28px 32px;
+        margin-bottom: 20px;
+    }
+
+    .printer-settings-page .printer-kicker,
+    .printer-settings-page .printer-panel-label,
+    .printer-settings-page .printer-actions-label,
+    .printer-settings-page .form-label,
+    .printer-settings-page .form-text,
+    .printer-settings-page .printer-tip-title {
+        font-family: 'DM Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--printer-muted);
+    }
+
+    .printer-settings-page h1 {
+        margin: 8px 0 0;
+        font-size: 22px;
+        line-height: 1.1;
+        font-weight: 600;
+        color: var(--printer-ink);
+    }
+
+    .printer-settings-page .printer-sub {
+        margin: 8px 0 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #606060;
+    }
+
+    .printer-settings-page .printer-panel {
+        overflow: hidden;
+    }
+
+    .printer-settings-page .printer-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--printer-border);
+    }
+
+    .printer-settings-page .printer-panel-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--printer-ink);
+    }
+
+    .printer-settings-page .printer-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--printer-border);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-family: 'DM Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--printer-ink);
+        background: #ffffff;
+    }
+
+    .printer-settings-page .printer-panel-body {
+        padding: 24px;
+    }
+
+    .printer-settings-page .printer-field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border: 1px solid var(--printer-border);
+    }
+
+    .printer-settings-page .printer-field,
+    .printer-settings-page .printer-field-full {
+        padding: 20px;
+        border-right: 1px solid var(--printer-border);
+        border-bottom: 1px solid var(--printer-border);
+    }
+
+    .printer-settings-page .printer-field:nth-child(2n) {
+        border-right: 0;
+    }
+
+    .printer-settings-page .printer-field-full {
+        grid-column: 1 / -1;
+        border-right: 0;
+    }
+
+    .printer-settings-page .printer-field-grid > :last-child {
+        border-bottom: 0;
+    }
+
+    .printer-settings-page .form-control,
+    .printer-settings-page .form-select {
+        min-height: 44px;
+        border: 1px solid transparent;
+        border-bottom-color: var(--printer-border);
+        border-radius: var(--ui-radius-md);
+        background: #ffffff;
+        color: var(--printer-ink);
+        font-size: 15px;
+        font-weight: 400;
+        padding-left: 0;
+        padding-right: 0;
+        box-shadow: none;
+    }
+
+    .printer-settings-page .form-control:focus,
+    .printer-settings-page .form-select:focus {
+        border-color: transparent;
+        border-bottom-color: #0a0a0a;
+        box-shadow: none;
+    }
+
+    .printer-settings-page .form-check-input {
+        border-radius: 999px;
+        border-color: #cfcfcf;
+        box-shadow: none;
+    }
+
+    .printer-settings-page .form-check-input:checked {
+        background-color: #0a0a0a;
+        border-color: #0a0a0a;
+    }
+
+    .printer-settings-page .form-check-label {
+        font-size: 14px;
+        color: var(--printer-ink);
+    }
+
+    .printer-settings-page .printer-actions-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+    }
+
+    .printer-settings-page .printer-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .printer-settings-page .btn {
+        border-radius: var(--ui-radius-md);
+        box-shadow: none;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 10px 16px;
+    }
+
+    .printer-settings-page .btn-success {
+        background: #0a0a0a;
+        border: 1px solid #0a0a0a;
+        color: #ffffff;
+    }
+
+    .printer-settings-page .btn-outline-secondary,
+    .printer-settings-page .printer-back-link {
+        background: #ffffff;
+        border: 1px solid var(--printer-border);
+        color: var(--printer-ink);
+        text-decoration: none;
+    }
+
+    .printer-settings-page .btn-success:hover {
+        background: #000000;
+        border-color: #000000;
+        color: #ffffff;
+    }
+
+    .printer-settings-page .btn-outline-secondary:hover,
+    .printer-settings-page .printer-back-link:hover {
+        background: var(--printer-soft);
+        border-color: #dcdcdc;
+        color: var(--printer-ink);
+    }
+
+    .printer-settings-page .printer-tip-box {
+        margin-top: 18px;
+        padding: 18px 20px;
+    }
+
+    .printer-settings-page .printer-tip-list {
+        margin: 10px 0 0;
+        padding-left: 18px;
+        color: #606060;
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    @@media (max-width: 768px) {
+        .printer-settings-page .printer-shell,
+        .printer-settings-page .printer-panel-header,
+        .printer-settings-page .printer-panel-body,
+        .printer-settings-page .printer-field,
+        .printer-settings-page .printer-field-full,
+        .printer-settings-page .printer-tip-box {
+            padding: 20px;
+        }
+
+        .printer-settings-page .printer-field-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .printer-settings-page .printer-field {
+            border-right: 0;
+        }
+    }
+
+    .printer-settings-page .printer-shell,
+    .printer-settings-page .printer-panel,
+    .printer-settings-page .printer-tip-box,
+    .printer-settings-page .printer-field-grid {
+        border-radius: var(--ui-radius-xl) !important;
+    }
+
+    .printer-settings-page .btn,
+    .printer-settings-page .form-control,
+    .printer-settings-page .form-select,
+    .printer-settings-page .form-check-input,
+    .printer-settings-page .printer-back-link {
+        border-radius: var(--ui-radius-md) !important;
+    }
+</style>
+
+<div class="container-fluid p-4 printer-settings-page">
+    <div class="printer-shell">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+                <div class="printer-kicker">Printing Setup</div>
+                <h1>Printer Settings</h1>
+                <p class="printer-sub">Choose the Windows printer and paper profile used for invoice printing.</p>
+            </div>
             @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl))
             {
-                <a class="invoice-btn invoice-btn-ghost" href="@Model.ReturnUrl">
+                <a class="btn printer-back-link" href="@Model.ReturnUrl">
                     <i class="bi bi-arrow-left"></i> Back
                 </a>
             }
@@ -33,15 +288,19 @@
         <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
     }
 
-    <div class="invoice-card">
-        <div class="invoice-card-header">
-            <h6 class="invoice-card-title">Default Printer</h6>
-            <span class="invoice-tag"><i class="bi bi-printer"></i> Windows</span>
+    <div class="printer-panel">
+        <div class="printer-panel-header">
+            <div>
+                <div class="printer-panel-label">Device Configuration</div>
+                <h2 class="printer-panel-title">Default Printer</h2>
+            </div>
+            <span class="printer-tag"><i class="bi bi-printer"></i> Windows</span>
         </div>
-        <div class="invoice-card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-8">
-                    <label class="form-label fw-bold" for="SelectedPrinter">Installed Printers</label>
+
+        <div class="printer-panel-body">
+            <div class="printer-field-grid">
+                <div class="printer-field">
+                    <label class="form-label" for="SelectedPrinter">Installed Printers</label>
                     <select id="SelectedPrinter" name="SelectedPrinter" class="form-select" form="printerForm" required>
                         <option value="">-- Select printer --</option>
                         @foreach (var p in Model.InstalledPrinters)
@@ -56,47 +315,56 @@
                             }
                         }
                     </select>
-                    <div class="form-text">
-                        Saved: <span class="fw-bold">@(!string.IsNullOrWhiteSpace(Model.SavedPrinter) ? Model.SavedPrinter : "None")</span>
-                    </div>
-
-                    <div class="form-check mt-3">
-                        <input class="form-check-input" type="checkbox" id="ReceiptBorderless" name="ReceiptBorderless" form="printerForm"
-                               value="true" @(Model.ReceiptBorderless ? "checked" : null) />
-                        <label class="form-check-label fw-bold" for="ReceiptBorderless">
-                            Borderless receipt print (no lines / grid)
-                        </label>
-                        <div class="form-text">
-                            Faster on dot-matrix printers. Removes table borders and underlines on the printed receipt.
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <label class="form-label fw-bold" for="PaperSize">Paper size (for browser printing)</label>
-                        <select id="PaperSize" name="PaperSize" class="form-select" form="printerForm">
-                            @if (string.Equals(Model.PaperSize, "A4", StringComparison.OrdinalIgnoreCase))
-                            {
-                                <option value="Letter">Letter (8.5 x 11 / short bond)</option>
-                                <option value="A4" selected="selected">A4 (210 x 297mm)</option>
-                            }
-                            else
-                            {
-                                <option value="Letter" selected="selected">Letter (8.5 x 11 / short bond)</option>
-                                <option value="A4">A4 (210 x 297mm)</option>
-                            }
-                        </select>
-                        <div class="form-text">
-                            This sets the print CSS <code>@@page</code> size used by HazelInvoice print pages. Your printer driver settings still apply.
-                        </div>
+                    <div class="form-text mt-2">
+                        Saved: @(!string.IsNullOrWhiteSpace(Model.SavedPrinter) ? Model.SavedPrinter : "None")
                     </div>
                 </div>
-                <div class="col-md-4 d-flex gap-2 justify-content-md-end">
+
+                <div class="printer-field">
+                    <label class="form-label" for="PaperSize">Paper Size</label>
+                    <select id="PaperSize" name="PaperSize" class="form-select" form="printerForm">
+                        @if (string.Equals(Model.PaperSize, "A4", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <option value="Letter">Letter (8.5 x 11 / short bond)</option>
+                            <option value="A4" selected="selected">A4 (210 x 297mm)</option>
+                        }
+                        else
+                        {
+                            <option value="Letter" selected="selected">Letter (8.5 x 11 / short bond)</option>
+                            <option value="A4">A4 (210 x 297mm)</option>
+                        }
+                    </select>
+                    <div class="form-text mt-2">Used by HazelInvoice print CSS for browser-based printing.</div>
+                </div>
+
+                <div class="printer-field-full">
+                    <label class="form-label" for="ReceiptBorderless">Receipt Output</label>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="ReceiptBorderless" name="ReceiptBorderless" form="printerForm"
+                               value="true" @(Model.ReceiptBorderless ? "checked" : null) />
+                        <label class="form-check-label" for="ReceiptBorderless">
+                            Borderless receipt print (no lines / grid)
+                        </label>
+                    </div>
+                    <div class="form-text mt-2">
+                        Faster on dot-matrix printers. Removes table borders and underlines on the printed receipt.
+                    </div>
+                </div>
+            </div>
+
+            <div class="printer-actions-row">
+                <div>
+                    <div class="printer-actions-label">Recommended Workflow</div>
+                    <div class="printer-sub">Choose a printer, run a test print, then save the final setting.</div>
+                </div>
+
+                <div class="printer-actions">
                     <form id="testForm" asp-action="TestPrint" method="post" class="m-0">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="SelectedPrinter" value="@Model.SelectedPrinter" />
                         <input type="hidden" name="PaperSize" value="@Model.PaperSize" />
                         <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
-                        <button type="submit" class="btn btn-outline-secondary w-100">
+                        <button type="submit" class="btn btn-outline-secondary">
                             <i class="bi bi-bug"></i> Test Print
                         </button>
                     </form>
@@ -104,24 +372,26 @@
                     <form id="printerForm" asp-action="Save" method="post" class="m-0">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
-                        <button type="submit" class="btn btn-success w-100">
+                        <button type="submit" class="btn btn-success">
                             <i class="bi bi-check2-circle"></i> Save
                         </button>
                     </form>
                 </div>
             </div>
 
-            <hr />
-            <div class="text-muted small">
-                Dot-matrix tips: use a printer driver that supports continuous paper, set margins in Windows “Printing preferences”,
-                and keep templates simple for consistent alignment.
+            <div class="printer-tip-box">
+                <div class="printer-tip-title">Dot-Matrix Tips</div>
+                <ul class="printer-tip-list">
+                    <li>Use a printer driver that supports continuous paper when possible.</li>
+                    <li>Set the final paper size and margins in Windows printer preferences.</li>
+                    <li>Keep print templates simple for more consistent alignment.</li>
+                </ul>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Keep TestPrint form in sync with the dropdown without duplicating inputs in the markup.
     (function () {
         const sel = document.getElementById('SelectedPrinter');
         const paperSel = document.getElementById('PaperSize');

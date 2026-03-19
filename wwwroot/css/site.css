@@ -153,7 +153,7 @@ html, body {
 }
 
 .dashboard-minimal .dash-btn {
-  border-radius: 0;
+  border-radius: var(--ui-radius-md);
   font-weight: 800;
   padding: 0.5rem 0.9rem;
   letter-spacing: 0.06em;
@@ -299,7 +299,7 @@ html, body {
 }
 
 .dashboard-minimal .metric-card {
-  border-radius: 0;
+  border-radius: var(--ui-radius-xl);
   border: 1px solid #111827;
   border-left-width: 1px;
   padding: 0.9rem 0.95rem;
@@ -330,11 +330,11 @@ html, body {
 }
 
 .dashboard-minimal .kpi-trend {
-  border-radius: 0;
+  border-radius: var(--ui-radius-sm);
 }
 
 .dashboard-minimal .surface-card {
-  border-radius: 0;
+  border-radius: var(--ui-radius-xl);
   box-shadow: none;
   border: 1px solid #111827;
 }
@@ -1133,7 +1133,7 @@ a {
   color: var(--sidebar-ink);
   text-decoration: none;
   padding: 0.65rem 0.8rem;
-  border-radius: 0;
+  border-radius: var(--ui-radius-md);
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -1167,14 +1167,14 @@ a {
   width: 6px;
   height: 70%;
   background: var(--sidebar-accent-strong);
-  border-radius: 0;
+  border-radius: var(--ui-radius-sm);
   box-shadow: 0 0 10px rgba(251, 191, 36, 0.7);
 }
 
 .sidebar-link i {
   width: 24px;
   height: 24px;
-  border-radius: 0;
+  border-radius: var(--ui-radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1193,7 +1193,7 @@ a {
   font-weight: 700;
   background: rgba(6, 95, 70, 0.68);
   border: 1px solid rgba(45, 212, 191, 0.28);
-  border-radius: 0;
+  border-radius: var(--ui-radius-md);
   display: block;
   width: 100%;
 }
@@ -1747,7 +1747,7 @@ h6 {
   background: #ffffff;
   color: #000000;
   border: 2px solid #111827;
-  border-radius: 0;
+  border-radius: var(--ui-radius-xl);
   box-shadow: none;
   padding: 1rem 1.1rem;
 }
@@ -1774,7 +1774,7 @@ h6 {
 .invoice-ui.invoice-ui-min .invoice-btn-primary,
 .invoice-ui.invoice-ui-min .invoice-btn-ghost,
 .invoice-ui.invoice-ui-min .invoice-btn-outline {
-  border-radius: 0;
+  border-radius: var(--ui-radius-md);
   box-shadow: none;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1837,7 +1837,7 @@ h6 {
 }
 
 .invoice-ui.invoice-ui-min .invoice-card {
-  border-radius: 0;
+  border-radius: var(--ui-radius-xl);
   border: 1px solid #111827;
   box-shadow: none;
 }
@@ -1853,7 +1853,7 @@ h6 {
 }
 
 .invoice-ui.invoice-ui-min .invoice-tag {
-  border-radius: 0;
+  border-radius: 999px;
   background: #ffffff;
   border: 1px solid #111827;
   color: #111827;
@@ -1861,7 +1861,7 @@ h6 {
 }
 
 .invoice-ui.invoice-ui-min .invoice-icon-btn {
-  border-radius: 0;
+  border-radius: var(--ui-radius-md);
   box-shadow: none;
   border-color: #111827;
 }
@@ -3784,7 +3784,7 @@ textarea,
   margin: 0;
   padding: 7px 0 !important;
   border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: var(--ui-radius-md) !important;
   background: transparent !important;
   color: var(--editorial-text) !important;
   font-size: 15px !important;
@@ -3836,7 +3836,7 @@ textarea,
   padding: 0 0 22px !important;
   border: 0 !important;
   border-bottom: 1px solid var(--editorial-line) !important;
-  border-radius: 0 !important;
+  border-radius: var(--ui-radius-xl) !important;
   background: transparent !important;
 }
 
@@ -3906,7 +3906,7 @@ textarea,
 .admin-account-logout {
   background: #ffffff !important;
   border: 1px solid var(--editorial-line) !important;
-  border-radius: 0 !important;
+  border-radius: var(--ui-radius-md) !important;
   color: var(--editorial-text) !important;
   box-shadow: none !important;
 }
@@ -3981,7 +3981,7 @@ textarea,
 .orders-summary-page .admin-page-hero {
   background: #ffffff !important;
   border: 1px solid var(--editorial-line) !important;
-  border-radius: 0 !important;
+  border-radius: var(--ui-radius-xl) !important;
   box-shadow: none !important;
 }
 
@@ -4056,7 +4056,7 @@ textarea,
   min-height: 44px;
   background: #ffffff !important;
   border: 1px solid var(--editorial-line) !important;
-  border-radius: 0 !important;
+  border-radius: var(--ui-radius-md) !important;
   color: var(--editorial-text) !important;
   font-size: 15px !important;
   box-shadow: none !important;
@@ -4073,7 +4073,7 @@ textarea,
 .btn,
 .content-area .btn {
   min-height: 42px;
-  border-radius: 0 !important;
+  border-radius: var(--ui-radius-md) !important;
   font-size: 14px !important;
   font-weight: 500 !important;
   box-shadow: none !important;
@@ -4207,4 +4207,111 @@ body {
 .product-table td,
 .order-table tbody td {
   font-size: 0.88rem;
+}
+
+/* Global radius system */
+:root {
+  --ui-radius-xl: 24px;
+  --ui-radius-lg: 20px;
+  --ui-radius-md: 16px;
+  --ui-radius-sm: 12px;
+}
+
+.card,
+.modal-content,
+.offcanvas,
+.dropdown-menu,
+.table-responsive,
+.alert,
+.sidebar,
+.admin-page-hero,
+.admin-filter-strip,
+.admin-surface-card,
+.invoice-card,
+.invoice-hero,
+.order-hero,
+.order-toolbar,
+.order-table-card,
+.product-card,
+.product-form-card,
+.purchase-card,
+.purchase-form-card,
+.supplier-card,
+.supplier-form-card,
+.supplier-delete-card,
+.workforce-card,
+.workforce-form-card,
+.payroll-panel,
+.payroll-table-card,
+.expense-shell,
+.expense-panel,
+.expense-ledger-group,
+.printer-shell,
+.printer-panel,
+.printer-tip-box,
+.income-header,
+.income-sheet,
+.income-kpi,
+.metric-card,
+.bulk-toolbar,
+.filter-bar,
+.product-search-bar,
+.info-collapse,
+.matrix-toolbar,
+.matrix-panel,
+.price-card,
+.price-setup-header,
+.price-date-form,
+.weekly-page .card,
+.partner-page .card,
+.laborer-page .card,
+.report-shell .card,
+.report-shell .kpi-card,
+.report-shell .excel-box,
+.printer-page .card {
+  border-radius: var(--ui-radius-xl) !important;
+}
+
+.btn,
+.content-area .btn,
+.form-control,
+.form-select,
+.input-group-text,
+.form-check-input,
+.product-tools .form-control,
+.product-tools .form-select,
+.product-tools .btn-search,
+.product-tools .btn-clear,
+.invoice-btn,
+.admin-action-btn,
+.admin-mini-btn,
+.dash-btn,
+.purchase-btn,
+.workforce-btn,
+.filter-pill,
+.info-btn,
+.action-menu-btn,
+.sort-trigger,
+.expense-primary-btn,
+.expense-secondary-btn {
+  border-radius: var(--ui-radius-md) !important;
+}
+
+.status-pill,
+.payroll-status,
+.workforce-status,
+.badge,
+.invoice-tag,
+.printer-tag,
+.status-active,
+.status-inactive {
+  border-radius: 999px !important;
+}
+
+.table-responsive table thead th:first-child {
+  border-top-left-radius: var(--ui-radius-lg);
+}
+
+.table-responsive table thead th:last-child {
+  border-top-right-radius: var(--ui-radius-lg);
 }

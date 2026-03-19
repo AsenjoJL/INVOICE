@@ -1,7 +1,52 @@
 <style>
     .workforce-page {
+        --workforce-bg: #ffffff;
+        --workforce-ink: #0a0a0a;
+        --workforce-muted: #888888;
+        --workforce-border: #e8e8e8;
+        --workforce-soft: #f8f8f8;
         font-family: 'DM Sans', sans-serif;
-        color: #0f172a;
+        color: var(--workforce-ink);
+    }
+
+    .workforce-page .workforce-title,
+    .workforce-page .workforce-form-header h4 {
+        margin: 0;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 22px;
+        line-height: 1.1;
+        font-weight: 600;
+        color: var(--workforce-ink);
+    }
+
+    .workforce-page .workforce-sub,
+    .workforce-page .small.text-muted {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #606060 !important;
+        font-weight: 400;
+    }
+
+    .workforce-page .form-label,
+    .workforce-page .workforce-table thead th,
+    .workforce-page .workforce-status,
+    .workforce-page .admin-section-kicker,
+    .workforce-page .form-floating > label {
+        font-family: 'DM Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--workforce-muted);
+    }
+
+    .workforce-header,
+    .workforce-filter,
+    .workforce-card,
+    .workforce-form-card {
+        background: var(--workforce-bg);
+        border: 1px solid var(--workforce-border);
+        border-radius: var(--ui-radius-xl);
+        box-shadow: none;
     }
 
     .workforce-header {
@@ -9,158 +54,191 @@
         flex-wrap: wrap;
         justify-content: space-between;
         align-items: center;
-        gap: 0.75rem;
-        background: #ffffff;
-        border: 2px solid #cbd5e1;
-        border-radius: 0;
-        box-shadow: none;
-        padding: 1rem 1.2rem;
-        margin-bottom: 1rem;
-    }
-    .workforce-title {
-        margin: 0;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 800;
-        color: #000000;
-    }
-    .workforce-sub {
-        margin: 0.22rem 0 0;
-        color: #334155;
-        font-weight: 600;
-        font-size: 0.92rem;
+        gap: 16px;
+        padding: 28px 32px;
+        margin-bottom: 20px;
     }
 
-    .workforce-btn {
-        border-radius: 0;
-        font-weight: 700;
+    .workforce-btn,
+    .workforce-page .btn {
+        border-radius: var(--ui-radius-md);
         box-shadow: none !important;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 10px 16px;
     }
-    .workforce-btn-neutral {
-        border: 1px solid #cbd5e1;
+
+    .workforce-btn-neutral,
+    .workforce-page .btn-outline-danger,
+    .workforce-page .btn-outline-success {
         background: #ffffff;
-        color: #0f172a;
+        border: 1px solid var(--workforce-border);
+        color: var(--workforce-ink);
     }
+
     .workforce-btn-primary {
-        border: 1px solid #0f766e;
-        background: #0f766e;
+        background: #0a0a0a;
+        border: 1px solid #0a0a0a;
+        color: #ffffff;
+    }
+
+    .workforce-btn-neutral:hover,
+    .workforce-page .btn-outline-danger:hover,
+    .workforce-page .btn-outline-success:hover {
+        background: var(--workforce-soft);
+        color: var(--workforce-ink);
+        border-color: #dcdcdc;
+    }
+
+    .workforce-btn-primary:hover {
+        background: #000000;
+        border-color: #000000;
         color: #ffffff;
     }
 
     .workforce-filter {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 14px;
         align-items: end;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 0;
-        padding: 0.7rem 0.8rem;
-        margin-bottom: 0.9rem;
+        padding: 18px 20px;
+        margin-bottom: 16px;
     }
-    .workforce-filter .form-control,
-    .workforce-filter .form-select {
-        border-radius: 0;
-        border: 1px solid #cbd5e1;
-        font-weight: 600;
+
+    .workforce-form-shell {
+        max-width: 860px;
+        margin: 0 auto;
+    }
+
+    .workforce-form-header {
+        padding: 24px 28px;
+        border-bottom: 1px solid var(--workforce-border);
+        background: #ffffff;
+    }
+
+    .workforce-form-body {
+        padding: 24px 28px;
+        background: #ffffff;
+    }
+
+    .workforce-page .form-control,
+    .workforce-page .form-select {
+        min-height: 44px;
+        border: 1px solid transparent;
+        border-bottom-color: var(--workforce-border);
+        border-radius: var(--ui-radius-md);
+        background: #ffffff;
+        box-shadow: none;
+        color: var(--workforce-ink);
+        font-size: 15px;
+        font-weight: 400;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .workforce-page .form-floating > .form-control,
+    .workforce-page .form-floating > .form-select {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .workforce-page .form-floating > label {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .workforce-page .form-control:focus,
+    .workforce-page .form-select:focus {
+        border-color: transparent;
+        border-bottom-color: #0a0a0a;
         box-shadow: none;
     }
 
-    .workforce-card {
-        border: 2px solid #cbd5e1;
-        border-radius: 0;
+    .workforce-page .form-check-input {
+        border-radius: 999px;
+        border-color: #cfcfcf;
         box-shadow: none;
-        overflow: hidden;
-        background: #ffffff;
+    }
+
+    .workforce-page .form-check-input:checked {
+        background-color: #0a0a0a;
+        border-color: #0a0a0a;
     }
 
     .workforce-table {
         margin-bottom: 0;
     }
+
     .workforce-table thead th {
-        background: #f1f5f9;
-        color: #334155;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-size: 0.75rem;
-        font-weight: 700;
+        background: #ffffff;
+        border-bottom: 1px solid var(--workforce-border);
+        padding: 14px 16px;
+        font-weight: 400;
     }
-    .workforce-table tbody tr:nth-child(even) {
-        background: #fafcff;
+
+    .workforce-table td {
+        padding: 16px;
+        vertical-align: middle;
+        border-color: var(--workforce-border);
+        font-size: 14px;
     }
+
     .workforce-table tbody tr:hover {
-        background: #f0fdfa;
+        background: #fbfbfb;
     }
+
     .workforce-money {
-        font-family: Consolas, "Courier New", monospace;
-        font-weight: 700;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
         white-space: nowrap;
+        color: var(--workforce-ink);
     }
+
     .workforce-status {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
+        padding: 5px 10px;
         border-radius: 999px;
-        padding: 0.26rem 0.7rem;
-        font-size: 0.74rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-    }
-    .workforce-status-active {
-        color: #166534;
-        background: #dcfce7;
-    }
-    .workforce-status-archived {
-        color: #475569;
-        background: #e2e8f0;
-    }
-    .workforce-status-locked {
-        color: #475569;
-        background: #e2e8f0;
-    }
-    .workforce-status-open {
-        color: #0e7490;
-        background: #cffafe;
+        border: 1px solid var(--workforce-border);
+        background: #ffffff;
+        color: var(--workforce-ink);
     }
 
-    .workforce-form-shell {
-        max-width: 760px;
-        margin: 0 auto;
+    .workforce-status-active,
+    .workforce-status-archived,
+    .workforce-status-locked,
+    .workforce-status-open {
+        background: #ffffff;
+        color: inherit;
     }
+
+    .workforce-card .card-footer {
+        background: #ffffff;
+        border-top: 1px solid var(--workforce-border);
+        padding: 18px 20px;
+    }
+
+    @@media (max-width: 768px) {
+        .workforce-header,
+        .workforce-filter,
+        .workforce-form-header,
+        .workforce-form-body {
+            padding: 20px;
+        }
+    }
+
+    .workforce-header,
+    .workforce-filter,
+    .workforce-card,
     .workforce-form-card {
-        border: 2px solid #cbd5e1;
-        border-radius: 0;
-        box-shadow: none;
-        overflow: hidden;
-        background: #ffffff;
+        border-radius: var(--ui-radius-xl) !important;
     }
-    .workforce-form-header {
-        padding: 0.9rem 1rem;
-        border-bottom: 1px solid #e2e8f0;
-        background: #ffffff;
-    }
-    .workforce-form-header h4 {
-        margin: 0;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 800;
-        color: #000000;
-    }
-    .workforce-form-body {
-        padding: 1rem;
-    }
-    .workforce-form .form-control,
-    .workforce-form .form-select,
-    .workforce-form .form-check-input {
-        border-radius: 0;
-        border: 1px solid #cbd5e1;
-        box-shadow: none;
-    }
-    .workforce-form .form-control,
-    .workforce-form .form-select {
-        font-weight: 600;
-    }
-    .workforce-form .form-control:focus,
-    .workforce-form .form-select:focus {
-        border-color: #0f766e;
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+
+    .workforce-btn,
+    .workforce-page .btn,
+    .workforce-page .form-control,
+    .workforce-page .form-select {
+        border-radius: var(--ui-radius-md) !important;
     }
 </style>

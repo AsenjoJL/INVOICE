@@ -56,8 +56,11 @@ public static class OrderImportHelpers
         if (string.IsNullOrWhiteSpace(key))
             return false;
 
-        if (productMap.TryGetValue(key, out product))
+        if (productMap.TryGetValue(key, out var matchedProduct) && matchedProduct != null)
+        {
+            product = matchedProduct;
             return true;
+        }
 
         // Fallback: best contains/prefix match for minor naming variants.
         var containMatches = productMap

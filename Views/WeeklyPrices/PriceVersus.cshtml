@@ -8,68 +8,68 @@
 
 <style>
     .price-setup-page {
+        --price-line: #e8e8e8;
+        --price-text: #0a0a0a;
+        --price-muted: #888888;
         font-family: 'DM Sans', sans-serif;
-        color: #0f172a;
-    }
-    .price-setup-header {
-        background: #ffffff;
-        border: 2px solid #cbd5e1;
-        border-radius: 0;
-        box-shadow: none;
-        padding: 1rem 1.25rem;
+        color: var(--price-text);
     }
     .price-setup-title {
         margin: 0;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 800;
-        color: #000000;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        color: var(--price-text);
     }
     .price-setup-sub {
         margin: 0.25rem 0 0;
-        color: #334155;
-        font-weight: 600;
+        color: var(--price-muted);
     }
     .price-week-label {
-        color: #000000;
-        font-weight: 800;
+        color: var(--price-text);
+        font-weight: 500;
     }
     .price-btn {
-        border-radius: 0;
-        font-weight: 700;
+        border-radius: var(--ui-radius-xl);
+        font-weight: 500;
         border-width: 1px;
         box-shadow: none !important;
     }
     .price-btn-neutral {
-        border-color: #cbd5e1;
-        color: #0f172a;
+        border-color: var(--price-line);
+        color: var(--price-text);
         background: #ffffff;
     }
     .price-btn-primary {
-        border-color: #0f766e;
-        background: #0f766e;
+        border-color: #0a0a0a;
+        background: #0a0a0a;
         color: #ffffff;
     }
     .price-date-form {
         display: inline-block;
         background: #ffffff;
-        border: 2px solid #cbd5e1;
-        border-radius: 0;
+        border: 1px solid var(--price-line);
+        border-radius: var(--ui-radius-md);
         box-shadow: none;
         padding: 0.75rem 0.9rem;
     }
     .price-date-form label {
-        font-weight: 700;
-        color: #0f172a;
+        font-family: 'DM Mono', monospace;
+        font-size: 9px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--price-muted);
         margin-right: 0.5rem;
     }
     .price-date-form input[type="date"] {
-        border-radius: 0;
-        border: 1px solid #cbd5e1;
-        font-weight: 600;
+        border-radius: var(--ui-radius-xl);
+        border: 1px solid var(--price-line);
+        font-weight: 500;
     }
     .price-card {
-        border: 2px solid #cbd5e1;
-        border-radius: 0;
+        border: 1px solid var(--price-line);
+        border-radius: var(--ui-radius-md);
         box-shadow: none;
         overflow: hidden;
     }
@@ -77,123 +77,72 @@
         margin: 0;
     }
     .price-table thead th {
-        background: #f1f5f9;
-        color: #334155;
+        background: #ffffff;
+        color: var(--price-muted);
+        font-family: 'DM Mono', monospace;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-size: 0.76rem;
-        border-bottom: 1px solid #cbd5e1;
-    }
-    .price-table tbody tr:nth-child(even) {
-        background: #fafcff;
+        letter-spacing: 0.14em;
+        font-size: 9px;
+        font-weight: 500;
+        border-bottom: 1px solid var(--price-line);
     }
     .price-table tbody tr:hover {
-        background: #f0fdfa;
+        background: #fafafa;
     }
-    .price-table .row-edited {
-        background: #fff7ed !important;
+    .price-table .row-edited td {
+        background: #fafafa !important;
     }
     .price-product-name {
-        font-weight: 800;
-        color: #111827;
+        font-weight: 500;
+        color: var(--price-text);
     }
     .price-unit {
-        color: #64748b;
-        font-weight: 600;
+        color: var(--price-muted);
+        font-family: 'DM Mono', monospace;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
     }
     .price-input {
-        border-radius: 0;
-        border: 1px solid #cbd5e1;
-        font-weight: 700;
+        border-radius: var(--ui-radius-md);
+        border: 1px solid var(--price-line);
+        font-weight: 500;
         box-shadow: none;
     }
     .price-input:focus {
-        border-color: #0f766e;
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+        border-color: #d4d4d4;
+        box-shadow: none;
     }
     .price-value {
-        color: #2563eb;
+        color: var(--price-text);
     }
     .price-delivery-input {
-        border-radius: 0;
-        border: 1px solid #cbd5e1;
-        background: #f8fafc;
-        color: #2563eb;
-        font-weight: 700;
+        border-radius: var(--ui-radius-md);
+        border: 1px solid var(--price-line);
+        background: #ffffff;
+        color: var(--price-text);
+        font-weight: 500;
     }
     .price-reset-btn {
-        border-radius: 0;
-        font-weight: 700;
+        border-radius: var(--ui-radius-md);
+        font-weight: 500;
     }
     .price-status {
         border-radius: 999px;
-        font-weight: 700;
-        font-size: 0.75rem;
+        font-family: 'DM Mono', monospace;
+        font-weight: 500;
+        font-size: 10px;
         padding: 0.3rem 0.65rem;
     }
     .price-status-weekly {
-        background: #fef3c7;
-        color: #92400e;
+        background: #ffffff;
+        color: var(--price-text);
+        border: 1px solid var(--price-line);
     }
     .price-status-default {
-        background: #f1f5f9;
-        color: #64748b;
-        border: 1px solid #cbd5e1;
-    }
-
-    /* Neutral admin override */
-    .price-setup-page {
-        background: transparent;
-        color: #111827;
-    }
-    .price-setup-header,
-    .price-date-form,
-    .price-card {
         background: #ffffff;
-        border: 1px solid #d8e0ea;
-        box-shadow: none;
-        border-radius: 24px;
-    }
-    .price-setup-title,
-    .price-product-name,
-    .price-value {
-        color: #111827;
-    }
-    .price-setup-sub,
-    .price-week-label,
-    .price-unit,
-    .price-table thead th {
-        color: #94a3b8;
-    }
-    .price-table thead th {
-        background: #ffffff;
-        border-bottom: 1px solid #d8e0ea;
-    }
-    .price-table tbody tr:hover {
-        background: #fafbfd;
-    }
-    .price-btn-neutral {
-        background: #ffffff;
-        border-color: #d8e0ea;
-        color: #111827;
-    }
-    .price-btn-primary {
-        background: #111827;
-        border-color: #111827;
-        color: #ffffff;
-    }
-    .price-input,
-    .price-delivery-input {
-        border-color: #d8e0ea;
-        box-shadow: none;
-        background: #ffffff;
-        color: #111827;
-    }
-    .price-status-weekly,
-    .price-status-default {
-        background: #f5f7fa;
-        color: #111827;
-        border: 1px solid #d8e0ea;
+        color: var(--price-muted);
+        border: 1px solid var(--price-line);
     }
 </style>
 
@@ -294,10 +243,11 @@
                                     </td>
 
                                     <td class="text-end">
-                                        <input type="text" 
-                                               class="form-control text-end delivery-price-input price-delivery-input" 
-                                               value="@((item.Cost + item.Markup + (item.DeliveryFee ?? item.MasterDeliveryFee)).ToString("0.00"))" 
-                                               readonly />
+                                        <input type="number" step="0.01" min="0"
+                                               name="Items[@i].DeliveryPrice"
+                                               class="form-control text-end delivery-price-input price-delivery-input"
+                                               value="@item.DeliveryPrice.ToString("0.00")" />
+                                        <input type="hidden" name="Items[@i].DeliveryFee" value="@((item.DeliveryFee ?? item.MasterDeliveryFee).ToString("0.00"))" class="delivery-fee-hidden" />
                                     </td>
 
                                     <td class="text-center">
@@ -339,15 +289,18 @@
 
             const cost = parseNumber(costInput?.value);
             const markup = parseNumber(markupInput?.value);
-            const deliveryFee = parseNumber(row.dataset.deliveryFee);
+            const deliveryPriceInput = row.querySelector('.delivery-price-input');
+            const hiddenDeliveryFee = row.querySelector('.delivery-fee-hidden');
             const basePrice = cost + markup;
-            const deliveryPrice = basePrice + deliveryFee;
+            const currentDeliveryPrice = parseNumber(deliveryPriceInput?.value);
+            const deliveryFee = hiddenDeliveryFee ? parseNumber(hiddenDeliveryFee.value) : parseNumber(row.dataset.deliveryFee);
+            const deliveryPrice = currentDeliveryPrice > 0 ? currentDeliveryPrice : basePrice + deliveryFee;
 
             const basePriceInput = row.querySelector('.base-price-input');
             if (basePriceInput) basePriceInput.value = basePrice.toFixed(2);
 
-            const deliveryPriceInput = row.querySelector('.delivery-price-input');
             if (deliveryPriceInput) deliveryPriceInput.value = deliveryPrice.toFixed(2);
+            if (hiddenDeliveryFee) hiddenDeliveryFee.value = (deliveryPrice - basePrice).toFixed(2);
 
             row.classList.add('row-edited');
         };
@@ -356,16 +309,35 @@
             const costInput = row.querySelector('.cost-input');
             const basePriceInput = row.querySelector('.base-price-input');
             const markupInput = row.querySelector('.markup-input');
+            const deliveryPriceInput = row.querySelector('.delivery-price-input');
+            const hiddenDeliveryFee = row.querySelector('.delivery-fee-hidden');
 
             const cost = parseNumber(costInput?.value);
             const basePrice = parseNumber(basePriceInput?.value);
-            const deliveryFee = parseNumber(row.dataset.deliveryFee);
+            const deliveryPrice = parseNumber(deliveryPriceInput?.value);
             const markup = basePrice - cost;
-            const deliveryPrice = basePrice + deliveryFee;
 
             if (markupInput) markupInput.value = markup.toFixed(2);
+            if (deliveryPriceInput && deliveryPriceInput.value.trim() === '') {
+                deliveryPriceInput.value = basePrice.toFixed(2);
+            }
+            if (hiddenDeliveryFee) {
+                hiddenDeliveryFee.value = (parseNumber(deliveryPriceInput?.value) - basePrice).toFixed(2);
+            }
+
+            row.classList.add('row-edited');
+        };
+
+        const updateRowFromDeliveryPrice = (row) => {
+            const basePriceInput = row.querySelector('.base-price-input');
             const deliveryPriceInput = row.querySelector('.delivery-price-input');
-            if (deliveryPriceInput) deliveryPriceInput.value = deliveryPrice.toFixed(2);
+            const hiddenDeliveryFee = row.querySelector('.delivery-fee-hidden');
+            const basePrice = parseNumber(basePriceInput?.value);
+            const deliveryPrice = parseNumber(deliveryPriceInput?.value);
+
+            if (hiddenDeliveryFee) {
+                hiddenDeliveryFee.value = Math.max(deliveryPrice - basePrice, 0).toFixed(2);
+            }
 
             row.classList.add('row-edited');
         };
@@ -380,6 +352,10 @@
                 const row = e.target.closest('tr');
                 updateRowFromBasePrice(row);
             }
+            if (e.target.classList.contains('delivery-price-input')) {
+                const row = e.target.closest('tr');
+                updateRowFromDeliveryPrice(row);
+            }
         });
 
         table.addEventListener('click', function(e) {
@@ -389,10 +365,15 @@
             const row = btn.closest('tr');
             const masterCost = parseNumber(row.dataset.masterCost);
             const masterMarkup = parseNumber(row.dataset.masterMarkup);
+            const masterDeliveryFee = parseNumber(row.dataset.deliveryFee);
             const costInput = row.querySelector('.cost-input');
             const markupInput = row.querySelector('.markup-input');
+            const deliveryPriceInput = row.querySelector('.delivery-price-input');
+            const hiddenDeliveryFee = row.querySelector('.delivery-fee-hidden');
             if (costInput) costInput.value = masterCost.toFixed(2);
             if (markupInput) markupInput.value = masterMarkup.toFixed(2);
+            if (deliveryPriceInput) deliveryPriceInput.value = (masterCost + masterMarkup + masterDeliveryFee).toFixed(2);
+            if (hiddenDeliveryFee) hiddenDeliveryFee.value = masterDeliveryFee.toFixed(2);
 
             updateRowFromCostMarkup(row);
         });

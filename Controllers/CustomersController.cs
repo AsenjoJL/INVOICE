@@ -44,7 +44,7 @@ public class CustomersController : Controller
         if (string.IsNullOrWhiteSpace(customer.GroupName))
             customer.GroupName = OutletGroups[0];
 
-        customer.Name = customer.Name?.Trim();
+        customer.Name = (customer.Name ?? string.Empty).Trim();
         if (!string.IsNullOrWhiteSpace(customer.Name))
         {
             var nameKey = customer.Name.ToLower();
@@ -87,7 +87,7 @@ public class CustomersController : Controller
         if (string.IsNullOrWhiteSpace(customer.GroupName))
             customer.GroupName = OutletGroups[0];
 
-        customer.Name = customer.Name?.Trim();
+        customer.Name = (customer.Name ?? string.Empty).Trim();
         if (!string.IsNullOrWhiteSpace(customer.Name))
         {
             var nameKey = customer.Name.ToLower();

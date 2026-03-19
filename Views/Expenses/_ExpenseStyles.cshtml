@@ -94,7 +94,7 @@
     .expense-primary-btn,
     .expense-secondary-btn {
         border: 0;
-        border-radius: 0;
+        border-radius: var(--ui-radius-xl);
         box-shadow: none;
     }
 
@@ -367,5 +367,21 @@
         .expense-ledger-group-head {
             flex-direction: column;
         }
+    }
+
+    .expense-shell,
+    .expense-sidebar,
+    .expense-panel,
+    .expense-ledger-total,
+    .expense-empty-state,
+    .expense-ledger-group {
+        border-radius: var(--ui-radius-xl) !important;
+    }
+
+    .expense-page .btn,
+    .expense-page .form-control,
+    .expense-page .form-select,
+    .expense-page .input-group-text {
+        border-radius: var(--ui-radius-md) !important;
     }
 </style>
