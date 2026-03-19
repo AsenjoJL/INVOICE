@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Price Versus Setup";
     ViewData["NotePurpose"] = "Set weekly cost, markup, and base price for each product.";
-    ViewData["NoteInstructions"] = "Reset restores master cost/markup; Save changes applies to the selected week (and optionally to master cost).";
+    ViewData["NoteInstructions"] = "Reset restores master cost/markup; saved weekly prices apply to future sales and orders for the selected week and do not rewrite old receipt profit records.";
 }
 
 <style>
@@ -170,6 +170,11 @@
         border-radius: var(--ui-radius-md);
         font-weight: 500;
     }
+    .price-row-save-btn {
+        border-radius: var(--ui-radius-md);
+        font-weight: 500;
+        min-width: 92px;
+    }
     .price-status {
         border-radius: 999px;
         font-family: 'DM Mono', monospace;
@@ -251,7 +256,7 @@
                     <div class="price-table-toolbar-copy">
                         <div class="price-table-toolbar-label">Table Actions</div>
                         <h3 class="price-table-toolbar-title">Save changes before leaving this page.</h3>
-                        <p class="price-table-toolbar-sub">The edited weekly prices below will be applied to the selected week and reflected in new sales, orders, and pricing lookups.</p>
+                        <p class="price-table-toolbar-sub">Save all changes at once, or use the row save button to update one product without being blocked by other rows. Saved prices affect future sales and order creation for this week.</p>
                     </div>
                     <button type="submit" class="btn price-btn price-btn-primary price-save-btn">
                         <i class="bi bi-save me-1"></i> Save Changes
@@ -268,6 +273,7 @@
                                 <th class="text-end py-3" style="width: 140px;">Markup (Added)</th>
                                 <th class="text-end py-3" style="width: 140px;">Base Price</th>
                                 <th class="text-end py-3" style="width: 140px;">Delivery Price</th>
+                                <th class="text-center py-3" style="width: 110px;">Save</th>
                                 <th class="text-center py-3" style="width: 90px;">Reset</th>
                                 <th class="text-center py-3" style="width: 100px;">Status</th>
                             </tr>
@@ -317,6 +323,15 @@
                                                class="form-control text-end delivery-price-input price-delivery-input"
                                                value="@item.DeliveryPrice.ToString("0.00")" />
                                         <input type="hidden" name="Items[@i].DeliveryFee" value="@((item.DeliveryFee ?? item.MasterDeliveryFee).ToString("0.00"))" class="delivery-fee-hidden" />
+                                    </td>
+
+                                    <td class="text-center">
+                                        <button type="submit"
+                                                name="singleProductId"
+                                                value="@item.ProductId"
+                                                class="btn btn-sm price-btn price-btn-primary price-row-save-btn">
+                                            Save Row
+                                        </button>
                                     </td>
 
                                     <td class="text-center">

@@ -34,18 +34,26 @@ public class WeeklyPricesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> PriceVersus(PriceVersusViewModel model)
+    public async Task<IActionResult> PriceVersus(PriceVersusViewModel model, int? singleProductId = null)
     {
         if (model.Items == null || model.Items.Count == 0)
         {
-            return RedirectToAction(nameof(PriceVersus), new { date = model.TargetDate.ToString("yyyy-MM-dd") });
+            return RedirectToPriceVersus(model.TargetDate);
         }
 
-        int diff = (7 + (model.TargetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
-        var weekStart = model.TargetDate.AddDays(-1 * diff).Date;
-        var weekEnd = weekStart.AddDays(6).Date;
+        var itemsToSave = singleProductId.HasValue
+            ? model.Items.Where(i => i.ProductId == singleProductId.Value).ToList()
+            : model.Items.ToList();
 
-        var pids = model.Items.Select(i => i.ProductId).Distinct().ToList();
+        if (itemsToSave.Count == 0)
+        {
+            TempData["ErrorMessage"] = "No price row was selected to save.";
+            return RedirectToPriceVersus(model.TargetDate);
+        }
+
+        var (weekStart, weekEnd) = GetWeekRange(model.TargetDate);
+
+        var pids = itemsToSave.Select(i => i.ProductId).Distinct().ToList();
 
         var productMap = await _context.Products
             .Where(p => pids.Contains(p.Id))
@@ -77,20 +85,19 @@ public class WeeklyPricesController : Controller
 
         var savedChanges = 0;
 
-        foreach (var item in model.Items)
+        foreach (var item in itemsToSave)
         {
             if (!productMap.TryGetValue(item.ProductId, out var prod)) continue;
 
+            var normalized = NormalizePostedPricing(item, prod);
             var masterCost = prod.UnitCost;
             var masterMarkup = prod.Markup;
             var masterDeliveryFee = prod.DeliveryFee;
-
-            decimal cost = Math.Max(item.Cost, 0m);
-            decimal basePriceFromPost = Math.Max(item.BasePrice, cost);
-            decimal markup = Math.Max(item.Markup, basePriceFromPost - cost);
-            decimal basePrice = cost + markup;
-            decimal deliveryPrice = Math.Max(item.DeliveryPrice, basePrice);
-            decimal deliveryFee = deliveryPrice - basePrice;
+            var cost = normalized.Cost;
+            var markup = normalized.Markup;
+            var basePrice = normalized.BasePrice;
+            var deliveryPrice = normalized.DeliveryPrice;
+            var deliveryFee = normalized.DeliveryFee;
 
             if (model.ApplyToMasterCost && masterCost != cost)
             {
@@ -180,10 +187,12 @@ public class WeeklyPricesController : Controller
         _cacheInvalidator.InvalidateDashboard();
         _cacheInvalidator.InvalidateProfitReports();
         TempData["SuccessMessage"] = savedChanges > 0
-            ? $"Saved changes for {savedChanges} price record(s)."
+            ? singleProductId.HasValue
+                ? "Saved the selected product price."
+                : $"Saved changes for {savedChanges} price record(s)."
             : "No price changes were detected.";
 
-        return RedirectToAction(nameof(PriceVersus), new { date = model.TargetDate.ToString("yyyy-MM-dd") });
+        return RedirectToPriceVersus(model.TargetDate);
     }
 
     // GET: WeeklyPrices
@@ -215,39 +224,11 @@ public class WeeklyPricesController : Controller
     public async Task<IActionResult> Create([Bind("Id,ProductId,EffectiveFrom,EffectiveTo,BasePrice,DeliveryPrice")] WeeklyPrice weeklyPrice)
     {
         var product = await _context.Products.FindAsync(weeklyPrice.ProductId);
-        if (product == null)
-        {
-            ModelState.AddModelError("ProductId", "Product not found.");
-        }
-
-        if (weeklyPrice.BasePrice < 0)
-            ModelState.AddModelError("BasePrice", "Base price cannot be negative.");
-        if (weeklyPrice.DeliveryPrice < 0)
-            ModelState.AddModelError("DeliveryPrice", "Delivery price cannot be negative.");
-
-        if (product != null && ModelState.IsValid)
-        {
-            var markup = weeklyPrice.BasePrice - product.UnitCost;
-            var deliveryFee = weeklyPrice.DeliveryPrice - weeklyPrice.BasePrice;
-
-            if (markup < 0)
-                ModelState.AddModelError("BasePrice", "Base price cannot be lower than cost.");
-            if (deliveryFee < 0)
-                ModelState.AddModelError("DeliveryPrice", "Delivery price cannot be lower than base price.");
-        }
+        ValidateWeeklyPriceInput(weeklyPrice, product);
 
         if (ModelState.IsValid && product != null)
         {
-            var markup = weeklyPrice.BasePrice - product.UnitCost;
-            var deliveryFee = weeklyPrice.DeliveryPrice - weeklyPrice.BasePrice;
-
-            weeklyPrice.Markup = markup;
-            weeklyPrice.DeliveryFee = deliveryFee != product.DeliveryFee ? deliveryFee : null;
-
-            var basePrice = product.UnitCost + markup;
-            var effectiveDeliveryFee = weeklyPrice.DeliveryFee ?? product.DeliveryFee;
-            weeklyPrice.BasePrice = basePrice;
-            weeklyPrice.DeliveryPrice = basePrice + effectiveDeliveryFee;
+            ApplyWeeklyPriceValues(weeklyPrice, product);
 
             _context.Add(weeklyPrice);
             await _context.SaveChangesAsync();
@@ -281,42 +262,16 @@ public class WeeklyPricesController : Controller
         if (existing == null) return NotFound();
 
         var product = await _context.Products.FindAsync(weeklyPrice.ProductId);
-        if (product == null)
-        {
-            ModelState.AddModelError("ProductId", "Product not found.");
-        }
-
-        if (weeklyPrice.BasePrice < 0)
-            ModelState.AddModelError("BasePrice", "Base price cannot be negative.");
-        if (weeklyPrice.DeliveryPrice < 0)
-            ModelState.AddModelError("DeliveryPrice", "Delivery price cannot be negative.");
-
-        if (product != null && ModelState.IsValid)
-        {
-            var markup = weeklyPrice.BasePrice - product.UnitCost;
-            var deliveryFee = weeklyPrice.DeliveryPrice - weeklyPrice.BasePrice;
-
-            if (markup < 0)
-                ModelState.AddModelError("BasePrice", "Base price cannot be lower than cost.");
-            if (deliveryFee < 0)
-                ModelState.AddModelError("DeliveryPrice", "Delivery price cannot be lower than base price.");
-        }
+        ValidateWeeklyPriceInput(weeklyPrice, product);
 
         if (ModelState.IsValid && product != null)
         {
-            var markup = weeklyPrice.BasePrice - product.UnitCost;
-            var deliveryFee = weeklyPrice.DeliveryPrice - weeklyPrice.BasePrice;
-
             existing.ProductId = weeklyPrice.ProductId;
             existing.EffectiveFrom = weeklyPrice.EffectiveFrom;
             existing.EffectiveTo = weeklyPrice.EffectiveTo;
-            existing.Markup = markup;
-            existing.DeliveryFee = deliveryFee != product.DeliveryFee ? deliveryFee : null;
-
-            var basePrice = product.UnitCost + markup;
-            var effectiveDeliveryFee = existing.DeliveryFee ?? product.DeliveryFee;
-            existing.BasePrice = basePrice;
-            existing.DeliveryPrice = basePrice + effectiveDeliveryFee;
+            existing.BasePrice = weeklyPrice.BasePrice;
+            existing.DeliveryPrice = weeklyPrice.DeliveryPrice;
+            ApplyWeeklyPriceValues(existing, product);
 
             try
             {
@@ -378,9 +333,7 @@ public class WeeklyPricesController : Controller
     {
         var day = targetDate.Date;
 
-        int diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
-        var weekStart = targetDate.AddDays(-1 * diff).Date;
-        var weekEnd = weekStart.AddDays(6).Date;
+        var (weekStart, weekEnd) = GetWeekRange(targetDate);
 
         var products = await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted);
         var weeklyPrices = await _lookupCache.GetWeeklyPricesForDayAsync(day, HttpContext.RequestAborted);
@@ -464,5 +417,74 @@ public class WeeklyPricesController : Controller
     private bool WeeklyPriceExists(int id)
     {
         return _context.WeeklyPrices.Any(e => e.Id == id);
+    }
+
+    private IActionResult RedirectToPriceVersus(DateTime targetDate)
+        => RedirectToAction(nameof(PriceVersus), new { date = targetDate.ToString("yyyy-MM-dd") });
+
+    private static (DateTime WeekStart, DateTime WeekEnd) GetWeekRange(DateTime targetDate)
+    {
+        int diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
+        var weekStart = targetDate.AddDays(-1 * diff).Date;
+        return (weekStart, weekStart.AddDays(6).Date);
+    }
+
+    private void ValidateWeeklyPriceInput(WeeklyPrice weeklyPrice, Product? product)
+    {
+        if (product == null)
+        {
+            ModelState.AddModelError("ProductId", "Product not found.");
+            return;
+        }
+
+        if (weeklyPrice.BasePrice < 0)
+            ModelState.AddModelError("BasePrice", "Base price cannot be negative.");
+        if (weeklyPrice.DeliveryPrice < 0)
+            ModelState.AddModelError("DeliveryPrice", "Delivery price cannot be negative.");
+
+        if (!ModelState.IsValid)
+            return;
+
+        var markup = weeklyPrice.BasePrice - product.UnitCost;
+        var deliveryFee = weeklyPrice.DeliveryPrice - weeklyPrice.BasePrice;
+
+        if (markup < 0)
+            ModelState.AddModelError("BasePrice", "Base price cannot be lower than cost.");
+        if (deliveryFee < 0)
+            ModelState.AddModelError("DeliveryPrice", "Delivery price cannot be lower than base price.");
+    }
+
+    private static void ApplyWeeklyPriceValues(WeeklyPrice weeklyPrice, Product product)
+    {
+        var markup = weeklyPrice.BasePrice - product.UnitCost;
+        var deliveryFee = weeklyPrice.DeliveryPrice - weeklyPrice.BasePrice;
+
+        weeklyPrice.Markup = markup;
+        weeklyPrice.DeliveryFee = deliveryFee != product.DeliveryFee ? deliveryFee : null;
+
+        var basePrice = product.UnitCost + markup;
+        var effectiveDeliveryFee = weeklyPrice.DeliveryFee ?? product.DeliveryFee;
+        weeklyPrice.BasePrice = basePrice;
+        weeklyPrice.DeliveryPrice = basePrice + effectiveDeliveryFee;
+    }
+
+    private static (decimal Cost, decimal Markup, decimal BasePrice, decimal DeliveryPrice, decimal DeliveryFee) NormalizePostedPricing(
+        PriceVersusItem item,
+        Product product)
+    {
+        var cost = Math.Max(item.Cost, 0m);
+        var basePriceFromPost = Math.Max(item.BasePrice, cost);
+        var markup = Math.Max(item.Markup, basePriceFromPost - cost);
+        var basePrice = cost + markup;
+        var deliveryPrice = Math.Max(item.DeliveryPrice, basePrice);
+        var deliveryFee = deliveryPrice - basePrice;
+
+        if (deliveryPrice == 0m)
+        {
+            deliveryFee = product.DeliveryFee;
+            deliveryPrice = basePrice + deliveryFee;
+        }
+
+        return (cost, markup, basePrice, deliveryPrice, deliveryFee);
     }
 }
