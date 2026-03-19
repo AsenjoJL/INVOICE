@@ -1064,19 +1064,43 @@
                         <span class="section-toggle"><i class="bi bi-chevron-down"></i></span>
                     </button>
                     <div id="expenseSection" class="collapse show excel-box">
+                        @if (Model.ExpenseGroups.Any())
+                        {
+                            foreach (var expenseGroup in Model.ExpenseGroups)
+                            {
+                                <div class="group-title px-3 pt-3 mb-0">@expenseGroup.Label</div>
+                                <table class="table-excel">
+                                    <thead>
+                                        <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var e in expenseGroup.Items)
+                                        {
+                                            <tr>
+                                                <td>@e.Category @if(!string.IsNullOrEmpty(e.Description)){<span>- @e.Description</span>} <br><small class="text-muted">@e.Date.ToString("MM/dd")</small></td>
+                                                <td class="num-col val-neg">@e.Amount.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td>@expenseGroup.Label.ToUpperInvariant()</td>
+                                            <td class="num-col val-neg">₱@expenseGroup.TotalAmount.ToString("N2")</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            }
+                        }
+                        else
+                        {
+                            <table class="table-excel">
+                                <tbody>
+                                    <tr><td colspan="2" class="text-center text-muted fst-italic py-3">No expenses recorded</td></tr>
+                                </tbody>
+                            </table>
+                        }
+
                         <table class="table-excel">
-                            <thead>
-                                <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
-                            </thead>
-                            <tbody>
-                                @foreach(var e in Model.Expenses) {
-                                    <tr>
-                                        <td>@e.Category @if(!string.IsNullOrEmpty(e.Description)){<span>- @e.Description</span>} <br><small class="text-muted">@e.Date.ToString("MM/dd")</small></td>
-                                        <td class="num-col val-neg">@e.Amount.ToString("N2")</td>
-                                    </tr>
-                                }
-                                @if(!Model.Expenses.Any()) { <tr><td colspan="2" class="text-center text-muted fst-italic py-3">No expenses recorded</td></tr>}
-                            </tbody>
                             <tfoot>
                                 <tr>
                                     <td>TOTAL EXPENSES</td>

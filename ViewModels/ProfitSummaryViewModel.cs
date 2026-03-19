@@ -25,6 +25,7 @@ public class ProfitSummaryViewModel
     
     // C2: Expenses (includes payroll expenses)
     public List<Expense> Expenses { get; set; } = new();
+    public List<ExpenseGroupViewModel> ExpenseGroups { get; set; } = new();
     public decimal TotalExpenses { get; set; }
     public decimal NetProfit { get; set; } // GrossProfit - Deductions
 
@@ -117,6 +118,13 @@ public class DailyProfitStat
     public decimal SalesAmount { get; set; }
     public decimal FeeAmount { get; set; }
     public decimal GrossProfit { get; set; }
+}
+
+public class ExpenseGroupViewModel
+{
+    public string Label { get; set; } = string.Empty;
+    public List<Expense> Items { get; set; } = new();
+    public decimal TotalAmount => Items.Sum(x => x.Amount);
 }
 
 

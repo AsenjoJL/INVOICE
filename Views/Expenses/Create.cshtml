@@ -19,15 +19,9 @@
                     
                     @{
                         var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
+                        var categoryGroups = (ViewBag.CategoryGroups as IEnumerable<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>)
+                            ?? Enumerable.Empty<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>();
                         var vendorOptions = (ViewBag.VendorOptions as List<string>) ?? new List<string>();
-                        var amountOptions = (ViewBag.AmountOptions as decimal[]) ?? Array.Empty<decimal>();
-                        var defaultCategories = new[] { "Rent", "Utilities", "Salaries", "Supplies", "Transportation", "Food & Meals", "Maintenance", "Other" };
-                        var allCategories = categoryOptions
-                            .Concat(defaultCategories)
-                            .Where(c => !string.IsNullOrWhiteSpace(c))
-                            .Distinct(StringComparer.OrdinalIgnoreCase)
-                            .OrderBy(c => c)
-                            .ToList();
                     }
 
                     <div class="row g-2 mb-3">
@@ -37,17 +31,8 @@
                             <span asp-validation-for="Date" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Amount</label>
-                            <input type="hidden" asp-for="Amount" id="amountValue" />
-                            <select id="amountSelect" class="form-select">
-                                <option value="">-- Select Amount --</option>
-                                @foreach (var amt in amountOptions)
-                                {
-                                    <option value="@amt">@amt.ToString("N2")</option>
-                                }
-                                <option value="__other__">Other...</option>
-                            </select>
-                            <input id="amountOther" type="number" step="0.01" class="form-control mt-2 d-none" placeholder="Enter amount" />
+                            <label asp-for="Amount" class="form-label">Amount</label>
+                            <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="Enter amount" value="@(Model?.Amount > 0 ? Model.Amount.ToString("0.00") : string.Empty)" />
                             <span asp-validation-for="Amount" class="text-danger"></span>
                         </div>
                     </div>
@@ -57,14 +42,25 @@
                             <label class="form-label">Category</label>
                             <input type="hidden" asp-for="Category" id="categoryValue" />
                             <select id="categorySelect" class="form-select">
-                                <option value="">-- Select Category --</option>
-                                @foreach (var c in allCategories)
+                                <option value="">-- Select Expense Name --</option>
+                                @foreach (var group in categoryGroups)
                                 {
-                                    <option value="@c">@c</option>
+                                    if (group.Items.Count == 0)
+                                    {
+                                        continue;
+                                    }
+
+                                    <optgroup label="@group.Label">
+                                        @foreach (var item in group.Items)
+                                        {
+                                            <option value="@item">@item</option>
+                                        }
+                                    </optgroup>
                                 }
                                 <option value="__other__">Other...</option>
                             </select>
                             <input id="categoryOther" class="form-control mt-2 d-none" placeholder="Enter category" />
+                            <div class="form-text">Use the grouped presets from your Daily, Weekly, and Monthly expense list.</div>
                             <span asp-validation-for="Category" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -108,10 +104,6 @@
 
 <script>
     (function () {
-        const amountValue = document.getElementById('amountValue');
-        const amountSelect = document.getElementById('amountSelect');
-        const amountOther = document.getElementById('amountOther');
-
         const categoryValue = document.getElementById('categoryValue');
         const categorySelect = document.getElementById('categorySelect');
         const categoryOther = document.getElementById('categoryOther');
@@ -120,9 +112,6 @@
         const vendorSelect = document.getElementById('vendorSelect');
         const vendorOther = document.getElementById('vendorOther');
 
-        function setAmount(val) {
-            amountValue.value = val || '';
-        }
         function setCategory(val) {
             categoryValue.value = val || '';
         }
@@ -143,18 +132,6 @@
                 otherInput.value = current;
             }
         }
-
-        amountSelect.addEventListener('change', () => {
-            if (amountSelect.value === '__other__') {
-                amountOther.classList.remove('d-none');
-                amountOther.value = '';
-                setAmount('');
-            } else {
-                amountOther.classList.add('d-none');
-                setAmount(amountSelect.value);
-            }
-        });
-        amountOther.addEventListener('input', () => setAmount(amountOther.value));
 
         categorySelect.addEventListener('change', () => {
             if (categorySelect.value === '__other__') {
@@ -180,7 +157,6 @@
         });
         vendorOther.addEventListener('input', () => setVendor(vendorOther.value));
 
-        initSelect(amountSelect, amountOther, amountValue, setAmount);
         initSelect(categorySelect, categoryOther, categoryValue, setCategory);
         initSelect(vendorSelect, vendorOther, vendorValue, setVendor);
     })();

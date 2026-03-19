@@ -23,6 +23,25 @@ internal sealed record PartnerAttributedRow(string PartnerName, string ItemName,
 /// </summary>
 public sealed class ProfitReportService : IProfitReportService
 {
+    private static readonly Dictionary<string, string> ExpenseGroupByCategory = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["FOOD ALLOWANCE"] = "Daily Expenses",
+        ["DRIVER FEE"] = "Daily Expenses",
+        ["PLASTIC/SUPPLIES"] = "Daily Expenses",
+        ["DIESEL"] = "Daily Expenses",
+        ["DAILY DUES"] = "Daily Expenses",
+        ["CASH INTEREST"] = "Weekly Expenses",
+        ["PUSH CART"] = "Weekly Expenses",
+        ["TENT"] = "Weekly Expenses",
+        ["LABOR"] = "Weekly Expenses",
+        ["CARD INC"] = "Weekly Expenses",
+        ["ASIALINK CORP"] = "Monthly Expenses",
+        ["RAFI CORP"] = "Monthly Expenses",
+        ["BOARDING HOUSE"] = "Monthly Expenses",
+        ["PARKING FEE"] = "Monthly Expenses",
+        ["TRUCK MAINTENANCE"] = "Monthly Expenses"
+    };
+
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ProfitReportService> _logger;
     private readonly bool _partnersEnabled;
@@ -256,6 +275,7 @@ public sealed class ProfitReportService : IProfitReportService
         vm.TotalCapitalFund = capitals.Sum(c => c.Amount);
 
         vm.Expenses = expenses;
+        vm.ExpenseGroups = BuildExpenseGroups(expenses);
         vm.TotalExpenses = expenses.Sum(e => e.Amount);
 
         // Net Profit = Gross - Deductions - Expenses - Capital Funds (Retained)
@@ -398,5 +418,35 @@ public sealed class ProfitReportService : IProfitReportService
 
         _cache.Set(cacheKey, vm, TimeSpan.FromSeconds(30));
         return vm;
+    }
+
+    private static List<ExpenseGroupViewModel> BuildExpenseGroups(List<Expense> expenses)
+    {
+        var grouped = new Dictionary<string, List<Expense>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Daily Expenses"] = new(),
+            ["Weekly Expenses"] = new(),
+            ["Monthly Expenses"] = new(),
+            ["Other Expenses"] = new()
+        };
+
+        foreach (var expense in expenses.OrderBy(e => e.Date).ThenBy(e => e.Category))
+        {
+            var category = (expense.Category ?? string.Empty).Trim();
+            var groupName = ExpenseGroupByCategory.TryGetValue(category, out var mapped)
+                ? mapped
+                : "Other Expenses";
+
+            grouped[groupName].Add(expense);
+        }
+
+        return grouped
+            .Where(g => g.Value.Count > 0)
+            .Select(g => new ExpenseGroupViewModel
+            {
+                Label = g.Key,
+                Items = g.Value
+            })
+            .ToList();
     }
 }

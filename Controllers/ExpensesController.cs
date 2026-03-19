@@ -10,6 +10,34 @@ namespace HazelInvoice.Controllers;
 [Authorize]
 public class ExpensesController : Controller
 {
+    private static readonly (string Group, string[] Items)[] ExpensePresetGroups =
+    {
+        ("Daily Expenses", new[]
+        {
+            "FOOD ALLOWANCE",
+            "DRIVER FEE",
+            "PLASTIC/SUPPLIES",
+            "DIESEL",
+            "DAILY DUES"
+        }),
+        ("Weekly Expenses", new[]
+        {
+            "CASH INTEREST",
+            "PUSH CART",
+            "TENT",
+            "LABOR",
+            "CARD INC"
+        }),
+        ("Monthly Expenses", new[]
+        {
+            "ASIALINK CORP",
+            "RAFI CORP",
+            "BOARDING HOUSE",
+            "PARKING FEE",
+            "TRUCK MAINTENANCE"
+        })
+    };
+
     private readonly ApplicationDbContext _context;
     private readonly IAppCacheInvalidator _cacheInvalidator;
 
@@ -68,8 +96,32 @@ public class ExpensesController : Controller
             .OrderBy(v => v)
             .ToListAsync();
 
+        var categoryGroups = ExpensePresetGroups
+            .Select(group => new ExpenseCategoryGroupViewModel(
+                group.Group,
+                group.Items
+                    .Concat(categories)
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(item => item)
+                    .ToList()))
+            .ToList();
+
+        var uncategorized = categories
+            .Where(category => !ExpensePresetGroups.Any(group =>
+                group.Items.Contains(category, StringComparer.OrdinalIgnoreCase)))
+            .OrderBy(category => category)
+            .ToList();
+
+        if (uncategorized.Count > 0)
+        {
+            categoryGroups.Add(new ExpenseCategoryGroupViewModel("More Expense Types", uncategorized));
+        }
+
         ViewBag.CategoryOptions = categories;
+        ViewBag.CategoryGroups = categoryGroups;
         ViewBag.VendorOptions = vendors;
-        ViewBag.AmountOptions = new decimal[] { 50, 100, 200, 500, 1000, 2000, 5000, 10000 };
     }
+
+    public sealed record ExpenseCategoryGroupViewModel(string Label, List<string> Items);
 }
