@@ -7,6 +7,9 @@ obj/
 
 # User-specific / local tooling
 .codex_build_tmp*/
+temp_git/
+temp_push/
+tmp_xlsx/
 
 # Publish / installer artifacts (local)
 HazelInvoice_Installer.exe
@@ -38,3 +41,4 @@ logs/
 build*.log
 build*.txt
 start_log*.txt
+*.tmp

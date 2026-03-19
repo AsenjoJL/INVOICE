@@ -446,7 +446,7 @@ public class OrdersController : Controller
         for (var c = 1; c <= sheet.MaxCol; c++)
         {
             var raw = sheet.GetCell(headerRow, c);
-            var key = NormalizeKey(raw);
+            var key = OrderImportHelpers.NormalizeKey(raw);
             if (string.IsNullOrWhiteSpace(key) || NonOutletHeaderKeys.Contains(key))
                 continue;
 
@@ -466,7 +466,7 @@ public class OrdersController : Controller
             .ToListAsync();
 
         var customerMap = customers
-            .GroupBy(c => NormalizeKey(c.Name))
+            .GroupBy(c => OrderImportHelpers.NormalizeKey(c.Name))
             .ToDictionary(g => g.Key, g => g.First());
 
         var matchedOutletCols = new Dictionary<int, Customer>();
@@ -1157,7 +1157,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         out Customer customer)
     {
         customer = default!;
-        var key = NormalizeKey(header);
+        var key = OrderImportHelpers.NormalizeKey(header);
         if (string.IsNullOrWhiteSpace(key))
             return false;
 
