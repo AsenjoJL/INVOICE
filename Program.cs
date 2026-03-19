@@ -11,6 +11,7 @@ using HazelInvoice.Services.Expenses;
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -74,6 +75,12 @@ builder.Services.AddScoped<IVegetableMatrixTemplateService, VegetableMatrixTempl
 builder.Services.AddScoped<IProfitReportService, ProfitReportService>();
 
 builder.Services.AddControllersWithViews();
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.ValueCountLimit = 10000;
+    options.KeyLengthLimit = 4096;
+    options.ValueLengthLimit = 1024 * 1024;
+});
 
 var app = builder.Build();
 

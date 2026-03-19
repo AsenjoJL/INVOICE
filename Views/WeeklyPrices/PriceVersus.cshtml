@@ -361,10 +361,59 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const table = document.getElementById('priceTable');
+        const versusForm = document.getElementById('versusForm');
 
         const parseNumber = (value) => {
             if (!value) return 0;
             return parseFloat(value.toString().replace(',', '.')) || 0;
+        };
+
+        const submitSingleRow = (row, productId) => {
+            if (!versusForm) return;
+
+            const tempForm = document.createElement('form');
+            tempForm.method = 'post';
+            tempForm.action = versusForm.getAttribute('action') || window.location.pathname;
+            tempForm.style.display = 'none';
+
+            const antiForgery = versusForm.querySelector('input[name="__RequestVerificationToken"]');
+            if (antiForgery) {
+                const token = antiForgery.cloneNode();
+                token.value = antiForgery.value;
+                tempForm.appendChild(token);
+            }
+
+            const targetDate = versusForm.querySelector('input[name="TargetDate"]');
+            if (targetDate) {
+                const input = targetDate.cloneNode();
+                input.value = targetDate.value;
+                tempForm.appendChild(input);
+            }
+
+            const applyToMaster = versusForm.querySelector('input[name="ApplyToMasterCost"]');
+            const applyHidden = document.createElement('input');
+            applyHidden.type = 'hidden';
+            applyHidden.name = 'ApplyToMasterCost';
+            applyHidden.value = applyToMaster && applyToMaster.checked ? 'true' : 'false';
+            tempForm.appendChild(applyHidden);
+
+            const rowInputs = row.querySelectorAll('input[name], select[name], textarea[name]');
+            rowInputs.forEach((source) => {
+                const clone = document.createElement('input');
+                clone.type = 'hidden';
+                clone.name = source.name;
+                clone.value = source.value;
+                tempForm.appendChild(clone);
+            });
+
+            const productInput = document.createElement('input');
+            productInput.type = 'hidden';
+            productInput.name = 'singleProductId';
+            productInput.value = productId;
+            tempForm.appendChild(productInput);
+
+            document.body.appendChild(tempForm);
+            tempForm.submit();
         };
 
         const updateRowFromCostMarkup = (row) => {
@@ -443,6 +492,17 @@
         });
 
         table.addEventListener('click', function(e) {
+            const saveBtn = e.target.closest('.price-row-save-btn');
+            if (saveBtn) {
+                e.preventDefault();
+                const row = saveBtn.closest('tr');
+                const productId = saveBtn.value;
+                if (row && productId) {
+                    submitSingleRow(row, productId);
+                }
+                return;
+            }
+
             const btn = e.target.closest('.reset-cost-btn');
             if (!btn) return;
 
