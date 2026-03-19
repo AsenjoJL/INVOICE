@@ -970,10 +970,10 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
 
     // GET: Orders/ReceiptList
     // Back-compat endpoint used by the Receipts page shortcut.
-    // Defaults to today's Unpaid receipts, with optional status switch via query string.
+    // Defaults to the normalized delivery date (tomorrow if not specified).
     public async Task<IActionResult> ReceiptList(DateTime? date, string status = "Unpaid")
     {
-        var targetDate = date ?? DateTime.Now.Date;
+        var targetDate = NormalizeOrderDate(date);
 
         var normalized = (status ?? string.Empty).Trim();
         var targetStatus = normalized.Equals("Paid", StringComparison.OrdinalIgnoreCase)
@@ -988,14 +988,14 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     // GET: Orders/UnpaidOrders
     public async Task<IActionResult> UnpaidOrders(DateTime? date)
     {
-        var targetDate = date ?? DateTime.Now.Date;
+        var targetDate = NormalizeOrderDate(date);
         return await GetOrdersByStatus(targetDate, PaymentStatus.Unpaid);
     }
 
     // GET: Orders/PaidOrders
     public async Task<IActionResult> PaidOrders(DateTime? date)
     {
-        var targetDate = date ?? DateTime.Now.Date;
+        var targetDate = NormalizeOrderDate(date);
         return await GetOrdersByStatus(targetDate, PaymentStatus.Paid);
     }
 

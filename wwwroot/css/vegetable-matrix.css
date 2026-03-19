@@ -30,7 +30,8 @@
 .matrix-container {
     height: calc(100vh - 290px);
     min-height: 520px;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
@@ -42,6 +43,15 @@
     background: var(--vm-bg);
     margin: 0 12px 10px;
     max-width: 100%;
+}
+
+.matrix-container.matrix-dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+
+.matrix-container:not(.matrix-dragging) {
+    cursor: grab;
 }
 
 .matrix-toolbar {

@@ -33,7 +33,8 @@ function changeProductPage(d) {
     'use strict';
 
     const table = document.getElementById('mainTable');
-    if (!table) return;
+    const matrixContainer = document.querySelector('.matrix-container');
+    if (!table || !matrixContainer) return;
 
     const elGrandAmt = document.getElementById('grandTotalAmt');
     const elGrandQty = document.getElementById('grandTotalQty');
@@ -43,6 +44,7 @@ function changeProductPage(d) {
     let totalQty = Number(vmCfg.grandTotalQty) || 0;
     let totalAmt = Number(vmCfg.grandTotalAmount) || 0;
     let hideZeroPriceRows = false;
+    let dragState = null;
 
     const prevValues = new WeakMap();
     const rowRefs = new WeakMap();
@@ -159,6 +161,61 @@ function changeProductPage(d) {
             row.classList.toggle('no-print-row', rowQty <= 0);
         });
     }
+
+    function isInteractiveTarget(target) {
+        return !!target.closest('input, select, textarea, button, a, label');
+    }
+
+    function startDrag(clientX, clientY) {
+        dragState = {
+            startX: clientX,
+            startY: clientY,
+            scrollLeft: matrixContainer.scrollLeft,
+            scrollTop: matrixContainer.scrollTop
+        };
+        matrixContainer.classList.add('matrix-dragging');
+    }
+
+    function moveDrag(clientX, clientY) {
+        if (!dragState) return;
+        const dx = clientX - dragState.startX;
+        const dy = clientY - dragState.startY;
+        matrixContainer.scrollLeft = dragState.scrollLeft - dx;
+        matrixContainer.scrollTop = dragState.scrollTop - dy;
+    }
+
+    function endDrag() {
+        dragState = null;
+        matrixContainer.classList.remove('matrix-dragging');
+    }
+
+    matrixContainer.addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        if (isInteractiveTarget(event.target)) return;
+
+        startDrag(event.clientX, event.clientY);
+        matrixContainer.setPointerCapture?.(event.pointerId);
+    });
+
+    matrixContainer.addEventListener('pointermove', (event) => {
+        if (!dragState) return;
+        moveDrag(event.clientX, event.clientY);
+    });
+
+    matrixContainer.addEventListener('pointerup', endDrag);
+    matrixContainer.addEventListener('pointercancel', endDrag);
+    matrixContainer.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse') {
+            endDrag();
+        }
+    });
+
+    matrixContainer.addEventListener('wheel', (event) => {
+        if (event.shiftKey || Math.abs(event.deltaX) > 0) {
+            event.preventDefault();
+            matrixContainer.scrollLeft += event.deltaX || event.deltaY;
+        }
+    }, { passive: false });
 
     if (!isPrintView) {
         window.addEventListener('beforeprint', applyPrintRowFilter);
