@@ -3156,6 +3156,492 @@ footer.footer .container {
   margin-bottom: 0;
 }
 
+/* Neutral admin theme inspired by the provided sample */
+:root {
+  --admin-bg: #f6f8fb;
+  --admin-panel: #ffffff;
+  --admin-panel-soft: #fbfcfe;
+  --admin-line: #d8e0ea;
+  --admin-line-strong: #c9d3df;
+  --admin-text: #111827;
+  --admin-muted: #7a8699;
+  --admin-accent: #111827;
+  --admin-accent-strong: #111827;
+  --admin-warm: #111827;
+  --admin-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+body {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f7f9fc 26%, #f3f6fa 100%);
+  color: var(--admin-text);
+}
+
+.sidebar {
+  background: #ffffff;
+  color: var(--admin-text);
+  border-right: 1px solid var(--admin-line);
+  box-shadow: none;
+}
+
+.sidebar-brand,
+.sidebar-subtitle,
+.sidebar-link,
+.sidebar .navbar-nav .nav-link,
+.sidebar .navbar-nav .nav-link.text-dark,
+.sidebar .navbar-nav .btn-link.text-dark {
+  color: var(--admin-text) !important;
+}
+
+.sidebar-brand::before {
+  background: #0f766e;
+  border: 1px solid #0f766e;
+  color: #ffffff;
+}
+
+.sidebar-section-title {
+  background: #f4f7fb;
+  border: 1px solid var(--admin-line);
+  color: var(--admin-muted);
+}
+
+.sidebar-link {
+  border-radius: 18px;
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+
+.sidebar-link:hover {
+  background: #f8fafc;
+  border-color: var(--admin-line);
+  color: var(--admin-text);
+  transform: none;
+}
+
+.sidebar-link.active {
+  background: #ffffff;
+  color: var(--admin-text);
+  border-color: var(--admin-line-strong);
+  box-shadow: none;
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--admin-line);
+}
+
+.sidebar-footer-note {
+  color: var(--admin-muted);
+}
+
+.sidebar-footer-note i {
+  color: var(--admin-text);
+}
+
+.mobile-topbar,
+.admin-topbar,
+.admin-page-hero,
+.admin-filter-strip,
+.admin-page-footerbar,
+.dashboard-module-bar,
+.invoice-ui .invoice-hero.admin-page-hero,
+.matrix-page .outlet-tabs-wrap,
+.matrix-page .matrix-info-panel,
+.matrix-page .matrix-container,
+.matrix-toolbar-upgraded,
+.receiptlist-min .invoice-hero.admin-page-hero,
+.orders-summary-page .admin-page-hero {
+  background: #ffffff !important;
+  border: 1px solid var(--admin-line) !important;
+  box-shadow: none !important;
+}
+
+.admin-kicker,
+.admin-section-kicker,
+.dashboard-hero-kicker {
+  background: #eef3f8;
+  color: #0f766e;
+}
+
+.admin-mode-pill,
+.dashboard-module-pill,
+.dashboard-inline-link,
+.dashboard-table-link,
+.invoice-tag,
+.section-chip,
+.dash-chip,
+.title-chip {
+  background: #f5f7fa;
+  border: 1px solid var(--admin-line);
+  color: var(--admin-text);
+  box-shadow: none;
+}
+
+.admin-mode-pill.active,
+.dashboard-module-pill.active {
+  background: #0f9b8e !important;
+  color: #ffffff !important;
+  border-color: #0f9b8e !important;
+  box-shadow: none !important;
+}
+
+.admin-account-card {
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+}
+
+.admin-account-avatar {
+  background: #0f9b8e;
+}
+
+.admin-account-copy small,
+.admin-page-subtitle,
+.dashboard-section-heading p,
+.metric-state,
+.invoice-sub,
+.order-sub,
+.purchase-sub,
+.expense-sub,
+.workforce-sub,
+.sub,
+.dash-meta,
+.dashboard-meta,
+.summary-note,
+.page-note .note-text {
+  color: var(--admin-muted);
+}
+
+.admin-action-btn,
+.invoice-btn-primary,
+.invoice-btn-solid,
+.dash-btn-dark {
+  background: #f5f7fa;
+  color: var(--admin-text) !important;
+  border: 1px solid var(--admin-line-strong);
+  box-shadow: none;
+}
+
+.admin-action-btn:hover,
+.invoice-btn-primary:hover,
+.invoice-btn-solid:hover,
+.dash-btn-dark:hover {
+  background: #eef3f8;
+  color: var(--admin-text) !important;
+}
+
+.dash-btn-light,
+.invoice-btn-ghost,
+.invoice-btn-outline,
+.admin-account-logout,
+.admin-mini-btn {
+  background: #ffffff;
+  color: var(--admin-text);
+  border: 1px solid var(--admin-line);
+}
+
+.dashboard-hero-panel,
+.order-hero.admin-page-hero-strong {
+  background: #ffffff !important;
+  color: var(--admin-text);
+  border: 1px solid var(--admin-line);
+  box-shadow: none;
+}
+
+.dashboard-hero-title,
+.order-title,
+.invoice-title,
+.admin-page-title,
+.dashboard-section-heading h2,
+.dash-title,
+.purchase-title,
+.expense-title,
+.workforce-title,
+.payroll-header h1,
+.product-header h1,
+.outlet-header h1,
+.supplier-header h1 {
+  color: var(--admin-text) !important;
+}
+
+.dashboard-hero-highlight {
+  background: #f8fafc;
+  border: 1px solid var(--admin-line);
+  color: var(--admin-text);
+  backdrop-filter: none;
+}
+
+.dashboard-hero-highlight span,
+.dashboard-hero-highlight small {
+  color: var(--admin-muted);
+}
+
+.metric-card,
+.surface-card,
+.card,
+.admin-surface-card,
+.order-table-card,
+.invoice-card,
+.product-card,
+.purchase-card,
+.expense-card,
+.payroll-table-card,
+.workforce-card,
+.outlet-card,
+.supplier-card {
+  background: #ffffff;
+  border: 1px solid var(--admin-line) !important;
+  box-shadow: none !important;
+}
+
+.metric-card {
+  border-left: 1px solid var(--admin-line) !important;
+}
+
+.metric-card.is-success,
+.metric-card.is-primary,
+.metric-card.is-warning,
+.metric-card.is-danger,
+.metric-card.is-info,
+.metric-card.is-danger-soft {
+  border-left-color: var(--admin-line) !important;
+}
+
+.metric-label,
+.surface-card-title,
+.invoice-card-title,
+.table-admin thead th,
+.invoice-table thead th,
+.outlet-table thead th,
+.supplier-table thead th,
+.purchase-table thead th,
+.expense-table thead th,
+.payroll-table thead th,
+.workforce-table thead th,
+.product-table thead th,
+.order-table thead th {
+  color: #94a3b8;
+  letter-spacing: 0.18em;
+  font-weight: 800;
+}
+
+.surface-card-header,
+.invoice-card-header,
+.orders-summary-page .card-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--admin-line) !important;
+}
+
+.table-admin thead th,
+.invoice-table thead th,
+.outlet-table thead th,
+.supplier-table thead th,
+.purchase-table thead th,
+.expense-table thead th,
+.payroll-table thead th,
+.workforce-table thead th,
+.product-table thead th,
+.order-table thead th {
+  background: #ffffff;
+}
+
+.table-admin td,
+.invoice-table tbody td,
+.outlet-table td,
+.supplier-table td,
+.purchase-table td,
+.expense-table td,
+.payroll-table td,
+.workforce-table td,
+.product-table td,
+.order-table tbody td {
+  color: var(--admin-text);
+  border-color: #eef2f7;
+}
+
+.table-admin tbody tr:hover,
+.invoice-table tbody tr:hover,
+.outlet-table tbody tr:hover,
+.supplier-table tbody tr:hover,
+.purchase-table tbody tr:hover,
+.expense-table tbody tr:hover,
+.payroll-table tbody tr:hover,
+.workforce-table tbody tr:hover,
+.product-table tbody tr:hover,
+.order-table tbody tr:hover {
+  background: #fafbfd;
+}
+
+.form-control,
+.form-select,
+.input-group-text {
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  color: var(--admin-text);
+  box-shadow: none;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #b8c4d3;
+  box-shadow: 0 0 0 3px rgba(203, 213, 225, 0.35);
+}
+
+.status-pill,
+.payroll-status,
+.workforce-status {
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.status-paid,
+.badge-soft-success,
+.payroll-status.paid {
+  background: #ebfbf5;
+  color: #0f766e;
+}
+
+.status-unpaid,
+.badge-soft-danger,
+.payroll-status.unpaid {
+  background: #fff1f1;
+  color: #dc2626;
+}
+
+.status-partial,
+.badge-soft-warning,
+.payroll-status.partial {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.avatar-initial {
+  background: #f3f6fa;
+  color: var(--admin-text);
+}
+
+/* Generic neutral forms/details/report surfaces */
+.content-area .container,
+.content-area .container-fluid {
+  color: var(--admin-text);
+}
+
+.content-area .card-header,
+.content-area .card-footer {
+  background: #ffffff;
+  border-color: var(--admin-line);
+}
+
+.content-area .form-floating > label,
+.content-area .form-label,
+.content-area .text-muted {
+  color: var(--admin-muted) !important;
+}
+
+.content-area .btn-outline-primary,
+.content-area .btn-outline-secondary,
+.content-area .btn-light,
+.content-area .btn-primary {
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.content-area .btn-primary {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.content-area .btn-light,
+.content-area .btn-outline-primary,
+.content-area .btn-outline-secondary {
+  background: #ffffff;
+  color: var(--admin-text);
+  border-color: var(--admin-line);
+}
+
+.product-form-page .product-form-card,
+.purchase-form-card,
+.payroll-panel,
+.price-card,
+.price-setup-header,
+.price-date-form,
+.report-shell .card,
+.report-shell .excel-box,
+.report-shell .kpi-card,
+.printer-page .card,
+.weekly-page .card,
+.partner-page .card,
+.laborer-page .card {
+  background: #ffffff !important;
+  border: 1px solid var(--admin-line) !important;
+  box-shadow: none !important;
+  border-radius: 24px !important;
+}
+
+.product-form-page .product-form-banner,
+.purchase-form-header,
+.payroll-panel .card-header,
+.report-shell .section-header,
+.price-setup-header,
+.price-date-form {
+  background: #ffffff !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-line) !important;
+}
+
+.product-form-page .product-form-kicker,
+.price-setup-title,
+.report-shell .group-title,
+.report-shell .report-title {
+  color: var(--admin-text) !important;
+}
+
+.product-form-page .subtitle,
+.price-setup-sub,
+.report-shell .text-muted,
+.report-shell .group-title,
+.payroll-panel .panel-title {
+  color: var(--admin-muted) !important;
+}
+
+.product-form-page .sku-pill,
+.product-form-page .sku-help,
+.price-status-default,
+.price-status-weekly {
+  background: #f5f7fa !important;
+  color: var(--admin-text) !important;
+  border: 1px solid var(--admin-line) !important;
+}
+
+.report-shell .table-excel,
+.report-shell .table-excel th,
+.report-shell .table-excel td {
+  border-color: var(--admin-line) !important;
+}
+
+.report-shell .table-excel th,
+.report-shell .table-excel tfoot td {
+  background: #ffffff !important;
+  color: #94a3b8 !important;
+}
+
+.report-shell .table-excel tbody tr:hover {
+  background: #fafbfd !important;
+}
+
+.report-shell .kpi-card {
+  border-left: 1px solid var(--admin-line) !important;
+}
+
+.report-shell .kpi-title {
+  color: #94a3b8 !important;
+}
+
+.report-shell .kpi-value,
+.report-shell .num-col,
+.price-value {
+  color: var(--admin-text) !important;
+}
+
 .order-shell .order-hero.admin-page-hero-strong,
 .order-shell .order-toolbar.admin-filter-strip,
 .order-shell .order-table-card.admin-surface-card {

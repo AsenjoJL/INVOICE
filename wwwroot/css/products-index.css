@@ -653,3 +653,45 @@
 .metric-value {
     font-size: 18px;
 }
+
+/* Neutral product surface */
+.product-page {
+    background: transparent;
+    color: #111827;
+}
+
+.product-header-main,
+.product-card,
+.product-metrics .metric-card,
+.filter-bar,
+.bulk-toolbar,
+.product-search-bar {
+    background: #ffffff;
+    border: 1px solid #d8e0ea !important;
+    box-shadow: none !important;
+}
+
+.product-header h1,
+.product-name,
+.product-cost,
+.product-sku {
+    color: #111827;
+}
+
+.product-meta,
+.row-summary,
+.eyebrow,
+.metric-label,
+.metric-chip,
+.sort-trigger {
+    color: #94a3b8;
+}
+
+.product-table thead th {
+    background: #ffffff;
+    border-bottom: 1px solid #d8e0ea;
+}
+
+.product-table tbody tr:hover {
+    background: #fafbfd;
+}

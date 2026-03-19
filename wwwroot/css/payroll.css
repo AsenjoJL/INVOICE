@@ -230,3 +230,36 @@
 .payroll-kpi .value {
     font-size: 1rem;
 }
+
+/* Neutral payroll surface */
+.payroll-page,
+.payroll-table-card,
+.payroll-summary .payroll-kpi,
+.payroll-filter {
+    background: transparent;
+    color: #111827;
+}
+
+.payroll-summary .payroll-kpi,
+.payroll-table-card,
+.payroll-filter {
+    border: 1px solid #d8e0ea;
+    box-shadow: none;
+}
+
+.payroll-header h1,
+.payroll-money {
+    color: #111827;
+}
+
+.payroll-kpi .label,
+.payroll-inline-note,
+.payroll-header .sub {
+    color: #94a3b8;
+}
+
+.payroll-table thead th {
+    background: #ffffff;
+    border-bottom: 1px solid #d8e0ea;
+    color: #94a3b8;
+}

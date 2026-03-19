@@ -816,3 +816,62 @@
     .matrix-info-panel {
         font-size: 0.76rem;
     }
+
+    /* Neutral matrix surface */
+    .matrix-page,
+    .matrix-toolbar,
+    .matrix-info-panel,
+    .outlet-tabs-wrap,
+    .matrix-container,
+    .detail-card,
+    .detail-finance-wrap {
+        background: transparent;
+        color: #111827;
+    }
+
+    .matrix-toolbar,
+    .matrix-info-panel,
+    .outlet-tabs-wrap,
+    .matrix-container,
+    .detail-card,
+    .detail-finance-wrap {
+        border-color: #d8e0ea !important;
+        box-shadow: none !important;
+    }
+
+    .matrix-title,
+    .matrix-title-text,
+    .header-row-1-title,
+    .detail-title,
+    .value {
+        color: #111827;
+    }
+
+    .matrix-page-meta,
+    .group-label,
+    .legend-caption,
+    .legend-name,
+    .info-label {
+        color: #94a3b8;
+    }
+
+    .btn-matrix {
+        background: #ffffff;
+        border: 1px solid #d8e0ea;
+        color: #111827;
+        box-shadow: none;
+    }
+
+    .btn-matrix-primary {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    .matrix-table thead th,
+    .detail-table thead th,
+    .detail-finance thead th {
+        background: #ffffff;
+        color: #94a3b8;
+        border-color: #d8e0ea;
+    }
