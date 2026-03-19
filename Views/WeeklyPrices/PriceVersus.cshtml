@@ -11,8 +11,28 @@
         --price-line: #e8e8e8;
         --price-text: #0a0a0a;
         --price-muted: #888888;
+        --price-soft: #f7f7f7;
         font-family: 'DM Sans', sans-serif;
         color: var(--price-text);
+    }
+    .price-setup-shell {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+    .price-setup-kicker,
+    .price-table-toolbar-label,
+    .price-field-label {
+        font-family: 'DM Mono', monospace;
+        font-size: 9px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--price-muted);
+    }
+    .price-setup-headline {
+        border-bottom: 1px solid var(--price-line);
+        padding-bottom: 1.25rem;
+        margin-bottom: 2rem;
     }
     .price-setup-title {
         margin: 0;
@@ -51,27 +71,30 @@
         align-items: center;
         flex-wrap: wrap;
     }
-    .price-date-form {
-        display: inline-block;
+    .price-control-row {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) 1fr;
+        gap: 1.5rem;
+        align-items: start;
+        margin-bottom: 1.75rem;
+    }
+    .price-date-form,
+    .price-master-toggle {
         background: #ffffff;
         border: 1px solid var(--price-line);
         border-radius: var(--ui-radius-md);
         box-shadow: none;
-        padding: 0.75rem 0.9rem;
+        padding: 1rem 1.1rem;
     }
     .price-date-form label {
-        font-family: 'DM Mono', monospace;
-        font-size: 9px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: var(--price-muted);
-        margin-right: 0.5rem;
+        display: block;
+        margin-bottom: 0.55rem;
     }
     .price-date-form input[type="date"] {
-        border-radius: var(--ui-radius-xl);
+        border-radius: var(--ui-radius-md);
         border: 1px solid var(--price-line);
         font-weight: 500;
+        min-height: 48px;
     }
     .price-card {
         border: 1px solid var(--price-line);
@@ -79,13 +102,33 @@
         box-shadow: none;
         overflow: hidden;
     }
+    .price-master-toggle {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    .price-master-toggle .form-check {
+        margin: 0;
+    }
+    .price-master-toggle .form-check-label {
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--price-text);
+    }
+    .price-master-toggle-note {
+        margin: 0.4rem 0 0;
+        color: var(--price-muted);
+        font-size: 14px;
+        line-height: 1.5;
+    }
     .price-table-toolbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 16px;
         flex-wrap: wrap;
-        padding: 1rem 1.25rem;
+        padding: 1.1rem 1.25rem;
         border-bottom: 1px solid var(--price-line);
         background: #ffffff;
     }
@@ -113,8 +156,27 @@
         line-height: 1.6;
     }
     .price-save-btn {
-        min-width: 200px;
-        padding-inline: 1.35rem;
+        min-width: 180px;
+        min-height: 46px;
+        padding-inline: 1.15rem;
+    }
+    .price-feedback {
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--price-line);
+        font-size: 14px;
+    }
+    .price-feedback-success {
+        background: #fbfbfb;
+        color: #111111;
+    }
+    .price-feedback-error {
+        background: #fff8f8;
+        color: #8b1e1e;
+    }
+    .price-table-wrap {
+        max-height: 70vh;
+        overflow: auto;
+        scroll-margin-top: 110px;
     }
     .price-table {
         margin: 0;
@@ -151,6 +213,7 @@
         border: 1px solid var(--price-line);
         font-weight: 500;
         box-shadow: none;
+        min-height: 44px;
     }
     .price-input:focus {
         border-color: #d4d4d4;
@@ -165,6 +228,7 @@
         background: #ffffff;
         color: var(--price-text);
         font-weight: 500;
+        min-height: 44px;
     }
     .price-reset-btn {
         border-radius: var(--ui-radius-md);
@@ -192,10 +256,18 @@
         color: var(--price-muted);
         border: 1px solid var(--price-line);
     }
+    .price-saved-row td {
+        background: #f8f8f8 !important;
+        transition: background-color 0.25s ease;
+    }
     @@media (max-width: 768px) {
         .price-setup-header,
-        .price-table-toolbar {
+        .price-table-toolbar,
+        .price-control-row {
             align-items: flex-start !important;
+        }
+        .price-control-row {
+            grid-template-columns: 1fr;
         }
         .price-save-btn {
             width: 100%;
@@ -204,8 +276,10 @@
 </style>
 
 <div class="container-fluid p-4 price-setup-page">
-    <div class="price-setup-header d-flex justify-content-between align-items-center mb-4">
+    <div class="price-setup-shell">
+    <div class="price-setup-header d-flex justify-content-between align-items-center price-setup-headline">
         <div>
+            <div class="price-setup-kicker">Finance / Weekly Pricing</div>
             <h2 class="price-setup-title">Price Versus Setup</h2>
             <p class="price-setup-sub">
                 Original Price vs Selling Price for Week: 
@@ -221,19 +295,24 @@
 
     <partial name="_PageNote" />
 
-    @if (TempData["SuccessMessage"] is string successMessage && !string.IsNullOrWhiteSpace(successMessage))
-    {
-        <div class="alert alert-success mb-4">@successMessage</div>
-    }
-    @if (TempData["ErrorMessage"] is string errorMessage && !string.IsNullOrWhiteSpace(errorMessage))
-    {
-        <div class="alert alert-danger mb-4">@errorMessage</div>
-    }
-
-    <form method="get" class="mb-4 price-date-form">
-        <label>View Prices For Date:</label>
-        <input type="date" name="date" class="form-control d-inline-block w-auto" value="@Model.TargetDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
-    </form>
+    <div class="price-control-row">
+        <form method="get" class="price-date-form">
+            <label class="price-field-label">View Prices For Date</label>
+            <input type="date" name="date" class="form-control" value="@Model.TargetDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+        </form>
+        <div class="price-master-toggle">
+            <div>
+                <div class="price-field-label">Save Mode</div>
+                <div class="form-check">
+                    <input class="form-check-input" asp-for="ApplyToMasterCost" form="versusForm" />
+                    <label class="form-check-label" asp-for="ApplyToMasterCost" form="versusForm">
+                        Apply cost changes to master product cost
+                    </label>
+                </div>
+                <p class="price-master-toggle-note">Leave this off if cost edits should apply only to the selected week.</p>
+            </div>
+        </div>
+    </div>
 
     <div class="card price-card">
         <div class="card-body p-0">
@@ -242,28 +321,28 @@
                 <input type="hidden" asp-for="TargetDate" />
 
                 <div asp-validation-summary="All" class="text-danger px-4 pt-3"></div>
-                <div class="px-4 pt-2 pb-3 border-bottom">
-                    <div class="form-check">
-                        <input class="form-check-input" asp-for="ApplyToMasterCost" />
-                        <label class="form-check-label" asp-for="ApplyToMasterCost">
-                            Apply cost changes to master product cost
-                        </label>
-                    </div>
-                    <div class="text-muted small">If unchecked, cost changes apply only to the selected week.</div>
-                </div>
 
-                <div class="price-table-toolbar">
+                @if (TempData["SuccessMessage"] is string successMessage && !string.IsNullOrWhiteSpace(successMessage))
+                {
+                    <div class="price-feedback price-feedback-success" id="priceFeedback">@successMessage</div>
+                }
+                @if (TempData["ErrorMessage"] is string errorMessage && !string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    <div class="price-feedback price-feedback-error" id="priceFeedback">@errorMessage</div>
+                }
+
+                <div class="price-table-toolbar" id="priceTableAnchor">
                     <div class="price-table-toolbar-copy">
                         <div class="price-table-toolbar-label">Table Actions</div>
-                        <h3 class="price-table-toolbar-title">Save changes before leaving this page.</h3>
-                        <p class="price-table-toolbar-sub">Save all changes at once, or use the row save button to update one product without being blocked by other rows. Saved prices affect future sales and order creation for this week.</p>
+                        <h3 class="price-table-toolbar-title">Save changes without losing your place.</h3>
+                        <p class="price-table-toolbar-sub">Use Save Changes for the full table, or Save Row for one product. After saving, the page restores you to this pricing area so work stays smooth.</p>
                     </div>
                     <button type="submit" class="btn price-btn price-btn-primary price-save-btn">
                         <i class="bi bi-save me-1"></i> Save Changes
                     </button>
                 </div>
                 
-                <div class="table-responsive" style="max-height: 70vh;">
+                <div class="table-responsive price-table-wrap" id="priceTableWrap">
                     <table class="table table-hover align-middle price-table" id="priceTable">
                         <thead class="sticky-top" style="top: 0; z-index: 10;">
                             <tr>
@@ -283,6 +362,7 @@
                             {
                                 var item = Model.Items[i];
                                 <tr class="item-row"
+                                    data-product-id="@item.ProductId"
                                     data-master-cost="@item.MasterCost.ToString("0.00")"
                                     data-master-markup="@item.MasterMarkup.ToString("0.00")"
                                     data-delivery-fee="@((item.DeliveryFee ?? item.MasterDeliveryFee).ToString("0.00"))">
@@ -356,20 +436,75 @@
             </form>
         </div>
     </div>
+    </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const table = document.getElementById('priceTable');
         const versusForm = document.getElementById('versusForm');
+        const tableWrap = document.getElementById('priceTableWrap');
+        const tableAnchor = document.getElementById('priceTableAnchor');
+        const scrollKey = 'priceVersus:windowScroll';
+        const tableScrollKey = 'priceVersus:tableScroll';
+        const savedRowKey = 'priceVersus:savedRow';
+        const restoreFlagKey = 'priceVersus:restoreAfterSave';
 
         const parseNumber = (value) => {
             if (!value) return 0;
             return parseFloat(value.toString().replace(',', '.')) || 0;
         };
 
+        const saveScrollState = (productId) => {
+            sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+            if (tableWrap) {
+                sessionStorage.setItem(tableScrollKey, String(tableWrap.scrollTop || 0));
+            }
+            if (productId) {
+                sessionStorage.setItem(savedRowKey, String(productId));
+            } else {
+                sessionStorage.removeItem(savedRowKey);
+            }
+            sessionStorage.setItem(restoreFlagKey, 'true');
+        };
+
+        const restoreScrollState = () => {
+            if (sessionStorage.getItem(restoreFlagKey) !== 'true') return;
+
+            const windowScroll = parseInt(sessionStorage.getItem(scrollKey) || '', 10);
+            const tableScroll = parseInt(sessionStorage.getItem(tableScrollKey) || '', 10);
+            const savedRowId = sessionStorage.getItem(savedRowKey);
+
+            requestAnimationFrame(() => {
+                if (!Number.isNaN(windowScroll)) {
+                    window.scrollTo({ top: windowScroll, behavior: 'instant' });
+                } else if (tableAnchor) {
+                    tableAnchor.scrollIntoView({ block: 'start' });
+                }
+
+                if (tableWrap && !Number.isNaN(tableScroll)) {
+                    tableWrap.scrollTop = tableScroll;
+                }
+
+                if (savedRowId) {
+                    const savedRow = table?.querySelector(`tr[data-product-id="${savedRowId}"]`);
+                    if (savedRow) {
+                        savedRow.classList.add('price-saved-row');
+                    }
+                }
+
+                sessionStorage.removeItem(scrollKey);
+                sessionStorage.removeItem(tableScrollKey);
+                sessionStorage.removeItem(savedRowKey);
+                sessionStorage.removeItem(restoreFlagKey);
+            });
+        };
+
+        restoreScrollState();
+
         const submitSingleRow = (row, productId) => {
             if (!versusForm) return;
+            saveScrollState(productId);
 
             const tempForm = document.createElement('form');
             tempForm.method = 'post';
@@ -520,6 +655,10 @@
             if (hiddenDeliveryFee) hiddenDeliveryFee.value = masterDeliveryFee.toFixed(2);
 
             updateRowFromCostMarkup(row);
+        });
+
+        versusForm.addEventListener('submit', function() {
+            saveScrollState(null);
         });
     });
 </script>
