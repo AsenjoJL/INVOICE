@@ -3137,6 +3137,25 @@ footer.footer .container {
   box-shadow: var(--admin-shadow);
 }
 
+.receiptlist-min .invoice-hero.admin-page-hero,
+.orders-summary-page .admin-page-hero {
+  border-radius: 28px;
+}
+
+.receiptlist-min .receiptlist-lines {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.orders-summary-page .card-header {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  border-bottom: 1px solid rgba(217, 226, 236, 0.95);
+}
+
+.orders-summary-page .table {
+  margin-bottom: 0;
+}
+
 .order-shell .order-hero.admin-page-hero-strong,
 .order-shell .order-toolbar.admin-filter-strip,
 .order-shell .order-table-card.admin-surface-card {

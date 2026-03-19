@@ -18,9 +18,10 @@
     };
 }
 
-<div class="container-fluid p-4 invoice-ui invoice-ui-min receiptlist-min">
-    <div class="invoice-hero invoice-hero-plain">
+<div class="container-fluid p-4 invoice-ui invoice-ui-min receiptlist-min admin-page-flow">
+    <div class="invoice-hero invoice-hero-plain admin-page-hero">
         <div>
+            <span class="admin-section-kicker">Order Monitor</span>
             <h1 class="invoice-title">@ViewData["Title"]</h1>
             <p class="invoice-sub">@Model.Date.ToString("dddd, MMM dd, yyyy")</p>
             <div class="receiptlist-stats">
@@ -31,7 +32,7 @@
         </div>
 
         <div class="invoice-actions">
-            <form method="get" asp-controller="Orders" asp-action="ReceiptList" class="d-flex align-items-center gap-2 flex-wrap">
+            <form method="get" asp-controller="Orders" asp-action="ReceiptList" class="admin-inline-filter">
                 <input type="date" name="date" value="@dateValue" class="form-control form-control-sm" />
                 <select name="status" class="form-select form-select-sm" style="min-width: 120px;">
                     <option value="Unpaid" selected="@(isUnpaid ? "selected" : null)">Unpaid</option>
@@ -43,10 +44,10 @@
         </div>
     </div>
 
-    <div class="invoice-card">
+    <div class="invoice-card admin-surface-card">
         <div class="invoice-card-header">
             <h6 class="invoice-card-title">Receipt List</h6>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="admin-inline-filter">
                 <input type="text" id="receiptSearch" class="form-control form-control-sm" placeholder="Search outlet or receipt #" style="min-width: 260px;" />
             </div>
         </div>
@@ -159,4 +160,3 @@
         });
     })();
 </script>
-

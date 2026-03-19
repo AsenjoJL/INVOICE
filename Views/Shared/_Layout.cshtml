@@ -20,6 +20,7 @@
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
         var pageTitle = (ViewData["Title"]?.ToString() ?? currentController).Trim();
+        var compactModePills = currentController == "Orders" || currentController == "Dashboard";
         var pageSubtitle = currentController switch
         {
             "Dashboard" => "Operations dashboard and performance overview.",
@@ -116,18 +117,36 @@
                     </div>
                     <div class="admin-topbar-actions">
                         <nav class="admin-mode-pills" aria-label="Quick navigation">
-                            <a class="admin-mode-pill @(currentController == "Dashboard" ? "active" : null)" asp-controller="Dashboard" asp-action="Index">
-                                <i class="bi bi-grid-1x2"></i> Dashboard
-                            </a>
-                            <a class="admin-mode-pill @(currentController == "Receipts" ? "active" : null)" asp-controller="Receipts" asp-action="Index">
-                                <i class="bi bi-receipt-cutoff"></i> Sales
-                            </a>
-                            <a class="admin-mode-pill @(currentController == "Orders" ? "active" : null)" asp-controller="Orders" asp-action="VegetableMatrix">
-                                <i class="bi bi-basket2"></i> Orders
-                            </a>
-                            <a class="admin-mode-pill @(currentController == "Payroll" || currentController == "Attendance" || currentController == "Laborers" ? "active" : null)" asp-controller="Payroll" asp-action="Index">
-                                <i class="bi bi-people"></i> Workforce
-                            </a>
+                            @if (compactModePills)
+                            {
+                                @if (currentController == "Dashboard")
+                                {
+                                    <a class="admin-mode-pill active" asp-controller="Dashboard" asp-action="Index">
+                                        <i class="bi bi-grid-1x2"></i> Dashboard
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a class="admin-mode-pill active" asp-controller="Orders" asp-action="VegetableMatrix">
+                                        <i class="bi bi-basket2"></i> Orders
+                                    </a>
+                                }
+                            }
+                            else
+                            {
+                                <a class="admin-mode-pill @(currentController == "Dashboard" ? "active" : null)" asp-controller="Dashboard" asp-action="Index">
+                                    <i class="bi bi-grid-1x2"></i> Dashboard
+                                </a>
+                                <a class="admin-mode-pill @(currentController == "Receipts" ? "active" : null)" asp-controller="Receipts" asp-action="Index">
+                                    <i class="bi bi-receipt-cutoff"></i> Sales
+                                </a>
+                                <a class="admin-mode-pill @(currentController == "Orders" ? "active" : null)" asp-controller="Orders" asp-action="VegetableMatrix">
+                                    <i class="bi bi-basket2"></i> Orders
+                                </a>
+                                <a class="admin-mode-pill @(currentController == "Payroll" || currentController == "Attendance" || currentController == "Laborers" ? "active" : null)" asp-controller="Payroll" asp-action="Index">
+                                    <i class="bi bi-people"></i> Workforce
+                                </a>
+                            }
                         </nav>
                         <div class="admin-topbar-account">
                             <partial name="_LoginPartial" />

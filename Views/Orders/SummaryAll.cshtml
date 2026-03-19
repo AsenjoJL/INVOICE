@@ -3,21 +3,22 @@
     ViewData["Title"] = "Summary All";
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid p-4 admin-page-flow orders-summary-page">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 admin-page-hero admin-page-hero-soft">
         <div>
-            <h1 class="h2 text-primary fw-bold">Summary Report</h1>
+            <span class="admin-section-kicker">Order Analytics</span>
+            <h1 class="h2 text-primary fw-bold mb-1">Summary Report</h1>
             <p class="text-muted">Overview from @Model.StartDate.ToString("MMM dd, yyyy") to @Model.EndDate.ToString("MMM dd, yyyy")</p>
         </div>
         <div>
-             <a asp-action="VegetableMatrix" class="btn btn-outline-primary me-2"><i class="bi bi-grid-3x3"></i> Matrix</a>
+             <a asp-action="VegetableMatrix" class="btn admin-action-btn me-2"><i class="bi bi-grid-3x3"></i> Matrix</a>
              <a asp-action="VegetableOutletOrder" class="btn btn-outline-primary"><i class="bi bi-cart"></i> Order Entry</a>
         </div>
     </div>
 
     <!-- Filters -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body bg-light">
+    <div class="card shadow-sm border-0 mb-4 admin-surface-card">
+        <div class="card-body bg-light admin-filter-strip">
             <form method="get" class="row g-3 align-items-end">
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Start Date</label>
@@ -51,7 +52,7 @@
     <!-- KPIs -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 border-start border-4 border-primary h-100">
+            <div class="card shadow-sm border-0 border-start border-4 border-primary h-100 admin-summary-card">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Sales (@Model.StatusFilter)</h6>
                     <h3 class="fw-bold text-primary mb-0">@Model.TotalSales.ToString("C")</h3>
@@ -60,7 +61,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card shadow-sm border-0 border-start border-4 border-success h-100">
+            <div class="card shadow-sm border-0 border-start border-4 border-success h-100 admin-summary-card">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Paid</h6>
                     <h3 class="fw-bold text-success mb-0">@Model.TotalPaid.ToString("C")</h3>
@@ -68,7 +69,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card shadow-sm border-0 border-start border-4 border-danger h-100">
+            <div class="card shadow-sm border-0 border-start border-4 border-danger h-100 admin-summary-card">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Unpaid</h6>
                     <h3 class="fw-bold text-danger mb-0">@Model.TotalUnpaid.ToString("C")</h3>
@@ -76,7 +77,7 @@
             </div>
         </div>
         <div class="col-md-3">
-             <div class="card shadow-sm border-0 border-start border-4 border-warning h-100">
+             <div class="card shadow-sm border-0 border-start border-4 border-warning h-100 admin-summary-card">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Items Sold</h6>
                     <h3 class="fw-bold text-dark mb-0">@Model.TotalItemsSold.ToString("0.###")</h3>
@@ -90,7 +91,7 @@
     <div class="row g-4">
         <!-- Top Items -->
         <div class="col-lg-5">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 admin-surface-card">
                 <div class="card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold">Top Selling Items</h5>
                 </div>
@@ -122,7 +123,7 @@
 
         <!-- Outlet Summary -->
         <div class="col-lg-7">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 admin-surface-card">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold">Outlet Performance</h5>
                 </div>
@@ -156,7 +157,7 @@
     </div>
 
     <!-- Daily Trend Table -->
-    <div class="card shadow-sm border-0 mt-4">
+    <div class="card shadow-sm border-0 mt-4 admin-surface-card">
         <div class="card-header bg-white py-3">
             <h5 class="mb-0 fw-bold">Daily Breakdown</h5>
         </div>
