@@ -6,6 +6,7 @@ using HazelInvoice.Services.Printing;
 using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Reports;
 using HazelInvoice.Services.Settings;
+using HazelInvoice.Services.Caching;
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
 using Microsoft.AspNetCore.Identity;
@@ -39,6 +40,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString,
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false) // Simplified for ease of use
     .AddRoles<IdentityRole>()
@@ -46,6 +48,8 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
 
 builder.Services.AddScoped<HazelInvoice.Services.IReceiptService, HazelInvoice.Services.ReceiptService>();
 builder.Services.AddScoped<IReceiptQueryService, ReceiptQueryService>();
+builder.Services.AddSingleton<IAppCacheInvalidator, AppCacheInvalidator>();
+builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
 
 // Dashboard metrics (keep controllers thin / scalable)
 builder.Services.AddScoped<IDashboardMetricsService, DashboardMetricsService>();

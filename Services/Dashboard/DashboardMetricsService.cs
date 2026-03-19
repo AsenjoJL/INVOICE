@@ -3,6 +3,8 @@ using HazelInvoice.Models;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
+using HazelInvoice.Services.Caching;
 
 namespace HazelInvoice.Services.Dashboard;
 
@@ -10,15 +12,30 @@ public class DashboardMetricsService : IDashboardMetricsService
 {
     private readonly ApplicationDbContext _db;
     private readonly ILogger<DashboardMetricsService> _logger;
+    private readonly IMemoryCache _cache;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public DashboardMetricsService(ApplicationDbContext db, ILogger<DashboardMetricsService> logger)
+    public DashboardMetricsService(
+        ApplicationDbContext db,
+        ILogger<DashboardMetricsService> logger,
+        IMemoryCache cache,
+        IAppCacheInvalidator cacheInvalidator)
     {
         _db = db;
         _logger = logger;
+        _cache = cache;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<DashboardViewModel> BuildAsync(DateTime today, CancellationToken ct = default)
     {
+        var cacheKey = AppCacheKeys.Dashboard(today.Date);
+        if (_cacheInvalidator is AppCacheInvalidator invalidator)
+            invalidator.TrackDashboardKey(cacheKey);
+
+        if (_cache.TryGetValue(cacheKey, out DashboardViewModel? cached) && cached != null)
+            return cached;
+
         try
         {
             // Keep everything centralized and reusable so future dashboard widgets don't bloat controllers.
@@ -265,6 +282,7 @@ public class DashboardMetricsService : IDashboardMetricsService
             .Take(10)
             .ToListAsync(ct);
 
+            _cache.Set(cacheKey, vm, TimeSpan.FromSeconds(30));
             return vm;
         }
         catch (Exception ex)

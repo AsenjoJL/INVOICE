@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using HazelInvoice.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Caching.Memory;
+using HazelInvoice.Services.Caching;
 
 namespace HazelInvoice.Services.Reports;
 
@@ -24,19 +26,38 @@ public sealed class ProfitReportService : IProfitReportService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ProfitReportService> _logger;
     private readonly bool _partnersEnabled;
+    private readonly IMemoryCache _cache;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
     public ProfitReportService(
         ApplicationDbContext context,
         ILogger<ProfitReportService> logger,
-        IOptions<FeaturesOptions> features)
+        IOptions<FeaturesOptions> features,
+        IMemoryCache cache,
+        IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
         _logger = logger;
         _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
+        _cache = cache;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<ProfitSummaryViewModel> BuildAsync(ProfitReportQueryOptions options, CancellationToken ct = default)
     {
+        var cacheKey = AppCacheKeys.ProfitReport(
+            options.StartDate.Date,
+            options.EndDate.Date,
+            options.IncludeUnpaid,
+            options.PercentFee,
+            options.Partner1SharePercent);
+
+        if (_cacheInvalidator is AppCacheInvalidator invalidator)
+            invalidator.TrackProfitReportKey(cacheKey);
+
+        if (_cache.TryGetValue(cacheKey, out ProfitSummaryViewModel? cached) && cached != null)
+            return cached;
+
         var startDateOnly = options.StartDate.Date;
         var endDateOnly = options.EndDate.Date;
         var endExclusive = endDateOnly.AddDays(1);
@@ -375,6 +396,7 @@ public sealed class ProfitReportService : IProfitReportService
             _logger.LogWarning(ex, "Profit report summary queries failed; returning report without TopItems/OutletSummaries.");
         }
 
+        _cache.Set(cacheKey, vm, TimeSpan.FromSeconds(30));
         return vm;
     }
 }

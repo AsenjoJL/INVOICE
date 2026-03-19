@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,15 +11,18 @@ namespace HazelInvoice.Controllers;
 public class SuppliersController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public SuppliersController(ApplicationDbContext context)
+    public SuppliersController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<IActionResult> Index()
     {
         var suppliers = await _context.Suppliers
+            .AsNoTracking()
             .OrderBy(s => s.Name)
             .ToListAsync();
 
@@ -38,6 +42,7 @@ public class SuppliersController : Controller
         {
             _context.Add(supplier);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateSuppliers();
             return RedirectToAction(nameof(Index));
         }
 
@@ -64,6 +69,7 @@ public class SuppliersController : Controller
         {
             _context.Update(supplier);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateSuppliers();
             return RedirectToAction(nameof(Index));
         }
 
@@ -90,6 +96,7 @@ public class SuppliersController : Controller
         supplier.IsActive = false;
         _context.Update(supplier);
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateSuppliers();
 
         return RedirectToAction(nameof(Index));
     }

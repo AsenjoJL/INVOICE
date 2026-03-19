@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using HazelInvoice.Services.Reports;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -18,11 +19,13 @@ public class ProfitReportController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IProfitReportService _profitReportService;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public ProfitReportController(ApplicationDbContext context, IProfitReportService profitReportService)
+    public ProfitReportController(ApplicationDbContext context, IProfitReportService profitReportService, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
         _profitReportService = profitReportService;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     // GET: ProfitReport
@@ -55,6 +58,7 @@ public class ProfitReportController : Controller
             
             _context.Deductions.Add(model);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateProfitReports();
         }
         return Redirect(returnUrl);
     }
@@ -99,6 +103,7 @@ public class ProfitReportController : Controller
         {
             _context.PartnerCapitals.Add(model);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateProfitReports();
         }
         return Redirect(returnUrl);
     }
@@ -111,6 +116,7 @@ public class ProfitReportController : Controller
         {
             _context.PartnerPurchases.Add(model);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateProfitReports();
         }
         return Redirect(returnUrl);
     }
@@ -133,6 +139,7 @@ public class ProfitReportController : Controller
                 _context.CollectionReceivedOverrides.RemoveRange(existing);
                 await _context.SaveChangesAsync();
             }
+            _cacheInvalidator.InvalidateProfitReports();
             return Redirect(returnUrl);
         }
 
@@ -146,6 +153,7 @@ public class ProfitReportController : Controller
 
         _context.CollectionReceivedOverrides.Add(model);
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateProfitReports();
 
         return Redirect(returnUrl);
     }

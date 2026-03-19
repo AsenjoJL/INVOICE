@@ -4,6 +4,7 @@ using HazelInvoice.Services;
 using HazelInvoice.Services.Printing;
 using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Settings;
+using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,19 +20,25 @@ public class ReceiptsController : Controller
     private readonly IInvoicePrintManager _invoicePrintManager;
     private readonly IReceiptQueryService _receiptQuery;
     private readonly IAppSettingStore _appSettings;
+    private readonly ILookupCacheService _lookupCache;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
     public ReceiptsController(
         ApplicationDbContext context,
         IReceiptService receiptService,
         IInvoicePrintManager invoicePrintManager,
         IReceiptQueryService receiptQuery,
-        IAppSettingStore appSettings)
+        IAppSettingStore appSettings,
+        ILookupCacheService lookupCache,
+        IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
         _receiptService = receiptService;
         _invoicePrintManager = invoicePrintManager;
         _receiptQuery = receiptQuery;
         _appSettings = appSettings;
+        _lookupCache = lookupCache;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     // GET: Receipts
@@ -66,21 +73,7 @@ public class ReceiptsController : Controller
     // GET: Receipts/Create
     public async Task<IActionResult> Create()
     {
-        // Pass products and services for dropdowns
-        ViewBag.Products = await _context.Products.Where(p => p.IsActive).ToListAsync();
-        ViewBag.Services = await _context.Services.Where(s => s.IsActive).ToListAsync();
-        var today = DateTime.Today;
-        ViewBag.PriceList = await _context.WeeklyPrices
-            .Include(p => p.Product)
-            .Where(w => w.EffectiveFrom <= today && w.EffectiveTo >= today)
-            .ToListAsync();
-
-        ViewBag.Customers = await _context.Customers.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
-        ViewBag.Partners = await _context.PartnerBalanceConfigs
-            .AsNoTracking()
-            .OrderBy(p => p.PartnerName)
-            .Select(p => p.PartnerName)
-            .ToListAsync();
+        await PopulateReceiptFormLookupsAsync(HttpContext.RequestAborted);
 
         return View();
     }
@@ -243,6 +236,8 @@ public class ReceiptsController : Controller
             }
 
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateDashboard();
+            _cacheInvalidator.InvalidateProfitReports();
 
             if (action == "Print")
             {
@@ -251,20 +246,7 @@ public class ReceiptsController : Controller
             return RedirectToAction(nameof(Index));
         }
         
-        // Reload filtered lists on failure
-        ViewBag.Products = await _context.Products.Where(p => p.IsActive).ToListAsync();
-        ViewBag.Services = await _context.Services.Where(s => s.IsActive).ToListAsync();
-        var today = DateTime.Today;
-        ViewBag.PriceList = await _context.WeeklyPrices
-            .Include(p => p.Product)
-            .Where(w => w.EffectiveFrom <= today && w.EffectiveTo >= today)
-            .ToListAsync();
-        ViewBag.Customers = await _context.Customers.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
-        ViewBag.Partners = await _context.PartnerBalanceConfigs
-            .AsNoTracking()
-            .OrderBy(p => p.PartnerName)
-            .Select(p => p.PartnerName)
-            .ToListAsync();
+        await PopulateReceiptFormLookupsAsync(HttpContext.RequestAborted);
 
         return View(receipt);
     }
@@ -336,6 +318,8 @@ public class ReceiptsController : Controller
         if (!deleted) return NotFound();
 
         TempData["Message"] = "Receipt deleted. Dashboard sales/profit and stock have been updated.";
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
@@ -362,6 +346,7 @@ public class ReceiptsController : Controller
         line.PartnerName = partnerName;
 
         await _context.SaveChangesAsync(HttpContext.RequestAborted);
+        _cacheInvalidator.InvalidateProfitReports();
 
         if (!string.IsNullOrWhiteSpace(returnUrl))
             return Redirect(returnUrl);
@@ -437,5 +422,14 @@ public class ReceiptsController : Controller
             .ToListAsync();
 
         return matchedItems;
+    }
+
+    private async Task PopulateReceiptFormLookupsAsync(CancellationToken ct)
+    {
+        ViewBag.Products = await _lookupCache.GetActiveProductsAsync(ct);
+        ViewBag.Services = await _lookupCache.GetActiveServicesAsync(ct);
+        ViewBag.PriceList = await _lookupCache.GetWeeklyPricesForDayAsync(DateTime.Today, ct);
+        ViewBag.Customers = await _lookupCache.GetActiveCustomersAsync(ct);
+        ViewBag.Partners = await _lookupCache.GetPartnerNamesAsync(ct);
     }
 }

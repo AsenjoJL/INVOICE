@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,12 @@ namespace HazelInvoice.Controllers;
 public class LaborersController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public LaborersController(ApplicationDbContext context)
+    public LaborersController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<IActionResult> Index(bool showArchived = false)
@@ -44,6 +47,7 @@ public class LaborersController : Controller
 
         _context.Laborers.Add(laborer);
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateLaborers();
         return RedirectToAction(nameof(Index));
     }
 
@@ -73,6 +77,7 @@ public class LaborersController : Controller
 
         _context.Update(laborer);
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateLaborers();
         return RedirectToAction(nameof(Index));
     }
 
@@ -89,6 +94,7 @@ public class LaborersController : Controller
         laborer.IsActive = false;
         laborer.ArchivedAt = DateTime.Now;
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateLaborers();
 
         if (!string.IsNullOrWhiteSpace(returnUrl))
         {
@@ -110,6 +116,7 @@ public class LaborersController : Controller
         laborer.IsActive = true;
         laborer.ArchivedAt = null;
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateLaborers();
 
         if (!string.IsNullOrWhiteSpace(returnUrl))
         {

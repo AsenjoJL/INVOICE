@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,14 @@ namespace HazelInvoice.Controllers;
 public class PurchasesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILookupCacheService _lookupCache;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public PurchasesController(ApplicationDbContext context)
+    public PurchasesController(ApplicationDbContext context, ILookupCacheService lookupCache, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _lookupCache = lookupCache;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     // GET: Purchases
@@ -154,6 +159,7 @@ public class PurchasesController : Controller
                 };
                 _context.Suppliers.Add(supplier);
                 await _context.SaveChangesAsync();
+                _cacheInvalidator.InvalidateSuppliers();
             }
             purchase.SupplierId = supplier.Id;
         }
@@ -228,6 +234,7 @@ public class PurchasesController : Controller
         }
 
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateProducts();
         return RedirectToAction(nameof(Index));
     }
 
@@ -297,17 +304,8 @@ public class PurchasesController : Controller
 
     private async Task PopulateOptionsAsync()
     {
-        ViewBag.Suppliers = await _context.Suppliers
-            .AsNoTracking()
-            .Where(s => s.IsActive)
-            .OrderBy(s => s.Name)
-            .ToListAsync();
-
-        ViewBag.Products = await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.Name)
-            .ToListAsync();
+        ViewBag.Suppliers = await _lookupCache.GetActiveSuppliersAsync(HttpContext.RequestAborted);
+        ViewBag.Products = await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted);
     }
 
     private async Task<string> GenerateNextPurchaseNumberAsync()

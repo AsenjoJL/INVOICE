@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 using HazelInvoice.ViewModels;
+using HazelInvoice.Services.Caching;
 
 namespace HazelInvoice.Controllers;
 
@@ -13,10 +14,14 @@ namespace HazelInvoice.Controllers;
 public class WeeklyPricesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILookupCacheService _lookupCache;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public WeeklyPricesController(ApplicationDbContext context)
+    public WeeklyPricesController(ApplicationDbContext context, ILookupCacheService lookupCache, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _lookupCache = lookupCache;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     // GET: WeeklyPrices/PriceVersus
@@ -178,6 +183,8 @@ public class WeeklyPricesController : Controller
         }
 
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateWeeklyPrices();
+        _cacheInvalidator.InvalidateProducts();
 
         return RedirectToAction(nameof(PriceVersus), new { date = model.TargetDate.ToString("yyyy-MM-dd") });
     }
@@ -186,6 +193,7 @@ public class WeeklyPricesController : Controller
     public async Task<IActionResult> Index()
     {
         var prices = await _context.WeeklyPrices
+            .AsNoTracking()
             .Include(w => w.Product)
             .OrderByDescending(w => w.EffectiveFrom)
             .ToListAsync();
@@ -195,7 +203,7 @@ public class WeeklyPricesController : Controller
     // GET: WeeklyPrices/Create
     public async Task<IActionResult> Create()
     {
-        ViewData["ProductId"] = new SelectList(await _context.Products.Where(p => p.IsActive).ToListAsync(), "Id", "Name");
+        ViewData["ProductId"] = new SelectList(await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted), "Id", "Name");
         // Default to this week
         var now = DateTime.Now;
         var startOfWeek = now.AddDays(-(int)now.DayOfWeek + 1); // Monday
@@ -246,10 +254,11 @@ public class WeeklyPricesController : Controller
 
             _context.Add(weeklyPrice);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateWeeklyPrices();
             return RedirectToAction(nameof(Index));
         }
 
-        ViewData["ProductId"] = new SelectList(await _context.Products.Where(p => p.IsActive).ToListAsync(), "Id", "Name", weeklyPrice.ProductId);
+        ViewData["ProductId"] = new SelectList(await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted), "Id", "Name", weeklyPrice.ProductId);
         return View(weeklyPrice);
     }
 
@@ -260,7 +269,7 @@ public class WeeklyPricesController : Controller
 
         var weeklyPrice = await _context.WeeklyPrices.FindAsync(id);
         if (weeklyPrice == null) return NotFound();
-        ViewData["ProductId"] = new SelectList(await _context.Products.Where(p => p.IsActive).ToListAsync(), "Id", "Name", weeklyPrice.ProductId);
+        ViewData["ProductId"] = new SelectList(await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted), "Id", "Name", weeklyPrice.ProductId);
         return View(weeklyPrice);
     }
 
@@ -316,6 +325,7 @@ public class WeeklyPricesController : Controller
             {
                 _context.Update(existing);
                 await _context.SaveChangesAsync();
+                _cacheInvalidator.InvalidateWeeklyPrices();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -325,7 +335,7 @@ public class WeeklyPricesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        ViewData["ProductId"] = new SelectList(await _context.Products.Where(p => p.IsActive).ToListAsync(), "Id", "Name", weeklyPrice.ProductId);
+        ViewData["ProductId"] = new SelectList(await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted), "Id", "Name", weeklyPrice.ProductId);
         return View(weeklyPrice);
     }
 
@@ -363,6 +373,7 @@ public class WeeklyPricesController : Controller
             }
         }
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateWeeklyPrices();
         return RedirectToAction(nameof(Index));
     }
 
@@ -374,16 +385,8 @@ public class WeeklyPricesController : Controller
         var weekStart = targetDate.AddDays(-1 * diff).Date;
         var weekEnd = weekStart.AddDays(6).Date;
 
-        var products = await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.Name)
-            .ToListAsync();
-
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => w.EffectiveFrom <= day && w.EffectiveTo >= day)
-            .ToListAsync();
+        var products = await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted);
+        var weeklyPrices = await _lookupCache.GetWeeklyPricesForDayAsync(day, HttpContext.RequestAborted);
 
         var weeklyMap = weeklyPrices
             .GroupBy(w => w.ProductId)

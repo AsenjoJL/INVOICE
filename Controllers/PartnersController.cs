@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,12 @@ namespace HazelInvoice.Controllers;
 public class PartnersController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public PartnersController(ApplicationDbContext context)
+    public PartnersController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     [HttpGet]
@@ -57,6 +60,8 @@ public class PartnersController : Controller
 
         _context.PartnerBalanceConfigs.Add(model);
         await _context.SaveChangesAsync(HttpContext.RequestAborted);
+        _cacheInvalidator.InvalidatePartners();
+        _cacheInvalidator.InvalidateProfitReports();
 
         TempData["SuccessMessage"] = "Partner added.";
         return RedirectToAction(nameof(Index));
@@ -104,6 +109,8 @@ public class PartnersController : Controller
         partner.AsOfDate = model.AsOfDate;
 
         await _context.SaveChangesAsync(HttpContext.RequestAborted);
+        _cacheInvalidator.InvalidatePartners();
+        _cacheInvalidator.InvalidateProfitReports();
 
         TempData["SuccessMessage"] = "Partner updated.";
         return RedirectToAction(nameof(Index));
@@ -120,9 +127,10 @@ public class PartnersController : Controller
 
         _context.PartnerBalanceConfigs.Remove(partner);
         await _context.SaveChangesAsync(HttpContext.RequestAborted);
+        _cacheInvalidator.InvalidatePartners();
+        _cacheInvalidator.InvalidateProfitReports();
 
         TempData["SuccessMessage"] = "Partner removed.";
         return RedirectToAction(nameof(Index));
     }
 }
-

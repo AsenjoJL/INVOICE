@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,16 +11,19 @@ namespace HazelInvoice.Controllers;
 public class CustomersController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
     private static readonly string[] OutletGroups = { "EIGHT2EIGHT OUTLETS", "Taste 8 outlets" };
 
-    public CustomersController(ApplicationDbContext context)
+    public CustomersController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<IActionResult> Index()
     {
         var customers = await _context.Customers
+            .AsNoTracking()
             .OrderBy(c => c.GroupName)
             .ThenBy(c => c.Name)
             .ToListAsync();
@@ -55,6 +59,7 @@ public class CustomersController : Controller
         {
             _context.Add(customer);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateCustomers();
             return RedirectToAction(nameof(Index));
         }
 
@@ -97,6 +102,7 @@ public class CustomersController : Controller
         {
             _context.Update(customer);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateCustomers();
             return RedirectToAction(nameof(Index));
         }
 
@@ -124,6 +130,7 @@ public class CustomersController : Controller
         customer.IsActive = false;
         _context.Update(customer);
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateCustomers();
 
         return RedirectToAction(nameof(Index));
     }

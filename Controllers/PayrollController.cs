@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,12 @@ namespace HazelInvoice.Controllers;
 public class PayrollController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public PayrollController(ApplicationDbContext context)
+    public PayrollController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, PaymentStatus? status)
@@ -384,6 +387,8 @@ public class PayrollController : Controller
         ApplyPaymentStatus(period, payableTotal);
 
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
         TempData["PayrollSuccess"] = "Payment saved.";
         return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
     }

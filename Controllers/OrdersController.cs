@@ -4,6 +4,7 @@ using HazelInvoice.Services;
 using HazelInvoice.Services.Orders;
 using HazelInvoice.Services.Printing;
 using HazelInvoice.Services.Settings;
+using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,8 @@ public class OrdersController : Controller
     private readonly IVegetableMatrixService _vegetableMatrixService;
     private readonly IVegetableMatrixTemplateService _vegetableMatrixTemplateService;
     private readonly IAppSettingStore _appSettings;
+    private readonly ILookupCacheService _lookupCache;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
     private static readonly string[] OutletOrderTokens = new[]
     {
@@ -51,7 +54,9 @@ public class OrdersController : Controller
         IInvoicePrintManager invoicePrintManager,
         IVegetableMatrixService vegetableMatrixService,
         IVegetableMatrixTemplateService vegetableMatrixTemplateService,
-        IAppSettingStore appSettings)
+        IAppSettingStore appSettings,
+        ILookupCacheService lookupCache,
+        IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
         _receiptService = receiptService;
@@ -59,6 +64,8 @@ public class OrdersController : Controller
         _vegetableMatrixService = vegetableMatrixService;
         _vegetableMatrixTemplateService = vegetableMatrixTemplateService;
         _appSettings = appSettings;
+        _lookupCache = lookupCache;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1&print=false&details=false
@@ -384,6 +391,9 @@ public class OrdersController : Controller
             }
         });
 
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
+
         return RedirectToAction(nameof(VegetableMatrix), new
         {
             date = model.Date.ToString("yyyy-MM-dd"),
@@ -581,10 +591,7 @@ public class OrdersController : Controller
         var dayStart = targetDate;
         var dayEnd = targetDate.AddDays(1);
 
-        var customers = await _context.Customers
-            .AsNoTracking()
-            .Where(c => c.IsActive)
-            .ToListAsync();
+        var customers = (await _lookupCache.GetActiveCustomersAsync(HttpContext.RequestAborted)).ToList();
         customers = customers
             .OrderBy(c => GetOutletOrderIndex(c.Name))
             .ThenBy(c => c.Name)
@@ -593,11 +600,7 @@ public class OrdersController : Controller
         if (!customerId.HasValue && customers.Any())
             customerId = customers.First().Id;
 
-        var products = await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.Name)
-            .ToListAsync();
+        var products = (await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted)).ToList();
 
         var productIds = products.Select(p => p.Id).ToList();
 
@@ -738,8 +741,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         if (!ModelState.IsValid)
         {
              // Repopulate Lists for View
-             var customers = await _context.Customers.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
-             var products = await _context.Products.AsNoTracking().Where(p => p.IsActive).OrderBy(p => p.Name).ToListAsync();
+             var customers = (await _lookupCache.GetActiveCustomersAsync(HttpContext.RequestAborted)).ToList();
+             var products = (await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted)).ToList();
              
              model.Customers = customers;
              model.Products = products;
@@ -930,6 +933,11 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                 throw;
             }
         });
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
+
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
 
         return RedirectToAction(nameof(VegetableOutletOrder), new
         {
@@ -1012,6 +1020,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             _context.Payments.Add(payment);
             
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateDashboard();
+            _cacheInvalidator.InvalidateProfitReports();
         }
         
         return RedirectToAction("PaidOrders", new { date = returnDate });

@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,16 +11,18 @@ namespace HazelInvoice.Controllers;
 public class ExpensesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public ExpensesController(ApplicationDbContext context)
+    public ExpensesController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     // GET: Expenses
     public async Task<IActionResult> Index()
     {
-        return View(await _context.Expenses.OrderByDescending(e => e.Date).ToListAsync());
+        return View(await _context.Expenses.AsNoTracking().OrderByDescending(e => e.Date).ToListAsync());
     }
 
     // GET: Expenses/Create
@@ -39,6 +42,8 @@ public class ExpensesController : Controller
             expense.RecordedById = User.Identity?.Name;
             _context.Add(expense);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateDashboard();
+            _cacheInvalidator.InvalidateProfitReports();
             return RedirectToAction(nameof(Index));
         }
         await PopulateExpenseOptionsAsync();

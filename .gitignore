@@ -6,6 +6,7 @@ obj/
 .vs/
 
 # User-specific / local tooling
+.dotnet_cli/
 .codex_build_tmp*/
 temp_git/
 temp_push/

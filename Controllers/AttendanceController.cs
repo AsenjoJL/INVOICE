@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,12 @@ namespace HazelInvoice.Controllers;
 public class AttendanceController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILookupCacheService _lookupCache;
 
-    public AttendanceController(ApplicationDbContext context)
+    public AttendanceController(ApplicationDbContext context, ILookupCacheService lookupCache)
     {
         _context = context;
+        _lookupCache = lookupCache;
     }
 
     [HttpGet]
@@ -23,11 +26,7 @@ public class AttendanceController : Controller
         var workDate = (date ?? DateTime.Today).Date;
         var (isDateLocked, lockReason) = await GetDateLockState(workDate);
 
-        var laborers = await _context.Laborers
-            .AsNoTracking()
-            .Where(l => l.IsActive)
-            .OrderBy(l => l.FullName)
-            .ToListAsync();
+        var laborers = await _lookupCache.GetActiveLaborersAsync(HttpContext.RequestAborted);
 
         var laborerIds = laborers.Select(l => l.Id).ToList();
         var existing = await _context.AttendanceRecords

@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,14 @@ namespace HazelInvoice.Controllers;
 public class ProductsController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILookupCacheService _lookupCache;
+    private readonly IAppCacheInvalidator _cacheInvalidator;
 
-    public ProductsController(ApplicationDbContext context)
+    public ProductsController(ApplicationDbContext context, ILookupCacheService lookupCache, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
+        _lookupCache = lookupCache;
+        _cacheInvalidator = cacheInvalidator;
     }
 
     // GET: Products
@@ -75,6 +80,8 @@ public class ProductsController : Controller
         {
             _context.Add(product);
             await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateProducts();
+            _cacheInvalidator.InvalidateWeeklyPrices();
             return RedirectToAction(nameof(Index));
         }
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
@@ -108,6 +115,8 @@ public class ProductsController : Controller
             {
                 _context.Update(product);
                 await _context.SaveChangesAsync();
+                _cacheInvalidator.InvalidateProducts();
+                _cacheInvalidator.InvalidateWeeklyPrices();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -147,6 +156,8 @@ public class ProductsController : Controller
         product.IsActive = false;
         _context.Update(product);
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateProducts();
+        _cacheInvalidator.InvalidateWeeklyPrices();
 
         return RedirectToAction(nameof(Index));
     }
@@ -164,6 +175,7 @@ public class ProductsController : Controller
             i++;
         }
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateProducts();
         TempData["Message"] = $"Renumbered {products.Count} products. First: {products.FirstOrDefault()?.Name} ({products.FirstOrDefault()?.SKU})";
         return RedirectToAction(nameof(Index));
     }
@@ -186,10 +198,6 @@ public class ProductsController : Controller
 
     private async Task<List<Supplier>> GetSupplierOptionsAsync()
     {
-        return await _context.Suppliers
-            .AsNoTracking()
-            .Where(s => s.IsActive)
-            .OrderBy(s => s.Name)
-            .ToListAsync();
+        return (await _lookupCache.GetActiveSuppliersAsync(HttpContext.RequestAborted)).ToList();
     }
 }
