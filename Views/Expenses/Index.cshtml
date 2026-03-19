@@ -9,17 +9,18 @@
 <partial name="_ExpenseStyles" />
 
 <div class="container-fluid p-4 expense-page">
-    <div class="expense-header">
+    <div class="expense-header admin-page-hero admin-page-hero-soft">
         <div>
+            <div class="admin-section-kicker">Cash Outflow</div>
             <h1 class="expense-title">Expenses</h1>
             <div class="expense-sub">Track operating expenses by category and vendor.</div>
         </div>
-        <a asp-action="Create" class="btn expense-btn expense-btn-primary"><i class="bi bi-minus-circle"></i> Record Expense</a>
+        <a asp-action="Create" class="btn expense-btn expense-btn-primary admin-action-btn"><i class="bi bi-minus-circle"></i> Record Expense</a>
     </div>
 
     <partial name="_PageNote" />
 
-    <div class="card expense-card">
+    <div class="card expense-card admin-surface-card">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle expense-table">

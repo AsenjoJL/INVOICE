@@ -14,8 +14,9 @@
 <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
 
 <div class="container-fluid p-4 payroll-page">
-    <div class="payroll-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
+    <div class="payroll-header d-flex justify-content-between align-items-start gap-3 flex-wrap admin-page-hero admin-page-hero-soft">
         <div>
+            <div class="admin-section-kicker">Workforce Finance</div>
             <h1>Payroll</h1>
             <div class="sub">Simple flow: generate periods, review balances, then record payment.</div>
             <div class="payroll-steps">
@@ -24,7 +25,7 @@
                 <span class="payroll-step">3. Pay</span>
             </div>
         </div>
-        <a asp-action="Generate" class="btn btn-light text-dark fw-bold"><i class="bi bi-magic"></i> Generate Payroll</a>
+        <a asp-action="Generate" class="btn admin-action-btn"><i class="bi bi-magic"></i> Generate Payroll</a>
     </div>
 
     @if (TempData["PayrollError"] is string payrollError && !string.IsNullOrWhiteSpace(payrollError))
@@ -36,7 +37,7 @@
         <div class="alert alert-success">@payrollSuccess</div>
     }
 
-    <div class="payroll-summary">
+    <div class="payroll-summary admin-summary-grid">
         <div class="payroll-kpi">
             <div class="label">Payroll Periods</div>
             <div class="value">@totalPeriods</div>
@@ -51,7 +52,7 @@
         </div>
     </div>
 
-    <form method="get" class="row g-2 align-items-end payroll-filter" data-auto-submit="true">
+    <form method="get" class="row g-2 align-items-end payroll-filter admin-filter-strip" data-auto-submit="true">
         <div class="col-md-3">
             <label class="form-label small fw-bold">Start Date</label>
             <input type="date" name="startDate" class="form-control" value="@(startDate?.ToString("yyyy-MM-dd") ?? "")" />
@@ -82,7 +83,7 @@
         </div>
     </form>
 
-    <div class="payroll-table-card">
+    <div class="payroll-table-card admin-surface-card">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 payroll-table">

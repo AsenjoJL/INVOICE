@@ -23,9 +23,10 @@
     };
 }
 
-<div class="container-fluid p-4 invoice-ui invoice-ui-min">
-    <div class="invoice-hero invoice-hero-plain">
+<div class="container-fluid p-4 invoice-ui invoice-ui-min admin-page-flow">
+    <div class="invoice-hero invoice-hero-plain admin-page-hero">
         <div>
+            <span class="admin-section-kicker">Sales Ledger</span>
             <h1 class="invoice-title">Receipts & Deliveries</h1>
             <p class="invoice-sub">Track delivery receipts, payment status, and totals at a glance.</p>
             <div class="small fw-bold mt-2">
@@ -47,10 +48,10 @@
         <div class="alert alert-success mb-3">@message</div>
     }
 
-    <div class="invoice-card">
+    <div class="invoice-card admin-surface-card">
         <div class="invoice-card-header">
             <h6 class="invoice-card-title">All Receipts</h6>
-            <form method="get" class="d-flex align-items-center gap-2">
+            <form method="get" class="admin-inline-filter">
                 <input class="form-control form-control-sm" name="q" id="q" value="@query" placeholder="Search receipt # or outlet" style="min-width: 240px;" />
                 <select class="form-select form-select-sm" name="pageSize" id="pageSize" style="width: 110px;">
                     <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25</option>
@@ -125,7 +126,7 @@
         </div>
     </div>
 
-    <div class="d-flex align-items-center justify-content-between mt-3">
+    <div class="d-flex align-items-center justify-content-between mt-3 admin-page-footerbar">
         <div class="small fw-bold">Page @currentPage of @totalPages</div>
         <div class="d-flex gap-2">
             @{

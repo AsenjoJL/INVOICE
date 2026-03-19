@@ -18,9 +18,9 @@
 <link rel="stylesheet" href="~/css/products-index.css" asp-append-version="true" />
 
 <div class="container-fluid p-4 product-page">
-    <div class="product-header">
+    <div class="product-header admin-page-flow">
         <div class="product-header-top">
-            <div class="product-header-main">
+            <div class="product-header-main admin-page-hero admin-page-hero-soft">
                 <div class="eyebrow">Catalog</div>
                 <h1>Products</h1>
                 <div class="sub">Minimal dashboard view to keep pricing and availability tidy.</div>
@@ -73,7 +73,7 @@
             </div>
         </div>
 
-        <div class="product-metrics">
+        <div class="product-metrics admin-summary-grid">
             <div class="metric-card">
                 <div class="metric-label">Total</div>
                 <div class="metric-value">@totalCount</div>
@@ -111,7 +111,7 @@
         </button>
     </div>
 
-    <div class="product-card">
+    <div class="product-card admin-surface-card">
         @if (TempData["Message"] != null)
         {
             <div class="alert alert-success m-3">@TempData["Message"]</div>

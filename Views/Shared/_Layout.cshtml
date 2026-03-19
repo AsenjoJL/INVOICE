@@ -19,6 +19,24 @@
     @{
         var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
         var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+        var pageTitle = (ViewData["Title"]?.ToString() ?? currentController).Trim();
+        var pageSubtitle = currentController switch
+        {
+            "Dashboard" => "Operations dashboard and performance overview.",
+            "Receipts" => "Sales encoding, delivery receipts, and payment tracking.",
+            "Orders" => "Daily outlet ordering and vegetable matrix planning.",
+            "Products" => "Catalog, costs, and selling price management.",
+            "Customers" => "Outlet directory and delivery account setup.",
+            "Suppliers" => "Vendors, sourcing details, and supply records.",
+            "WeeklyPrices" => "Weekly price setup and historical price review.",
+            "Purchases" => "Purchases, stock intake, and supplier payables.",
+            "Expenses" => "Expense tracking and cash outflow records.",
+            "Laborers" => "Workforce roster and labor profiles.",
+            "Attendance" => "Daily labor attendance and cutoff preparation.",
+            "Payroll" => "Payroll generation, payments, and run management.",
+            "ProfitReport" => "Sales, profit, deductions, and collections summary.",
+            _ => "HazelInvoice admin workspace."
+        };
         string NavClass(string controller, string? action = null)
         {
             if (!string.IsNullOrEmpty(action))
@@ -75,18 +93,47 @@
             </nav>
 
             <div class="sidebar-footer">
-                <partial name="_LoginPartial" />
+                <div class="sidebar-footer-note">
+                    <i class="bi bi-lightning-charge"></i>
+                    <span>Fast sales, purchasing, payroll, and reporting in one workspace.</span>
+                </div>
             </div>
         </aside>
 
         <div class="content">
             <div class="mobile-topbar d-lg-none">
-                <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarNav" aria-controls="sidebarNav">
+                <button class="admin-mobile-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarNav" aria-controls="sidebarNav">
                     <i class="bi bi-list"></i>
                 </button>
                 <span class="mobile-title">HazelInvoice</span>
             </div>
             <main role="main" class="content-area">
+                <section class="admin-topbar">
+                    <div class="admin-topbar-copy">
+                        <span class="admin-kicker">HazelInvoice Admin</span>
+                        <h1 class="admin-page-title">@pageTitle</h1>
+                        <p class="admin-page-subtitle">@pageSubtitle</p>
+                    </div>
+                    <div class="admin-topbar-actions">
+                        <nav class="admin-mode-pills" aria-label="Quick navigation">
+                            <a class="admin-mode-pill @(currentController == "Dashboard" ? "active" : null)" asp-controller="Dashboard" asp-action="Index">
+                                <i class="bi bi-grid-1x2"></i> Dashboard
+                            </a>
+                            <a class="admin-mode-pill @(currentController == "Receipts" ? "active" : null)" asp-controller="Receipts" asp-action="Index">
+                                <i class="bi bi-receipt-cutoff"></i> Sales
+                            </a>
+                            <a class="admin-mode-pill @(currentController == "Orders" ? "active" : null)" asp-controller="Orders" asp-action="VegetableMatrix">
+                                <i class="bi bi-basket2"></i> Orders
+                            </a>
+                            <a class="admin-mode-pill @(currentController == "Payroll" || currentController == "Attendance" || currentController == "Laborers" ? "active" : null)" asp-controller="Payroll" asp-action="Index">
+                                <i class="bi bi-people"></i> Workforce
+                            </a>
+                        </nav>
+                        <div class="admin-topbar-account">
+                            <partial name="_LoginPartial" />
+                        </div>
+                    </div>
+                </section>
                 @RenderBody()
             </main>
             <footer class="border-top footer text-muted">

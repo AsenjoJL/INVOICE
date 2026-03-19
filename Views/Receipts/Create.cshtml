@@ -20,9 +20,10 @@
     }).ToList();
 }
 
-<div class="container-fluid p-4 invoice-ui invoice-ui-min">
-    <div class="invoice-hero invoice-hero-plain">
+<div class="container-fluid p-4 invoice-ui invoice-ui-min admin-page-flow">
+    <div class="invoice-hero invoice-hero-plain admin-page-hero">
         <div>
+            <span class="admin-section-kicker">New Transaction</span>
             <h1 class="invoice-title">New Sale</h1>
             <p class="invoice-sub">Capture customer details, add items, and finalize totals in one place.</p>
         </div>
@@ -47,7 +48,7 @@
 
         <div class="invoice-grid">
             <div class="d-flex flex-column gap-3">
-                <div class="invoice-card">
+                <div class="invoice-card admin-surface-card">
                     <div class="invoice-card-header">
                         <h6 class="invoice-card-title">Customer Details</h6>
                         <span class="invoice-tag"><i class="bi bi-truck"></i> Delivery</span>
@@ -78,7 +79,7 @@
                     </div>
                 </div>
 
-                <div class="invoice-card">
+                <div class="invoice-card admin-surface-card">
                     <div class="invoice-card-header">
                         <h6 class="invoice-card-title">Line Items</h6>
                         <button type="button" class="invoice-btn invoice-btn-outline" onclick="addItemRow()">
@@ -117,7 +118,7 @@
             </div>
 
             <div class="invoice-summary">
-                <div class="invoice-card">
+                <div class="invoice-card admin-surface-card">
                     <div class="invoice-card-header">
                         <h6 class="invoice-card-title">Invoice Totals</h6>
                         <span class="invoice-tag"><i class="bi bi-cash-coin"></i> Summary</span>
@@ -139,7 +140,7 @@
                     </div>
                 </div>
 
-                <div class="invoice-card">
+                <div class="invoice-card admin-surface-card">
                     <div class="invoice-card-header">
                         <h6 class="invoice-card-title">Actions</h6>
                     </div>

@@ -6,25 +6,51 @@
     string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";
 }
 
-<div class="container-fluid pb-5 dashboard-shell dashboard-minimal">
-    <div class="dash-header">
-        <div class="dash-header-left">
-            <h1 class="dash-title">Dashboard</h1>
-            <div class="dash-meta">
-                <span>@DateTime.Now.ToString("ddd, MMM dd, yyyy")</span>
-                <span class="meta-dot">•</span>
-                <span>@DateTime.Now.ToString("h:mm tt")</span>
+<div class="container-fluid pb-5 dashboard-shell dashboard-admin">
+    <section class="dashboard-hero-panel">
+        <div class="dashboard-hero-main">
+            <span class="dashboard-hero-kicker"><i class="bi bi-activity"></i> Live Operations</span>
+            <h1 class="dashboard-hero-title">Admin Console</h1>
+            <p class="dashboard-hero-text">Track sales, expenses, margins, cash flow, and daily outlet movement from one command center.</p>
+            <div class="dashboard-hero-meta">
+                <span><i class="bi bi-calendar3"></i> @DateTime.Now.ToString("dddd, MMMM dd, yyyy")</span>
+                <span><i class="bi bi-clock-history"></i> @DateTime.Now.ToString("h:mm tt")</span>
             </div>
         </div>
-        <div class="dash-header-right">
-            <div class="dash-shortcuts">
-                <a href="/Orders/VegetableMatrix" class="dash-link-btn">Matrix</a>
-                <a href="/Orders/VegetableOutletOrder" class="dash-link-btn">Order</a>
-                <a href="/WeeklyPrices/PriceVersus" class="dash-link-btn">Price Setup</a>
+        <div class="dashboard-hero-side">
+            <div class="dashboard-hero-actions">
+                <a href="/Receipts/Create" class="dash-btn dash-btn-dark"><i class="bi bi-plus-circle"></i> New Sale</a>
+                <a href="/Orders/VegetableOutletOrder" class="dash-btn dash-btn-light"><i class="bi bi-basket2"></i> New Order</a>
             </div>
-            <a href="/ProfitReport" class="dash-btn dash-btn-primary">Reports</a>
+            <div class="dashboard-hero-highlight">
+                <span>Cash Position</span>
+                <strong>₱@Model.CashBalance.ToString("N0")</strong>
+                <small>@(Model.CashBalance == 0 ? "Waiting for new collections" : "Updated from sales and expenses")</small>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <section class="dashboard-module-bar">
+        <a href="/Dashboard" class="dashboard-module-pill active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        <a href="/Receipts" class="dashboard-module-pill"><i class="bi bi-receipt-cutoff"></i> Receipts</a>
+        <a href="/Orders/VegetableMatrix" class="dashboard-module-pill"><i class="bi bi-table"></i> Vegetable Order</a>
+        <a href="/Products" class="dashboard-module-pill"><i class="bi bi-box-seam"></i> Products</a>
+        <a href="/Customers" class="dashboard-module-pill"><i class="bi bi-shop"></i> Outlets</a>
+        <a href="/Purchases" class="dashboard-module-pill"><i class="bi bi-bag-check"></i> Purchases</a>
+        <a href="/Payroll" class="dashboard-module-pill"><i class="bi bi-cash-coin"></i> Payroll</a>
+        <a href="/ProfitReport" class="dashboard-module-pill"><i class="bi bi-graph-up-arrow"></i> Profit &amp; Sales</a>
+    </section>
+
+    <section class="dashboard-section-heading">
+        <div>
+            <h2>Dashboard Overview</h2>
+            <p>Real-time insights into selling performance, collections, expenses, and outlet activity.</p>
+        </div>
+        <div class="dashboard-section-actions">
+            <a href="/WeeklyPrices/PriceVersus" class="dashboard-inline-link"><i class="bi bi-sliders2"></i> Price Setup</a>
+            <a href="/Orders/UnpaidOrders" class="dashboard-inline-link"><i class="bi bi-exclamation-circle"></i> Unpaid Orders</a>
+        </div>
+    </section>
 
     <div class="row g-3 mb-4">
         <div class="col-xl-3 col-md-6">
@@ -160,7 +186,7 @@
             <div class="surface-card h-100">
                 <div class="surface-card-header">
                     <h6 class="surface-card-title"><i class="bi bi-clock-history me-2"></i> Recent Unpaid Orders</h6>
-                    <a href="/Orders" class="btn btn-sm btn-light text-muted small">View All</a>
+                    <a href="/Orders" class="dashboard-table-link">View All</a>
                 </div>
                 <div class="surface-card-body p-0 table-responsive-admin">
                     <table class="table table-admin table-hover mb-0 w-100">
@@ -204,7 +230,7 @@
             <div class="surface-card h-100">
                 <div class="surface-card-header">
                     <h6 class="surface-card-title"><i class="bi bi-check2-circle me-2"></i> Recent Paid Orders</h6>
-                    <a href="/Orders" class="btn btn-sm btn-light text-muted small">View All</a>
+                    <a href="/Orders" class="dashboard-table-link">View All</a>
                 </div>
                 <div class="surface-card-body p-0 table-responsive-admin">
                     <table class="table table-admin table-hover mb-0 w-100">

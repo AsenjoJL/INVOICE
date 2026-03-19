@@ -16,7 +16,7 @@
 }
 
 <div class="order-shell">
-    <div class="order-hero">
+    <div class="order-hero admin-page-hero-strong">
         <div class="order-hero-content">
             <span class="order-chip"><i class="bi bi-basket2-fill"></i> Outlet Orders</span>
             <h2 class="order-title">Per Outlet Order</h2>
@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <div class="order-toolbar">
+    <div class="order-toolbar admin-filter-strip">
         <form method="get" class="order-filters">
             <div class="order-field">
                 <label class="form-label">Date</label>
@@ -83,11 +83,11 @@
         </form>
 
         <div class="order-summary">
-            <div class="summary-card">
+            <div class="summary-card admin-summary-card">
                 <span>Total Qty</span>
                 <strong id="grandTotalQtyTop">@grandTotalQ.ToString("0.##")</strong>
             </div>
-            <div class="summary-card">
+            <div class="summary-card admin-summary-card">
                 <span>Total Amount</span>
                 <strong id="grandTotalAmtTop">@grandTotalAmt.ToString("N2")</strong>
             </div>
@@ -111,7 +111,7 @@
             <input type="hidden" asp-for="SelectedCustomerId" />
             <input type="hidden" asp-for="ShowAllOutlets" />
 
-            <div class="order-table-card">
+            <div class="order-table-card admin-surface-card">
                 <div class="table-responsive order-table-scroll">
                     <table class="table order-table align-middle mb-0" id="orderTable">
                         <thead>

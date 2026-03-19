@@ -9,19 +9,20 @@
 <partial name="_OutletStyles" />
 
 <div class="container-fluid p-4 outlet-page">
-    <div class="outlet-header d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+    <div class="outlet-header d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 admin-page-hero admin-page-hero-soft">
         <div>
+            <div class="admin-section-kicker">Directory</div>
             <h1>Outlet Directory</h1>
             <div class="sub">Maintain outlet records used in vegetable orders and sales.</div>
         </div>
         <div class="outlet-actions">
-            <a asp-action="Create" class="btn btn-light text-dark"><i class="bi bi-plus-lg"></i> Add Outlet</a>
+            <a asp-action="Create" class="btn admin-action-btn"><i class="bi bi-plus-lg"></i> Add Outlet</a>
         </div>
     </div>
 
     <partial name="_PageNote" />
 
-    <div class="outlet-card">
+    <div class="outlet-card admin-surface-card">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table outlet-table table-hover align-middle mb-0">
