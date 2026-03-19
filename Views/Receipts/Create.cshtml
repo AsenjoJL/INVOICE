@@ -32,6 +32,10 @@
         </div>
     </div>
 
+    <form method="get" asp-action="Create" id="deliveryDateReloadForm" class="d-none">
+        <input type="hidden" name="date" id="deliveryDateReloadValue" value="@Model.Date.ToString("yyyy-MM-dd")" />
+    </form>
+
     <form asp-action="Create" method="post" id="receiptForm">
         @if (!ViewData.ModelState.IsValid)
         {
@@ -55,6 +59,15 @@
                     </div>
                     <div class="invoice-card-body">
                         <div class="row g-3">
+                            <div class="col-md-4 invoice-field">
+                                <label asp-for="Date" class="form-label">Delivery Date</label>
+                                <input asp-for="Date" type="date" class="form-control" value="@Model.Date.ToString("yyyy-MM-dd")" />
+                                <div class="form-text">Pricing and duplicate checking use this delivery date. Change it before adding items, then click reload.</div>
+                                <button type="button" class="invoice-btn invoice-btn-outline mt-2" id="reloadDeliveryDateBtn">
+                                    <i class="bi bi-arrow-repeat"></i> Reload Prices For Date
+                                </button>
+                                <span asp-validation-for="Date" class="text-danger"></span>
+                            </div>
                             <div class="col-md-4 invoice-field">
                                 <label asp-for="CustomerId" class="form-label">Customer Name (Delivered To)</label>
                                 <select asp-for="CustomerId" class="form-select" required>
@@ -386,5 +399,21 @@
         if (event.target && event.target.id === 'paidAmountInput') {
             updateBalance();
         }
+    });
+
+    document.getElementById('reloadDeliveryDateBtn')?.addEventListener('click', function () {
+        var dateInput = document.getElementById('Date');
+        var reloadValue = document.getElementById('deliveryDateReloadValue');
+        if (!dateInput || !reloadValue || !dateInput.value) {
+            return;
+        }
+
+        var hasLines = document.querySelectorAll('#itemsBody tr').length > 1;
+        if (hasLines && !confirm('Reloading will refresh prices for the selected delivery date and clear unsaved line selections. Continue?')) {
+            return;
+        }
+
+        reloadValue.value = dateInput.value;
+        document.getElementById('deliveryDateReloadForm').submit();
     });
 </script>

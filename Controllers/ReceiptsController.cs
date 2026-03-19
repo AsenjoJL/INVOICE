@@ -71,11 +71,19 @@ public class ReceiptsController : Controller
     }
 
     // GET: Receipts/Create
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(DateTime? date)
     {
-        await PopulateReceiptFormLookupsAsync(HttpContext.RequestAborted);
+        var deliveryDate = NormalizeReceiptDate(date ?? DateTime.Today.AddDays(1));
+        var receipt = new Receipt
+        {
+            Date = deliveryDate,
+            Type = ReceiptType.Delivery,
+            PaidAmount = 0m
+        };
 
-        return View();
+        await PopulateReceiptFormLookupsAsync(receipt.Date, HttpContext.RequestAborted);
+
+        return View(receipt);
     }
 
     // POST: Receipts/Create
@@ -124,17 +132,18 @@ public class ReceiptsController : Controller
             // Trap duplicate order against existing same-day sales for same outlet.
             if (ModelState.IsValid && receipt.CustomerId.HasValue)
             {
+                var deliveryDate = NormalizeReceiptDate(receipt.Date);
                 var duplicateItems = await FindSameDayDuplicateItemsAsync(
                     receipt.CustomerId.Value,
                     receipt.CustomerName,
-                    DateTime.Today,
+                    deliveryDate,
                     receipt.Lines);
 
                 if (duplicateItems.Count > 0)
                 {
                     ModelState.AddModelError(
                         string.Empty,
-                        $"Duplicate order detected for this outlet today. Existing items: {string.Join(", ", duplicateItems)}. " +
+                        $"Duplicate order detected for this outlet on {deliveryDate:MMM dd, yyyy}. Existing items: {string.Join(", ", duplicateItems)}. " +
                         "Please edit the existing order instead of adding duplicates.");
                 }
             }
@@ -142,10 +151,12 @@ public class ReceiptsController : Controller
 
         if (ModelState.IsValid)
         {
+            var deliveryDate = NormalizeReceiptDate(receipt.Date);
+
             // Generate Number
             receipt.ReceiptNumber = await _receiptService.GenerateNextReceiptNumberAsync();
             receipt.CreatedById = User.Identity?.Name; // Or GetUserId
-            receipt.Date = DateTime.Now;
+            receipt.Date = deliveryDate;
 
             // Snapshot cost + normalize line values so Profit & Sales is stable even if product costs change later.
             var productIds = receipt.Lines.Where(l => l.ProductId.HasValue).Select(l => l.ProductId!.Value).Distinct().ToList();
@@ -246,7 +257,7 @@ public class ReceiptsController : Controller
             return RedirectToAction(nameof(Index));
         }
         
-        await PopulateReceiptFormLookupsAsync(HttpContext.RequestAborted);
+        await PopulateReceiptFormLookupsAsync(receipt.Date, HttpContext.RequestAborted);
 
         return View(receipt);
     }
@@ -424,11 +435,17 @@ public class ReceiptsController : Controller
         return matchedItems;
     }
 
-    private async Task PopulateReceiptFormLookupsAsync(CancellationToken ct)
+    private static DateTime NormalizeReceiptDate(DateTime input)
     {
+        return (input == default ? DateTime.Today.AddDays(1) : input).Date;
+    }
+
+    private async Task PopulateReceiptFormLookupsAsync(DateTime targetDate, CancellationToken ct)
+    {
+        var day = NormalizeReceiptDate(targetDate);
         ViewBag.Products = await _lookupCache.GetActiveProductsAsync(ct);
         ViewBag.Services = await _lookupCache.GetActiveServicesAsync(ct);
-        ViewBag.PriceList = await _lookupCache.GetWeeklyPricesForDayAsync(DateTime.Today, ct);
+        ViewBag.PriceList = await _lookupCache.GetWeeklyPricesForDayAsync(day, ct);
         ViewBag.Customers = await _lookupCache.GetActiveCustomersAsync(ct);
         ViewBag.Partners = await _lookupCache.GetPartnerNamesAsync(ct);
     }

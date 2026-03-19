@@ -629,3 +629,27 @@
         transform: translateY(0);
     }
 }
+
+/* Compact type scale */
+.product-page {
+    font-size: 14px;
+}
+
+.product-header h1 {
+    font-size: 22px;
+}
+
+.product-header .sub,
+.product-meta,
+.row-summary,
+.filter-pill,
+.sort-trigger,
+.dropdown-item,
+.product-pager,
+.product-table {
+    font-size: 12px;
+}
+
+.metric-value {
+    font-size: 18px;
+}

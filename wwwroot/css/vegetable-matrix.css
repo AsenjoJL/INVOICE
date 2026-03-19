@@ -794,3 +794,25 @@
         body.print-three-sheet .header-row-2-date,
         body.print-three-sheet .header-row-5-sub { font-size: 0.58rem; }
     }
+
+    /* Compact type scale */
+    .matrix-page {
+        font-size: 12px;
+    }
+
+    .matrix-title {
+        font-size: 0.94rem;
+    }
+
+    .matrix-page-meta,
+    .group-label,
+    .btn-matrix,
+    .matrix-date-input,
+    .outlet-tab,
+    .matrix-table,
+    .detail-table,
+    .detail-finance,
+    .legend-inline,
+    .matrix-info-panel {
+        font-size: 0.76rem;
+    }

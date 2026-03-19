@@ -3162,3 +3162,113 @@ footer.footer .container {
     border-radius: 22px !important;
   }
 }
+
+/* Compact type scale for production */
+body {
+  font-size: 0.93rem;
+}
+
+.sidebar-brand {
+  font-size: 1.28rem;
+}
+
+.sidebar-subtitle,
+.sidebar-link,
+.admin-page-subtitle,
+.dashboard-hero-text,
+.invoice-sub,
+.order-sub,
+.purchase-sub,
+.expense-sub,
+.workforce-sub,
+.sub {
+  font-size: 0.88rem;
+}
+
+.admin-page-title {
+  font-size: clamp(1.55rem, 1.8vw, 2rem);
+}
+
+.dashboard-hero-title,
+.invoice-title,
+.order-title {
+  font-size: clamp(1.55rem, 2vw, 2.15rem);
+}
+
+.dashboard-section-heading h2,
+.dashboard-minimal .dash-title,
+.dash-title {
+  font-size: 1.55rem;
+}
+
+.dashboard-admin .metric-value,
+.metric-value,
+.kpi-value,
+.invoice-summary-total {
+  font-size: clamp(1.45rem, 1.9vw, 1.95rem);
+}
+
+.kpi-card-priority .metric-value,
+.dashboard-minimal .metric-value,
+.dashboard-hero-highlight strong {
+  font-size: clamp(1.55rem, 2vw, 2.05rem);
+}
+
+.summary-card strong,
+.payroll-kpi .value {
+  font-size: 1rem;
+}
+
+.admin-mode-pill,
+.dashboard-module-pill,
+.dashboard-inline-link,
+.dashboard-table-link,
+.dash-btn,
+.invoice-btn,
+.admin-action-btn,
+.admin-account-copy strong,
+.admin-account-logout,
+.admin-mini-btn {
+  font-size: 0.84rem;
+}
+
+.metric-label,
+.surface-card-title,
+.invoice-card-title,
+.table-admin thead th,
+.invoice-table thead th,
+.outlet-table thead th,
+.supplier-table thead th,
+.purchase-table thead th,
+.expense-table thead th,
+.payroll-table thead th,
+.workforce-table thead th,
+.product-table thead th,
+.order-table thead th {
+  font-size: 0.68rem;
+}
+
+.surface-card-body,
+.invoice-card-body,
+.table,
+.form-control,
+.form-select,
+.btn,
+.admin-inline-filter,
+.purchase-page .purchase-filter,
+.workforce-page .workforce-filter {
+  font-size: 0.9rem;
+}
+
+.invoice-table tbody td,
+.table-admin td,
+.outlet-table td,
+.supplier-table td,
+.purchase-table td,
+.expense-table td,
+.payroll-table td,
+.workforce-table td,
+.product-table td,
+.order-table tbody td {
+  font-size: 0.88rem;
+}

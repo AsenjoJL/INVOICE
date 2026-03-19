@@ -209,3 +209,24 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Compact type scale */
+.payroll-page {
+    font-size: 14px;
+}
+
+.payroll-header h1 {
+    font-size: 1.25rem;
+}
+
+.payroll-header .sub,
+.payroll-step,
+.payroll-inline-note,
+.payroll-table,
+.payroll-status {
+    font-size: 0.78rem;
+}
+
+.payroll-kpi .value {
+    font-size: 1rem;
+}
