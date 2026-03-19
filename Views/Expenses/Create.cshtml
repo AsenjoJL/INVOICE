@@ -1,104 +1,160 @@
 @model HazelInvoice.Models.Expense
 @using HazelInvoice.Models
-
 @{
     ViewData["Title"] = "Record Expense";
+
+    var categoryGroups = (ViewBag.CategoryGroups as IEnumerable<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>)
+        ?? Enumerable.Empty<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>();
+    var vendorOptions = (ViewBag.VendorOptions as List<string>) ?? new List<string>();
+    var paymentOptions = Enum.GetNames<PaymentMethod>();
+    var selectedPayment = Model?.PaymentMethod.ToString() ?? PaymentMethod.Cash.ToString();
+    var dateValue = Model is not null && Model.Date != default
+        ? Model.Date.ToString("yyyy-MM-dd")
+        : DateTime.Now.ToString("yyyy-MM-dd");
 }
 
 <partial name="_ExpenseStyles" />
 
-<div class="container p-4 expense-page">
-    <div class="expense-form-wrap">
-        <div class="card expense-form-card">
-            <div class="card-header expense-form-header">
-                <h4>Record Expense</h4>
+<div class="expense-page">
+    <div class="expense-shell">
+        <aside class="expense-sidebar" aria-label="Expense navigation">
+            <div class="expense-sidebar-group">
+                <div class="expense-sidebar-label">Stock</div>
+                <a class="expense-sidebar-link" asp-controller="Products" asp-action="Index">Products</a>
+                <a class="expense-sidebar-link" asp-controller="Orders" asp-action="VegetableMatrix">Vegetable Order</a>
             </div>
-            <div class="card-body expense-form-body expense-form">
-                <form asp-action="Create">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                    
-                    @{
-                        var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
-                        var categoryGroups = (ViewBag.CategoryGroups as IEnumerable<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>)
-                            ?? Enumerable.Empty<HazelInvoice.Controllers.ExpensesController.ExpenseCategoryGroupViewModel>();
-                        var vendorOptions = (ViewBag.VendorOptions as List<string>) ?? new List<string>();
-                    }
+            <div class="expense-sidebar-group">
+                <div class="expense-sidebar-label">Purchases</div>
+                <a class="expense-sidebar-link" asp-controller="Purchases" asp-action="Index">Purchases</a>
+                <a class="expense-sidebar-link" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+            </div>
+            <div class="expense-sidebar-group">
+                <div class="expense-sidebar-label">Finance</div>
+                <a class="expense-sidebar-link is-active" asp-controller="Expenses" asp-action="Create">Record Expense</a>
+                <a class="expense-sidebar-link" asp-controller="Expenses" asp-action="Index">Expense Ledger</a>
+                <a class="expense-sidebar-link" asp-controller="ProfitReport" asp-action="Index">Profit &amp; Sales</a>
+            </div>
+        </aside>
 
-                    <div class="row g-2 mb-3">
-                         <div class="col-md-6">
-                            <label asp-for="Date" class="form-label">Date</label>
-                            <input asp-for="Date" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
-                            <span asp-validation-for="Date" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Amount" class="form-label">Amount</label>
-                            <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="Enter amount" value="@(Model?.Amount > 0 ? Model.Amount.ToString("0.00") : string.Empty)" />
-                            <span asp-validation-for="Amount" class="text-danger"></span>
-                        </div>
-                    </div>
+        <main class="expense-main">
+            <div class="expense-content">
+                <div class="expense-breadcrumb expense-page-label">
+                    <a asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                    <span> / </span>
+                    <a asp-controller="Expenses" asp-action="Index">Expenses</a>
+                    <span> / </span>
+                    <span>Record Expense</span>
+                </div>
 
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Category</label>
-                            <input type="hidden" asp-for="Category" id="categoryValue" />
-                            <select id="categorySelect" class="form-select">
-                                <option value="">-- Select Expense Name --</option>
-                                @foreach (var group in categoryGroups)
-                                {
-                                    if (group.Items.Count == 0)
+                <h1 class="expense-title">Record Expense</h1>
+
+                <form asp-action="Create" method="post" id="expenseForm">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+
+                    <input type="hidden" asp-for="Category" id="categoryValue" />
+                    <input type="hidden" asp-for="Vendor" id="vendorValue" />
+
+                    <div class="expense-form-shell">
+                        <div class="expense-form-grid">
+                            <div class="expense-field">
+                                <div class="expense-field-head">
+                                    <label asp-for="Date" class="expense-page-label">Date</label>
+                                </div>
+                                <input asp-for="Date" id="expenseDate" class="expense-field-input" type="date" value="@dateValue" />
+                                <span asp-validation-for="Date" class="field-validation-error"></span>
+                            </div>
+
+                            <div class="expense-field">
+                                <div class="expense-field-head">
+                                    <label asp-for="Amount" class="expense-page-label">Amount</label>
+                                </div>
+                                <div class="expense-field-prefix">
+                                    <div class="expense-field-addon">PHP</div>
+                                    <input asp-for="Amount" id="expenseAmount" type="number" step="0.01" class="expense-field-input" placeholder="0.00" value="@(Model?.Amount > 0 ? Model.Amount.ToString("0.00") : string.Empty)" />
+                                </div>
+                                <span asp-validation-for="Amount" class="field-validation-error"></span>
+                            </div>
+
+                            <div class="expense-field">
+                                <div class="expense-field-head">
+                                    <label class="expense-page-label" for="categorySelect">Category</label>
+                                </div>
+                                <select id="categorySelect" class="expense-field-select">
+                                    <option value="">Select category</option>
+                                    @foreach (var group in categoryGroups)
                                     {
-                                        continue;
-                                    }
-
-                                    <optgroup label="@group.Label">
-                                        @foreach (var item in group.Items)
+                                        if (group.Items.Count == 0)
                                         {
-                                            <option value="@item">@item</option>
+                                            continue;
                                         }
-                                    </optgroup>
-                                }
-                                <option value="__other__">Other...</option>
-                            </select>
-                            <input id="categoryOther" class="form-control mt-2 d-none" placeholder="Enter category" />
-                            <div class="form-text">Use the grouped presets from your Daily, Weekly, and Monthly expense list.</div>
-                            <span asp-validation-for="Category" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Payee / Vendor</label>
-                            <input type="hidden" asp-for="Vendor" id="vendorValue" />
-                            <select id="vendorSelect" class="form-select">
-                                <option value="">-- Select Vendor --</option>
-                                @foreach (var v in vendorOptions)
-                                {
-                                    <option value="@v">@v</option>
-                                }
-                                <option value="__other__">Other...</option>
-                            </select>
-                            <input id="vendorOther" class="form-control mt-2 d-none" placeholder="Enter vendor" />
-                            <span asp-validation-for="Vendor" class="text-danger"></span>
-                        </div>
-                    </div>
-                    
-                    <div class="row g-2 mb-3">
-                         <div class="col-md-6">
-                            <label asp-for="PaymentMethod" class="form-label">Payment Method</label>
-                            <select asp-for="PaymentMethod" class="form-select" asp-items="Html.GetEnumSelectList<PaymentMethod>()"></select>
-                            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
-                        </div>
-                    </div>
 
-                    <div class="form-floating mb-3">
-                        <textarea asp-for="Description" class="form-control" placeholder="Description" style="height: 100px"></textarea>
-                        <label asp-for="Description">Notes / Description <span class="text-muted">(Optional)</span></label>
-                    </div>
+                                        <optgroup label="@group.Label">
+                                            @foreach (var item in group.Items)
+                                            {
+                                                <option value="@item">@item</option>
+                                            }
+                                        </optgroup>
+                                    }
+                                    <option value="__other__">Other...</option>
+                                </select>
+                                <input id="categoryOther" class="expense-field-input mt-3 d-none" placeholder="Enter category" />
+                                <div class="expense-help">Choose from your daily, weekly, or monthly expense list.</div>
+                                <span asp-validation-for="Category" class="field-validation-error"></span>
+                            </div>
 
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn expense-btn expense-btn-primary btn-lg">Record Expense</button>
-                        <a asp-action="Index" class="btn expense-btn expense-btn-neutral">Cancel</a>
+                            <div class="expense-field">
+                                <div class="expense-field-head">
+                                    <label class="expense-page-label" for="vendorSelect">Payee / Vendor</label>
+                                </div>
+                                <select id="vendorSelect" class="expense-field-select">
+                                    <option value="">Select vendor</option>
+                                    @foreach (var vendor in vendorOptions)
+                                    {
+                                        <option value="@vendor">@vendor</option>
+                                    }
+                                    <option value="__other__">Other...</option>
+                                </select>
+                                <input id="vendorOther" class="expense-field-input mt-3 d-none" placeholder="Enter payee or vendor" />
+                                <span asp-validation-for="Vendor" class="field-validation-error"></span>
+                            </div>
+
+                            <div class="expense-field-wide">
+                                <div class="expense-field-head">
+                                    <label asp-for="PaymentMethod" class="expense-page-label">Payment Method</label>
+                                </div>
+                                <select asp-for="PaymentMethod" id="expensePaymentMethod" class="expense-field-select">
+                                    @foreach (var option in paymentOptions)
+                                    {
+                                        <option value="@option" selected="@(selectedPayment == option ? "selected" : null)">@option</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="PaymentMethod" class="field-validation-error"></span>
+                            </div>
+
+                            <div class="expense-field-wide">
+                                <div class="expense-field-head">
+                                    <label asp-for="Description" class="expense-page-label">Notes</label>
+                                </div>
+                                <textarea asp-for="Description" id="expenseDescription" class="expense-field-textarea" placeholder="Optional details about this expense."></textarea>
+                                <span asp-validation-for="Description" class="field-validation-error"></span>
+                            </div>
+
+                            <div class="expense-actions">
+                                <div class="expense-actions-meta">
+                                    <div class="expense-page-label">Entry Mode</div>
+                                    <div>Amounts stay blank until you type them and the form keeps the grouped expense structure you asked for.</div>
+                                </div>
+                                <div class="expense-button-row">
+                                    <a asp-action="Index" class="expense-secondary-btn">Cancel</a>
+                                    <button type="submit" class="expense-primary-btn">Record Expense</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
-        </div>
+        </main>
     </div>
 </div>
 
@@ -107,24 +163,30 @@
         const categoryValue = document.getElementById('categoryValue');
         const categorySelect = document.getElementById('categorySelect');
         const categoryOther = document.getElementById('categoryOther');
-
         const vendorValue = document.getElementById('vendorValue');
         const vendorSelect = document.getElementById('vendorSelect');
         const vendorOther = document.getElementById('vendorOther');
 
-        function setCategory(val) {
-            categoryValue.value = val || '';
-        }
-        function setVendor(val) {
-            vendorValue.value = val || '';
+        function syncHiddenValue(select, otherInput, hiddenInput) {
+            if (select.value === '__other__') {
+                otherInput.classList.remove('d-none');
+                hiddenInput.value = otherInput.value || '';
+                return;
+            }
+
+            otherInput.classList.add('d-none');
+            hiddenInput.value = select.value || '';
         }
 
-        function initSelect(select, otherInput, hiddenValue, setter) {
-            const current = hiddenValue.value || '';
-            if (!current) return;
-            const option = Array.from(select.options).find(o => o.value === current);
+        function initializeSelect(select, otherInput, hiddenInput) {
+            const current = hiddenInput.value || '';
+            if (!current) {
+                return;
+            }
+
+            const option = Array.from(select.options).find(item => item.value.toLowerCase() === current.toLowerCase());
             if (option) {
-                select.value = current;
+                select.value = option.value;
                 otherInput.classList.add('d-none');
             } else {
                 select.value = '__other__';
@@ -133,32 +195,13 @@
             }
         }
 
-        categorySelect.addEventListener('change', () => {
-            if (categorySelect.value === '__other__') {
-                categoryOther.classList.remove('d-none');
-                categoryOther.value = '';
-                setCategory('');
-            } else {
-                categoryOther.classList.add('d-none');
-                setCategory(categorySelect.value);
-            }
-        });
-        categoryOther.addEventListener('input', () => setCategory(categoryOther.value));
+        categorySelect.addEventListener('change', () => syncHiddenValue(categorySelect, categoryOther, categoryValue));
+        vendorSelect.addEventListener('change', () => syncHiddenValue(vendorSelect, vendorOther, vendorValue));
+        categoryOther.addEventListener('input', () => { categoryValue.value = categoryOther.value || ''; });
+        vendorOther.addEventListener('input', () => { vendorValue.value = vendorOther.value || ''; });
 
-        vendorSelect.addEventListener('change', () => {
-            if (vendorSelect.value === '__other__') {
-                vendorOther.classList.remove('d-none');
-                vendorOther.value = '';
-                setVendor('');
-            } else {
-                vendorOther.classList.add('d-none');
-                setVendor(vendorSelect.value);
-            }
-        });
-        vendorOther.addEventListener('input', () => setVendor(vendorOther.value));
-
-        initSelect(categorySelect, categoryOther, categoryValue, setCategory);
-        initSelect(vendorSelect, vendorOther, vendorValue, setVendor);
+        initializeSelect(categorySelect, categoryOther, categoryValue);
+        initializeSelect(vendorSelect, vendorOther, vendorValue);
     })();
 </script>
 
