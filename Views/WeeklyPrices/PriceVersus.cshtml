@@ -401,7 +401,7 @@
             rowInputs.forEach((source) => {
                 const clone = document.createElement('input');
                 clone.type = 'hidden';
-                clone.name = source.name;
+                clone.name = source.name.replace(/Items\[\d+\]/, 'Items[0]');
                 clone.value = source.value;
                 tempForm.appendChild(clone);
             });
