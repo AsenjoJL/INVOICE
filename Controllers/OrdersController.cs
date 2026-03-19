@@ -413,11 +413,7 @@ public class OrdersController : Controller
         if (TempData.ContainsKey("AfterImportShowReceipts"))
         {
             TempData.Remove("AfterImportShowReceipts");
-            return RedirectToAction(nameof(ReceiptList), new
-            {
-                date = model.Date.ToString("yyyy-MM-dd"),
-                status = PaymentStatus.Unpaid.ToString()
-            });
+            return RedirectToAction("Index", "Receipts");
         }
 
         return RedirectToAction(nameof(VegetableMatrix), new
