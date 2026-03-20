@@ -459,61 +459,66 @@
         }
     }
 
-    /* MODALS: flat, no gradient, consistent with report theme */
+    /* MODALS: neutral finance sheets */
     .report-modal .modal-content {
-        border: 2px solid #cbd5e1;
-        border-radius: 0;
+        border: 1px solid #e8e8e8;
+        border-radius: var(--ui-radius-xl);
         box-shadow: none;
         background: #ffffff;
+        overflow: hidden;
     }
     .report-modal {
-        font-family: 'Inter', sans-serif;
+        font-family: 'DM Sans', sans-serif;
     }
     .report-modal .modal-header {
         background: #ffffff;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e8e8e8;
         border-radius: 0;
-        padding: 0.65rem 0.9rem;
+        padding: 1rem 1.1rem 0.9rem;
     }
     .report-modal .modal-title {
-        font-family: 'Poppins', sans-serif;
-        font-weight: 700;
-        font-size: 0.95rem;
-        letter-spacing: 0.04em;
+        font-family: 'DM Mono', monospace;
+        font-weight: 500;
+        font-size: 11px;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
+        color: #0a0a0a;
     }
     .report-modal .modal-body {
         background: #ffffff;
-        padding: 0.9rem;
+        padding: 1rem 1.1rem;
     }
     .report-modal .modal-footer {
         background: #ffffff;
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid #e8e8e8;
         border-radius: 0;
-        padding: 0.5rem 0.9rem;
+        padding: 1rem 1.1rem 1.1rem;
     }
     .report-modal .form-control,
     .report-modal .form-select,
     .report-modal .input-group-text {
-        font-family: 'Inter', sans-serif;
-        font-weight: 600;
-        border-radius: 0;
-        border: 1px solid #cbd5e1;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        border-radius: var(--ui-radius-md);
+        border: 1px solid #e8e8e8;
         box-shadow: none;
+        min-height: 48px;
+        background: #ffffff;
+        color: #0a0a0a;
     }
     .report-modal .form-control::placeholder {
-        font-weight: 600;
-        color: #64748b;
+        font-weight: 500;
+        color: #888888;
     }
     .report-modal label,
     .report-modal .btn,
     .report-modal .input-group-text {
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
     }
     .report-modal .form-control:focus,
     .report-modal .form-select:focus {
-        border-color: #0f766e;
+        border-color: #d4d4d4;
         box-shadow: none;
     }
     .report-modal .btn-close {
@@ -522,43 +527,63 @@
     }
     .report-modal-submit {
         width: 100%;
-        border-radius: 0;
-        font-weight: 800;
-        letter-spacing: 0.02em;
-        border: 1px solid transparent;
+        min-height: 48px;
+        border-radius: var(--ui-radius-lg);
+        font-weight: 600;
+        letter-spacing: 0;
+        border: 1px solid #0a0a0a;
+        background: #0a0a0a !important;
+        color: #ffffff !important;
     }
     .report-modal-deduction .modal-header {
-        border-top: 4px solid #dc2626;
+        border-top: 0;
     }
     .report-modal-deduction .modal-title {
-        color: #b91c1c;
+        color: #0a0a0a;
     }
     .report-modal-deduction .report-modal-submit {
-        background: #dc2626;
-        color: #ffffff;
-        border-color: #dc2626;
+        border-color: #0a0a0a;
     }
     .report-modal-capital .modal-header {
-        border-top: 4px solid #0891b2;
+        border-top: 0;
     }
     .report-modal-capital .modal-title {
-        color: #0e7490;
+        color: #0a0a0a;
     }
     .report-modal-capital .report-modal-submit {
-        background: #0891b2;
-        color: #ffffff;
-        border-color: #0891b2;
+        border-color: #0a0a0a;
     }
     .report-modal-purchase .modal-header {
-        border-top: 4px solid #475569;
+        border-top: 0;
     }
     .report-modal-purchase .modal-title {
-        color: #334155;
+        color: #0a0a0a;
     }
     .report-modal-purchase .report-modal-submit {
-        background: #475569;
-        color: #ffffff;
-        border-color: #475569;
+        border-color: #0a0a0a;
+    }
+    .report-modal .modal-stack {
+        display: grid;
+        gap: 0.85rem;
+    }
+    .report-modal .modal-field-label {
+        display: block;
+        margin-bottom: 0.45rem;
+        font-family: 'DM Mono', monospace;
+        font-size: 9px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: #888888;
+    }
+    .report-modal .input-group .input-group-text {
+        padding-inline: 1rem;
+        justify-content: center;
+    }
+    .report-modal .modal-footer .report-modal-submit:hover,
+    .report-modal .modal-footer .report-modal-submit:focus {
+        background: #0a0a0a !important;
+        color: #ffffff !important;
     }
 
     /* ------------------------------
@@ -1667,13 +1692,27 @@
              <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
             <div class="modal-header"><h6 class="modal-title">Add Deduction</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <input type="text" name="Description" class="form-control mb-2 fw-bold" required placeholder="Description (e.g. Salary)" />
-                <select name="Category" class="form-select mb-2 fw-bold">
-                    <option value="General" selected>General (Include in net profit)</option>
-                    <option value="Note">Note (Separate deduction)</option>
-                </select>
-                <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
-                <input type="date" name="Date" class="form-control mb-2" value="@businessToday.ToString("yyyy-MM-dd")" required />
+                <div class="modal-stack">
+                    <div>
+                        <label class="modal-field-label">Description</label>
+                        <input type="text" name="Description" class="form-control" required placeholder="Description (e.g. Salary)" />
+                    </div>
+                    <div>
+                        <label class="modal-field-label">Category</label>
+                        <select name="Category" class="form-select">
+                            <option value="General" selected>General (Include in net profit)</option>
+                            <option value="Note">Note (Separate deduction)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="modal-field-label">Amount</label>
+                        <div class="input-group"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control" required placeholder="0.00" /></div>
+                    </div>
+                    <div>
+                        <label class="modal-field-label">Date</label>
+                        <input type="date" name="Date" class="form-control" value="@businessToday.ToString("yyyy-MM-dd")" required />
+                    </div>
+                </div>
             </div>
             <div class="modal-footer"><button type="submit" class="btn report-modal-submit">Save Deduction</button></div>
         </form>
@@ -1688,10 +1727,24 @@
              <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
             <div class="modal-header"><h6 class="modal-title">Add Capital</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
              <div class="modal-body">
-                <input type="text" name="FundName" class="form-control mb-2 fw-bold" required placeholder="Fund Name (e.g. Hazel Capital)" />
-                <input type="text" name="Description" class="form-control mb-2" placeholder="Notes (Optional)" />
-                <div class="input-group mb-2"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control fw-bold" required placeholder="0.00" /></div>
-                <input type="date" name="Date" class="form-control mb-2" value="@businessToday.ToString("yyyy-MM-dd")" required />
+                <div class="modal-stack">
+                    <div>
+                        <label class="modal-field-label">Fund Name</label>
+                        <input type="text" name="FundName" class="form-control" required placeholder="Fund Name (e.g. Hazel Capital)" />
+                    </div>
+                    <div>
+                        <label class="modal-field-label">Notes</label>
+                        <input type="text" name="Description" class="form-control" placeholder="Notes (Optional)" />
+                    </div>
+                    <div>
+                        <label class="modal-field-label">Amount</label>
+                        <div class="input-group"><span class="input-group-text">₱</span><input type="number" step="0.01" name="Amount" class="form-control" required placeholder="0.00" /></div>
+                    </div>
+                    <div>
+                        <label class="modal-field-label">Date</label>
+                        <input type="date" name="Date" class="form-control" value="@businessToday.ToString("yyyy-MM-dd")" required />
+                    </div>
+                </div>
             </div>
             <div class="modal-footer"><button type="submit" class="btn report-modal-submit">Save Capital</button></div>
         </form>

@@ -51,7 +51,7 @@
         </div>
         <div class="dashboard-section-actions">
             <a href="/WeeklyPrices/PriceVersus" class="dashboard-inline-link"><i class="bi bi-sliders2"></i> Price Setup</a>
-            <a href="/Orders/UnpaidOrders" class="dashboard-inline-link"><i class="bi bi-exclamation-circle"></i> Unpaid Orders</a>
+            <a href="@Url.Action("UnpaidOrders", "Orders", new { date = nextDeliveryDate })" class="dashboard-inline-link"><i class="bi bi-exclamation-circle"></i> Unpaid Orders</a>
         </div>
     </section>
 
@@ -95,7 +95,7 @@
                 <div class="metric-value">₱@Model.UnpaidAmount.ToString("N0")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@Model.UnpaidInvoiceCount invoice@(Model.UnpaidInvoiceCount == 1 ? "" : "s")</span>
-                    <a class="unpaid-link" href="/Orders/UnpaidOrders">View</a>
+                    <a class="unpaid-link" href="@Url.Action("UnpaidOrders", "Orders", new { date = nextDeliveryDate })">View</a>
                 </div>
             </div>
         </div>
@@ -245,7 +245,7 @@
             <div class="surface-card h-100">
                 <div class="surface-card-header">
                     <h6 class="surface-card-title"><i class="bi bi-clock-history me-2"></i> Recent Unpaid Orders</h6>
-                    <a href="/Orders" class="dashboard-table-link">View All</a>
+                    <a href="@Url.Action("UnpaidOrders", "Orders", new { date = nextDeliveryDate })" class="dashboard-table-link">View All</a>
                 </div>
                 <div class="surface-card-body p-0 table-responsive-admin">
                     <table class="table table-admin table-hover mb-0 w-100">
@@ -289,7 +289,7 @@
             <div class="surface-card h-100">
                 <div class="surface-card-header">
                     <h6 class="surface-card-title"><i class="bi bi-check2-circle me-2"></i> Recent Paid Orders</h6>
-                    <a href="/Orders" class="dashboard-table-link">View All</a>
+                    <a href="@Url.Action("PaidOrders", "Orders", new { date = nextDeliveryDate })" class="dashboard-table-link">View All</a>
                 </div>
                 <div class="surface-card-body p-0 table-responsive-admin">
                     <table class="table table-admin table-hover mb-0 w-100">

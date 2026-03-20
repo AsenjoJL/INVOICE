@@ -13,19 +13,26 @@ public static class OrderImportHelpers
     public static Dictionary<string, Product> BuildProductLookup(IEnumerable<Product> products)
     {
         var productLookup = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var product in products
+        var orderedProducts = products
             .OrderByDescending(p => p.IsActive)
-            .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
+            .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // Product names are the primary source of truth for Excel imports.
+        // Add them first so later SKU aliases cannot steal an exact name match.
+        foreach (var product in orderedProducts)
         {
             foreach (var key in GetCandidateKeys(product.Name))
             {
                 AddLookupEntry(productLookup, key, product);
             }
+        }
 
+        foreach (var product in orderedProducts)
+        {
             foreach (var key in GetCandidateKeys(product.SKU))
             {
-                AddLookupEntry(productLookup, key, product);
+                AddLookupEntry(productLookup, key, product, allowNameCollision: false);
             }
         }
 
@@ -198,9 +205,22 @@ public static class OrderImportHelpers
         return int.TryParse(left, out productId) && int.TryParse(right, out customerId);
     }
 
-    private static void AddLookupEntry(Dictionary<string, Product> lookup, string key, Product product)
+    private static void AddLookupEntry(
+        Dictionary<string, Product> lookup,
+        string key,
+        Product product,
+        bool allowNameCollision = true)
     {
-        if (!lookup.TryGetValue(key, out var existing) || (!existing.IsActive && product.IsActive))
+        if (!lookup.TryGetValue(key, out var existing))
+        {
+            lookup[key] = product;
+            return;
+        }
+
+        if (!allowNameCollision)
+            return;
+
+        if (!existing.IsActive && product.IsActive)
         {
             lookup[key] = product;
         }
