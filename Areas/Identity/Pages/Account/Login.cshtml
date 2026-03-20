@@ -12,42 +12,48 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 48px 20px;
-            background:
-                radial-gradient(circle at top left, rgba(58, 115, 255, 0.08), transparent 30%),
-                linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            padding: 40px 20px;
+            background: #202124;
             font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
         }
 
         .auth-card {
-            width: min(100%, 720px);
-            background: #ffffff;
-            border: 1px solid #e8e8e8;
-            border-radius: 30px;
+            width: min(100%, 540px);
+            background: #2b2c29;
+            border: 1px solid #4a4c48;
+            border-radius: 0;
             overflow: hidden;
             box-shadow: none;
         }
 
         .auth-card-head {
-            padding: 26px 32px 12px;
-            background: linear-gradient(90deg, #2f58d7 0%, #1fa2e1 100%);
+            padding: 24px 40px 18px;
+            background: transparent;
+            border-bottom: 1px solid #474946;
         }
 
         .auth-card-head h1 {
             margin: 0;
-            font-size: 30px;
-            font-weight: 700;
+            font-size: 28px;
+            font-weight: 600;
             letter-spacing: -0.04em;
-            color: #08142b;
+            color: #ffffff;
+            line-height: 1.15;
+        }
+
+        .auth-card-head p {
+            margin: 8px 0 0;
+            font-size: 15px;
+            color: #d3d6d0;
         }
 
         .auth-card-body {
-            padding: 22px 20px 20px;
+            padding: 28px 40px 20px;
         }
 
         .auth-form {
             display: grid;
-            gap: 20px;
+            gap: 18px;
         }
 
         .auth-validation {
@@ -56,82 +62,74 @@
         }
 
         .auth-field {
-            position: relative;
-            border: 1px solid #dfe7f4;
-            border-radius: 22px;
-            background: #dfeafb;
-            padding: 34px 18px 14px;
+            display: grid;
+            gap: 8px;
         }
 
         .auth-field-label {
-            position: absolute;
-            top: 10px;
-            left: 14px;
-            display: inline-flex;
-            align-items: center;
-            min-height: 18px;
-            padding: 0 8px;
-            border: 1px solid #d6dce8;
-            border-radius: 999px;
-            background: #ffffff;
-            color: #7d8593;
-            font-family: "DM Mono", "Consolas", "Courier New", monospace;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.16em;
+            display: block;
+            color: #d6d7d2;
+            font-size: 14px;
+            font-weight: 600;
         }
 
         .auth-input {
             width: 100%;
-            border: 0;
+            min-height: 50px;
+            border: 1px solid #555752;
+            border-radius: 12px;
             background: transparent;
-            color: #0a0a0a;
-            font-size: 18px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
             line-height: 1.4;
             outline: none;
             box-shadow: none !important;
-            padding: 0;
+            padding: 12px 16px;
         }
 
         .auth-input::placeholder {
-            color: #8e98aa;
+            color: #9ea29a;
         }
 
         .auth-input:focus {
             outline: none;
+            border-color: #6b6e69;
         }
 
         .auth-check {
             display: flex;
             align-items: center;
             gap: 10px;
-            color: #0a0a0a;
-            font-size: 16px;
+            color: #d6d7d2;
+            font-size: 14px;
             padding-left: 2px;
         }
 
         .auth-check .form-check-input {
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
             margin: 0;
-            border: 1px solid #d6dce8;
+            border: 1px solid #6a6d67;
+            border-radius: 4px !important;
+            background-color: transparent;
             box-shadow: none;
         }
 
         .auth-check .form-check-input:checked {
-            background-color: #0a0a0a;
-            border-color: #0a0a0a;
+            background-color: #2b67ad;
+            border-color: #2b67ad;
         }
 
         .auth-submit {
             width: 100%;
-            min-height: 54px;
+            min-height: 52px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #0a0a0a;
-            border-radius: 20px;
-            background: #0a0a0a;
+            border: 1px solid #2b67ad;
+            border-radius: 12px;
+            background: #2b67ad;
             color: #ffffff;
             font-size: 16px;
             font-weight: 600;
@@ -141,9 +139,62 @@
 
         .auth-submit:hover,
         .auth-submit:focus {
-            background: #0a0a0a;
-            border-color: #0a0a0a;
+            background: #2b67ad;
+            border-color: #2b67ad;
             color: #ffffff;
+        }
+
+        .auth-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .auth-link,
+        .auth-link:hover,
+        .auth-link:focus {
+            color: #2d7ad7;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .auth-link-muted,
+        .auth-link-muted:hover,
+        .auth-link-muted:focus {
+            color: #a8aca5;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .auth-password-wrap {
+            position: relative;
+        }
+
+        .auth-input.has-toggle {
+            padding-right: 46px;
+        }
+
+        .auth-toggle {
+            position: absolute;
+            top: 50%;
+            right: 14px;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #8d908a;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .auth-footer {
+            margin-top: 2px;
+            text-align: center;
+            color: #d6d7d2;
+            font-size: 14px;
+            font-weight: 500;
         }
 
         .field-validation-error {
@@ -154,7 +205,7 @@
 
         @@media (max-width: 640px) {
             .auth-card-head {
-                padding: 22px 24px 10px;
+                padding: 22px 22px 16px;
             }
 
             .auth-card-head h1 {
@@ -162,11 +213,12 @@
             }
 
             .auth-card-body {
-                padding: 18px 16px 18px;
+                padding: 22px 22px 18px;
             }
 
-            .auth-field {
-                padding: 30px 16px 12px;
+            .auth-row {
+                align-items: flex-start;
+                flex-direction: column;
             }
 
             .auth-input {
@@ -179,7 +231,8 @@
 <div class="auth-shell">
     <div class="auth-card">
         <div class="auth-card-head">
-            <h1>Sign In</h1>
+            <h1>Welcome back</h1>
+            <p>Sign in to continue to your account</p>
         </div>
         <div class="auth-card-body">
             <form id="account" method="post" class="auth-form">
@@ -187,31 +240,45 @@
                 <div asp-validation-summary="ModelOnly" class="text-danger auth-validation"></div>
 
                 <div class="auth-field">
-                    <label asp-for="Input.Email" class="auth-field-label">Email</label>
+                    <label asp-for="Input.Email" class="auth-field-label">Email address</label>
                     <input asp-for="Input.Email"
                            class="auth-input"
                            autocomplete="username"
                            aria-required="true"
-                           placeholder="name@example.com" />
+                           placeholder="name@example.com"
+                           spellcheck="false" />
                     <span asp-validation-for="Input.Email" class="text-danger"></span>
                 </div>
 
                 <div class="auth-field">
-                    <label asp-for="Input.Password" class="auth-field-label">Password</label>
-                    <input asp-for="Input.Password"
-                           class="auth-input"
-                           autocomplete="current-password"
-                           aria-required="true"
-                           placeholder="password" />
+                    <div class="auth-row">
+                        <label asp-for="Input.Password" class="auth-field-label mb-0">Password</label>
+                        <span class="auth-link-muted">No reset page</span>
+                    </div>
+                    <div class="auth-password-wrap">
+                        <input asp-for="Input.Password"
+                               class="auth-input has-toggle"
+                               autocomplete="current-password"
+                               aria-required="true"
+                               placeholder="Password" />
+                        <button type="button" class="auth-toggle" id="togglePassword" aria-label="Show password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
                     <span asp-validation-for="Input.Password" class="text-danger"></span>
                 </div>
 
                 <div class="form-check auth-check">
                     <input class="form-check-input" asp-for="Input.RememberMe" />
-                    <label class="form-check-label" asp-for="Input.RememberMe">Remember me</label>
+                    <label class="form-check-label" asp-for="Input.RememberMe">Remember me for 30 days</label>
                 </div>
 
-                <button id="login-submit" type="submit" class="auth-submit">Login</button>
+                <button id="login-submit" type="submit" class="auth-submit">Sign in</button>
+
+                <div class="auth-footer">
+                    Don't have an account?
+                    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="auth-link">Create one</a>
+                </div>
             </form>
         </div>
     </div>
@@ -219,4 +286,20 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const passwordInput = document.getElementById('Input_Password');
+            const toggle = document.getElementById('togglePassword');
+            if (!passwordInput || !toggle) return;
+
+            toggle.addEventListener('click', function () {
+                const isPassword = passwordInput.getAttribute('type') === 'password';
+                passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+                toggle.innerHTML = isPassword
+                    ? '<i class="bi bi-eye-slash"></i>'
+                    : '<i class="bi bi-eye"></i>';
+                toggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+            });
+        })();
+    </script>
 }
