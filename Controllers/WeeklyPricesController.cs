@@ -63,19 +63,19 @@ public class WeeklyPricesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ImportTemplate(IFormFile? importFile, DateTime targetDate, string? importMode = null, string? searchTerm = null, int page = 1, int pageSize = 40)
+    public async Task<IActionResult> ImportTemplate(IFormFile? importFile, DateTime targetDate, string? importMode = null, string? searchTerm = null, int page = 1, int pageSize = 40, string? returnUrl = null)
     {
         var normalizedImportMode = NormalizeImportMode(importMode);
         if (importFile == null || importFile.Length == 0)
         {
             TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) price template.";
-            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
         if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
-            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
         await using var stream = new MemoryStream();
@@ -89,14 +89,14 @@ public class WeeklyPricesController : Controller
         catch (Exception ex)
         {
             TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
-            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
         var headerRow = FindPriceTemplateHeaderRow(sheet);
         if (headerRow <= 0)
         {
             TempData["ErrorMessage"] = "Could not find the price template header row.";
-            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
         var itemCol = FindColumnByHeader(sheet, headerRow, "items");
@@ -110,7 +110,7 @@ public class WeeklyPricesController : Controller
         if (itemCol <= 0 || unitCol <= 0 || (requiresDeliveryPrice && sellingPriceCol <= 0) || (requiresPurchasePrice && purchasePriceCol <= 0))
         {
             TempData["ErrorMessage"] = "The template must contain item, price, unit, and purchase-price columns.";
-            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
         var products = await _context.Products
@@ -232,7 +232,7 @@ public class WeeklyPricesController : Controller
             TempData["ErrorMessage"] = unmatchedProducts.Count > 0
                 ? $"No matching products were imported. Unmatched: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
                 : "No valid price rows were found in the template.";
-            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
         var saveResult = await SavePriceItemsAsync(targetDate, applyToMasterCost: false, importedItems);
@@ -241,8 +241,10 @@ public class WeeklyPricesController : Controller
             ? $" Unmatched products: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
             : string.Empty;
 
-        TempData["SuccessMessage"] = $"Imported {GetImportModeLabel(normalizedImportMode)} for {saveResult.Items.Count} product(s); updated {updatedUnits} unit value(s).{unmatchedNote}";
-        return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+        var successMessage = $"Imported {GetImportModeLabel(normalizedImportMode)} for {saveResult.Items.Count} product(s); updated {updatedUnits} unit value(s).{unmatchedNote}";
+        TempData["SuccessMessage"] = successMessage;
+        TempData["Message"] = successMessage;
+        return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
     }
 
     [HttpPost]
@@ -556,6 +558,11 @@ public class WeeklyPricesController : Controller
             page = Math.Max(1, page),
             pageSize = Math.Clamp(pageSize, 20, 200)
         });
+
+    private IActionResult RedirectAfterImport(DateTime targetDate, string? searchTerm, int page, int pageSize, string? returnUrl)
+        => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? LocalRedirect(returnUrl)
+            : RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
 
     private static (DateTime WeekStart, DateTime WeekEnd) GetWeekRange(DateTime targetDate)
     {

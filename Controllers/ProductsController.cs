@@ -3,6 +3,7 @@ using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace HazelInvoice.Controllers;
@@ -105,7 +106,7 @@ public class ProductsController : Controller
     // POST: Products/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,SupplierId,Unit,UnitCost,DeliveryFee,IsActive")] Product product, string? returnUrl = null)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,SupplierId,Unit,UnitCost,DeliveryFee,IsActive")] Product product, string? returnUrl = null, int? returnClientPage = null)
     {
         if (id != product.Id) return NotFound();
 
@@ -124,7 +125,17 @@ public class ProductsController : Controller
                 else throw;
             }
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-                return LocalRedirect(returnUrl);
+            {
+                var redirectUrl = returnUrl;
+                if (returnClientPage.HasValue && returnClientPage.Value > 1)
+                {
+                    redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restorePage", returnClientPage.Value.ToString());
+                }
+
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "highlightProductId", product.Id.ToString());
+
+                return LocalRedirect(redirectUrl);
+            }
 
             return RedirectToAction(nameof(Index));
         }

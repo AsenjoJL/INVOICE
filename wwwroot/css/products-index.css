@@ -281,6 +281,11 @@
     background: #fafafa;
 }
 
+.product-table tbody tr.product-row-highlight td {
+    background: #f7f7f7;
+    transition: background-color 0.2s ease;
+}
+
 .product-sku,
 .product-cost {
     font-family: var(--product-font-mono);

@@ -32,6 +32,7 @@
                 <form asp-action="Edit" method="post" id="productEditForm">
                     <input type="hidden" asp-for="Id" />
                     <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="returnClientPage" id="returnClientPage" />
                     <div asp-validation-summary="ModelOnly" class="text-danger product-form-alert"></div>
 
                     <div class="product-form-section">
@@ -156,9 +157,22 @@
         (function () {
             const form = document.getElementById('productEditForm');
             if (!form) return;
+            const returnClientPage = document.getElementById('returnClientPage');
 
             form.addEventListener('submit', () => {
                 sessionStorage.setItem('products:index:restore', '1');
+
+                if (!returnClientPage) return;
+
+                try {
+                    const savedState = JSON.parse(sessionStorage.getItem('products:index:viewState') || 'null');
+                    const currentPage = Number(savedState?.currentPage || 1);
+                    returnClientPage.value = Number.isFinite(currentPage) && currentPage > 0
+                        ? String(currentPage)
+                        : '1';
+                } catch {
+                    returnClientPage.value = '1';
+                }
             });
         })();
     </script>

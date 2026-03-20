@@ -29,6 +29,10 @@
 (function () {
     'use strict';
 
+    const url = new URL(window.location.href);
+    const restorePageParam = parseInt(url.searchParams.get('restorePage') || '0', 10);
+    const highlightProductId = url.searchParams.get('highlightProductId');
+
     const STATUS_FILTER = {
         ALL: 'all',
         ACTIVE: 'active',
@@ -88,6 +92,10 @@
             if (categoryFilter && typeof saved.categoryValue === 'string') categoryFilter.value = saved.categoryValue;
             if (pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
         } catch {
+        }
+
+        if (Number.isFinite(restorePageParam) && restorePageParam > 0) {
+            state.currentPage = restorePageParam;
         }
     }
 
@@ -343,11 +351,30 @@
         const saved = (() => {
             try { return JSON.parse(sessionStorage.getItem('products:index:viewState') || 'null'); } catch { return null; }
         })();
-        const y = parseInt(String(saved?.scrollY ?? sessionStorage.getItem('products:index:scrollY') ?? '0'), 10);
-        if (!Number.isNaN(y) && y > 0) {
-            window.requestAnimationFrame(() => window.scrollTo(0, y));
+        const highlightedRow = highlightProductId
+            ? tableBody.querySelector(`tr.product-row[data-id="${highlightProductId}"]`)
+            : null;
+
+        if (highlightedRow instanceof HTMLElement && highlightedRow.style.display !== 'none') {
+            window.requestAnimationFrame(() => {
+                highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                highlightedRow.classList.add('product-row-highlight');
+                window.setTimeout(() => highlightedRow.classList.remove('product-row-highlight'), 2200);
+            });
+        } else {
+            const y = parseInt(String(saved?.scrollY ?? sessionStorage.getItem('products:index:scrollY') ?? '0'), 10);
+            if (!Number.isNaN(y) && y > 0) {
+                window.requestAnimationFrame(() => window.scrollTo(0, y));
+            }
         }
+
         sessionStorage.removeItem('products:index:restore');
         sessionStorage.removeItem('products:index:scrollY');
+    }
+
+    if ((Number.isFinite(restorePageParam) && restorePageParam > 0) || highlightProductId) {
+        url.searchParams.delete('restorePage');
+        url.searchParams.delete('highlightProductId');
+        window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
     }
 })();
