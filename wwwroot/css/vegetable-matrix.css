@@ -34,7 +34,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
+    touch-action: auto;
     border: 2px solid var(--vm-border);
     border-radius: var(--ui-radius-xl);
     box-shadow: none;
@@ -43,6 +43,7 @@
     background: var(--vm-bg);
     margin: 0 12px 10px;
     max-width: 100%;
+    width: calc(100vw - 290px);
 }
 
 .matrix-container.matrix-dragging {
@@ -50,8 +51,10 @@
     user-select: none;
 }
 
-.matrix-container:not(.matrix-dragging) {
-    cursor: grab;
+@media (hover: hover) and (pointer: fine) {
+    .matrix-container:not(.matrix-dragging) {
+        cursor: grab;
+    }
 }
 
 .matrix-toolbar {
@@ -316,9 +319,19 @@
     .matrix-table {
         border-collapse: separate;
         border-spacing: 0;
-        width: 100%;
+        width: max-content;
         min-width: max-content;
         margin-bottom: 0;
+    }
+
+    @media (max-width: 991.98px) {
+        .matrix-container {
+            width: calc(100vw - 24px);
+            min-height: 420px;
+            margin: 0 0 10px;
+            border-left-width: 1px;
+            border-right-width: 1px;
+        }
     }
 
     .matrix-table th, .matrix-table td {

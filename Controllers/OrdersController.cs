@@ -138,7 +138,7 @@ public class OrdersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveMatrix(VegetableMatrixViewModel model, bool doPrint = false)
+    public async Task<IActionResult> SaveMatrix(VegetableMatrixViewModel model, bool doPrint = false, bool forceWeeklyPriceRecords = false)
     {
         if (model == null) return BadRequest("Model is null");
         model.Date = NormalizeOrderDate(model.Date);
@@ -236,7 +236,7 @@ public class OrdersController : Controller
                     (!r.CustomerId.HasValue && r.CustomerName == c.Name);
 
                 // 0) Update Weekly Prices (Price overrides) if provided
-                await UpdateWeeklyPricesFromPricesAsync(model.Date, model.ProductPrices);
+                await UpdateWeeklyPricesFromPricesAsync(model.Date, model.ProductPrices, forceWeeklyPriceRecords);
 
                 foreach (var customer in customers)
                 {
@@ -623,10 +623,10 @@ public class OrdersController : Controller
         var fractionalNote = fractionalQtyCount > 0
             ? $" Fractional quantities detected: {fractionalQtyCount} cells."
             : string.Empty;
-        TempData["SuccessMessage"] = $"Excel imported and receipts updated for {targetDate:MMM dd, yyyy}: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{fractionalNote}";
+        TempData["SuccessMessage"] = $"Excel imported, weekly prices updated, and receipts updated for {targetDate:MMM dd, yyyy}: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{fractionalNote}";
         TempData["AfterImportShowReceipts"] = "true";
 
-        return await SaveMatrix(vm, doPrint: false);
+        return await SaveMatrix(vm, doPrint: false, forceWeeklyPriceRecords: true);
     }
 
     // OUTLET ORDER GET
@@ -1264,7 +1264,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     private static DateTime NormalizeOrderDate(DateTime? date)
         => BusinessDate.NormalizeNextDeliveryDate(date);
 
-    private async Task UpdateWeeklyPricesFromPricesAsync(DateTime date, Dictionary<int, decimal>? postedPrices)
+    private async Task UpdateWeeklyPricesFromPricesAsync(DateTime date, Dictionary<int, decimal>? postedPrices, bool forceCreateWeeklyRecords = false)
     {
         if (postedPrices == null || postedPrices.Count == 0) return;
 
@@ -1329,7 +1329,9 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                 ? wp.DeliveryPrice
                 : (effectiveCost + markup + effectiveDeliveryFee);
 
-            if (Math.Abs(postedPrice - defaultPrice) < 0.005m) continue;
+            var matchesCurrentWeeklyPrice = Math.Abs(postedPrice - defaultPrice) < 0.005m;
+            if (matchesCurrentWeeklyPrice && (wp != null || !forceCreateWeeklyRecords))
+                continue;
 
             decimal newMarkup = postedPrice - effectiveCost - effectiveDeliveryFee;
             decimal newBase = effectiveCost + newMarkup;

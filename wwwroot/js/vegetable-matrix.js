@@ -190,7 +190,8 @@ function changeProductPage(d) {
     }
 
     matrixContainer.addEventListener('pointerdown', (event) => {
-        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        if (event.pointerType !== 'mouse') return;
+        if (event.button !== 0) return;
         if (isInteractiveTarget(event.target)) return;
 
         startDrag(event.clientX, event.clientY);
@@ -204,11 +205,7 @@ function changeProductPage(d) {
 
     matrixContainer.addEventListener('pointerup', endDrag);
     matrixContainer.addEventListener('pointercancel', endDrag);
-    matrixContainer.addEventListener('pointerleave', (event) => {
-        if (event.pointerType === 'mouse') {
-            endDrag();
-        }
-    });
+    matrixContainer.addEventListener('pointerleave', endDrag);
 
     matrixContainer.addEventListener('wheel', (event) => {
         if (event.shiftKey || Math.abs(event.deltaX) > 0) {
