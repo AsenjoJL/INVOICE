@@ -43,11 +43,12 @@ public class ReceiptsController : Controller
     }
 
     // GET: Receipts
-    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 50)
+    public async Task<IActionResult> Index(string? q, DateTime? date = null, int page = 1, int pageSize = 50)
     {
         var vm = await _receiptQuery.QueryAsync(new ReceiptQueryOptions
         {
             Query = q,
+            Date = date?.Date,
             Page = page,
             PageSize = pageSize,
             UnpaidOnly = false
@@ -57,11 +58,12 @@ public class ReceiptsController : Controller
     }
 
     // GET: Receipts/Unpaid
-    public async Task<IActionResult> Unpaid(string? q, int page = 1, int pageSize = 50)
+    public async Task<IActionResult> Unpaid(string? q, DateTime? date = null, int page = 1, int pageSize = 50)
     {
         var vm = await _receiptQuery.QueryAsync(new ReceiptQueryOptions
         {
             Query = q,
+            Date = date?.Date,
             Page = page,
             PageSize = pageSize,
             UnpaidOnly = true

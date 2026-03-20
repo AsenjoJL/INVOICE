@@ -413,7 +413,7 @@ public class OrdersController : Controller
         if (TempData.ContainsKey("AfterImportShowReceipts"))
         {
             TempData.Remove("AfterImportShowReceipts");
-            return RedirectToAction("Index", "Receipts");
+            return RedirectToAction("Index", "Receipts", new { date = model.Date.ToString("yyyy-MM-dd") });
         }
 
         return RedirectToAction(nameof(VegetableMatrix), new
@@ -525,7 +525,6 @@ public class OrdersController : Controller
 
         var products = await _context.Products
             .AsNoTracking()
-            .Where(p => p.IsActive)
             .ToListAsync();
 
         // Map by normalized Name and SKU to improve matching coverage

@@ -32,6 +32,13 @@ public sealed class ReceiptQueryService : IReceiptQueryService
             baseQuery = baseQuery.Where(r => r.Status == PaymentStatus.Unpaid);
         }
 
+        if (options.Date.HasValue)
+        {
+            var dayStart = options.Date.Value.Date;
+            var dayEnd = dayStart.AddDays(1);
+            baseQuery = baseQuery.Where(r => r.Date >= dayStart && r.Date < dayEnd);
+        }
+
         if (!string.IsNullOrWhiteSpace(q))
         {
             // Keep it simple + index-friendly: exact-ish receipt number match + contains on customer.
@@ -72,10 +79,10 @@ public sealed class ReceiptQueryService : IReceiptQueryService
             TotalCount = totalCount,
             Receipts = receipts,
             Query = q,
+            Date = options.Date?.Date,
             Page = page,
             PageSize = pageSize,
             UnpaidOnly = options.UnpaidOnly
         };
     }
 }
-
