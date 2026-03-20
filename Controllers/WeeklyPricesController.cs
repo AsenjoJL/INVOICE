@@ -63,8 +63,9 @@ public class WeeklyPricesController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ImportTemplate(IFormFile? importFile, DateTime targetDate, string? searchTerm = null, int page = 1, int pageSize = 40)
+    public async Task<IActionResult> ImportTemplate(IFormFile? importFile, DateTime targetDate, string? importMode = null, string? searchTerm = null, int page = 1, int pageSize = 40)
     {
+        var normalizedImportMode = NormalizeImportMode(importMode);
         if (importFile == null || importFile.Length == 0)
         {
             TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) price template.";
@@ -103,7 +104,10 @@ public class WeeklyPricesController : Controller
         var unitCol = FindColumnByHeader(sheet, headerRow, "uom");
         var purchasePriceCol = FindNextPriceColumn(sheet, headerRow, sellingPriceCol);
 
-        if (itemCol <= 0 || sellingPriceCol <= 0 || unitCol <= 0 || purchasePriceCol <= 0)
+        var requiresDeliveryPrice = normalizedImportMode is "both" or "delivery-only";
+        var requiresPurchasePrice = normalizedImportMode is "both" or "original-only";
+
+        if (itemCol <= 0 || unitCol <= 0 || (requiresDeliveryPrice && sellingPriceCol <= 0) || (requiresPurchasePrice && purchasePriceCol <= 0))
         {
             TempData["ErrorMessage"] = "The template must contain item, price, unit, and purchase-price columns.";
             return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
@@ -124,6 +128,19 @@ public class WeeklyPricesController : Controller
             if (!string.IsNullOrWhiteSpace(skuKey) && !productMap.ContainsKey(skuKey))
                 productMap[skuKey] = product;
         }
+
+        var productIds = products.Select(p => p.Id).ToList();
+        var existingWeeklyPrices = await _context.WeeklyPrices
+            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= targetDate.Date && w.EffectiveTo >= targetDate.Date)
+            .ToListAsync();
+
+        var weeklyPriceMap = existingWeeklyPrices
+            .GroupBy(w => w.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
 
         var importedItems = new List<PriceVersusItem>();
         var matchedProducts = 0;
@@ -146,11 +163,26 @@ public class WeeklyPricesController : Controller
                 continue;
             }
 
-            if (!SimpleXlsxReader.TryParseDecimal(sheet.GetCell(row, sellingPriceCol), out var deliveryPrice) || deliveryPrice < 0)
-                continue;
+            decimal? importedDeliveryPrice = null;
+            if (sellingPriceCol > 0 &&
+                SimpleXlsxReader.TryParseDecimal(sheet.GetCell(row, sellingPriceCol), out var parsedDeliveryPrice) &&
+                parsedDeliveryPrice >= 0)
+            {
+                importedDeliveryPrice = parsedDeliveryPrice;
+            }
 
-            if (!SimpleXlsxReader.TryParseDecimal(sheet.GetCell(row, purchasePriceCol), out var cost) || cost < 0)
-                cost = 0m;
+            decimal? importedCost = null;
+            if (purchasePriceCol > 0 &&
+                SimpleXlsxReader.TryParseDecimal(sheet.GetCell(row, purchasePriceCol), out var parsedCost) &&
+                parsedCost >= 0)
+            {
+                importedCost = parsedCost;
+            }
+
+            if (requiresDeliveryPrice && !importedDeliveryPrice.HasValue)
+                continue;
+            if (requiresPurchasePrice && !importedCost.HasValue)
+                continue;
 
             var unit = sheet.GetCell(row, unitCol).Trim();
             if (!string.IsNullOrWhiteSpace(unit) && !string.Equals(product.Unit, unit, StringComparison.OrdinalIgnoreCase))
@@ -158,6 +190,24 @@ public class WeeklyPricesController : Controller
                 product.Unit = unit;
                 updatedUnits++;
             }
+
+            var currentWeekly = weeklyPriceMap.TryGetValue(product.Id, out var wp) ? wp : null;
+            var currentCost = currentWeekly?.CostOverride ?? product.UnitCost;
+            var currentDeliveryPrice = currentWeekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
+
+            var cost = normalizedImportMode switch
+            {
+                "original-only" => importedCost!.Value,
+                "delivery-only" => currentCost,
+                _ => importedCost ?? currentCost
+            };
+
+            var deliveryPrice = normalizedImportMode switch
+            {
+                "original-only" => Math.Max(currentDeliveryPrice, cost),
+                "delivery-only" => importedDeliveryPrice!.Value,
+                _ => importedDeliveryPrice ?? Math.Max(currentDeliveryPrice, cost)
+            };
 
             var markup = Math.Max(deliveryPrice - cost, 0m);
             importedItems.Add(new PriceVersusItem
@@ -191,7 +241,7 @@ public class WeeklyPricesController : Controller
             ? $" Unmatched products: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
             : string.Empty;
 
-        TempData["SuccessMessage"] = $"Imported weekly prices for {saveResult.Items.Count} product(s); updated {updatedUnits} unit value(s).{unmatchedNote}";
+        TempData["SuccessMessage"] = $"Imported {GetImportModeLabel(normalizedImportMode)} for {saveResult.Items.Count} product(s); updated {updatedUnits} unit value(s).{unmatchedNote}";
         return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
     }
 
@@ -558,6 +608,22 @@ public class WeeklyPricesController : Controller
 
         return 0;
     }
+
+    private static string NormalizeImportMode(string? importMode)
+        => importMode?.Trim().ToLowerInvariant() switch
+        {
+            "delivery-only" => "delivery-only",
+            "original-only" => "original-only",
+            _ => "both"
+        };
+
+    private static string GetImportModeLabel(string importMode)
+        => importMode switch
+        {
+            "delivery-only" => "delivery prices only",
+            "original-only" => "original prices only",
+            _ => "weekly prices"
+        };
 
     private void ValidateWeeklyPriceInput(WeeklyPrice weeklyPrice, Product? product)
     {
