@@ -160,7 +160,7 @@ public class ProductsController : Controller
     // POST: Products/Delete/5
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id, string? returnUrl = null)
+    public async Task<IActionResult> DeleteConfirmed(int id, string? returnUrl = null, int? returnClientPage = null)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null) return NotFound();
@@ -173,14 +173,14 @@ public class ProductsController : Controller
 
         TempData["Message"] = $"Deactivated {product.Name}.";
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-            return LocalRedirect(returnUrl);
+            return LocalRedirect(BuildReturnUrl(returnUrl, returnClientPage));
 
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeletePermanent(int id, string? returnUrl = null)
+    public async Task<IActionResult> DeletePermanent(int id, string? returnUrl = null, int? returnClientPage = null)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null) return NotFound();
@@ -193,7 +193,7 @@ public class ProductsController : Controller
         {
             TempData["Message"] = $"Cannot delete {product.Name} from the database because it already has receipts, purchases, or stock history. Deactivate it instead.";
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-                return LocalRedirect(returnUrl);
+                return LocalRedirect(BuildReturnUrl(returnUrl, returnClientPage));
 
             return RedirectToAction(nameof(Index));
         }
@@ -209,7 +209,7 @@ public class ProductsController : Controller
 
         TempData["Message"] = $"Deleted {product.Name} from the database.";
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-            return LocalRedirect(returnUrl);
+            return LocalRedirect(BuildReturnUrl(returnUrl, returnClientPage));
 
         return RedirectToAction(nameof(Index));
     }
@@ -235,6 +235,16 @@ public class ProductsController : Controller
     private bool ProductExists(int id)
     {
         return _context.Products.Any(e => e.Id == id);
+    }
+
+    private static string BuildReturnUrl(string returnUrl, int? returnClientPage)
+    {
+        if (!returnClientPage.HasValue || returnClientPage.Value <= 1)
+        {
+            return returnUrl;
+        }
+
+        return QueryHelpers.AddQueryString(returnUrl, "restorePage", returnClientPage.Value.ToString());
     }
 
     private async Task<List<string>> GetCategoryOptionsAsync()

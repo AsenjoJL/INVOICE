@@ -84,7 +84,15 @@ public static class SimpleXlsxReader
 
         if (string.Equals(type, "inlineStr", StringComparison.OrdinalIgnoreCase))
         {
-            return cell.Element(ns + "is")?.Element(ns + "t")?.Value ?? string.Empty;
+            var inlineString = cell.Element(ns + "is");
+            if (inlineString != null)
+            {
+                var text = string.Concat(inlineString.Descendants(ns + "t").Select(t => t.Value));
+                if (!string.IsNullOrWhiteSpace(text))
+                    return text;
+            }
+
+            return string.Empty;
         }
 
         return cell.Element(ns + "v")?.Value ?? string.Empty;

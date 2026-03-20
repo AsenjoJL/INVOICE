@@ -268,7 +268,7 @@
                                                 </a>
                                             </li>
                                             <li>
-                                                <a class="dropdown-item"
+                                                <a class="dropdown-item product-return-link"
                                                    asp-action="Delete"
                                                    asp-route-id="@item.Id"
                                                    asp-route-returnUrl="@returnUrl">
@@ -279,11 +279,12 @@
                                             <li>
                                                 <form asp-action="DeletePermanent"
                                                       method="post"
-                                                      class="m-0"
+                                                      class="m-0 product-return-form"
                                                       onsubmit="return confirm('Delete @item.Name from the database? This cannot be undone.');">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="id" value="@item.Id" />
                                                     <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                    <input type="hidden" name="returnClientPage" class="return-client-page" value="1" />
                                                     <button type="submit" class="dropdown-item text-danger">
                                                         <i class="bi bi-trash me-2"></i>Delete from Database
                                                     </button>

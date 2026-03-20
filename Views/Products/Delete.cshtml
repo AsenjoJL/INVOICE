@@ -30,6 +30,7 @@
             <form asp-action="Delete" method="post">
                 <input type="hidden" asp-for="Id" />
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <input type="hidden" name="returnClientPage" id="returnClientPage" value="1" />
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-danger">Deactivate</button>
                     @if (!string.IsNullOrWhiteSpace(returnUrl))
@@ -45,3 +46,22 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const input = document.getElementById('returnClientPage');
+            if (!input) return;
+
+            try {
+                const savedState = JSON.parse(sessionStorage.getItem('products:index:viewState') || 'null');
+                const currentPage = Number(savedState?.currentPage || 1);
+                input.value = Number.isFinite(currentPage) && currentPage > 0
+                    ? String(currentPage)
+                    : '1';
+            } catch {
+                input.value = '1';
+            }
+        })();
+    </script>
+}

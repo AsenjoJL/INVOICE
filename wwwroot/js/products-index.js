@@ -13,15 +13,33 @@
         }
     }
 
-    document.querySelectorAll('.product-edit-link').forEach(link => {
+    function rememberListPosition() {
+        sessionStorage.setItem(SCROLL_KEY, String(window.scrollY || 0));
+        sessionStorage.setItem(RESTORE_KEY, '1');
+        const state = getSavedState() || {};
+        sessionStorage.setItem(STATE_KEY, JSON.stringify({
+            ...state,
+            scrollY: window.scrollY || 0
+        }));
+    }
+
+    document.querySelectorAll('.product-edit-link, .product-return-link').forEach(link => {
         link.addEventListener('click', () => {
-            sessionStorage.setItem(SCROLL_KEY, String(window.scrollY || 0));
-            sessionStorage.setItem(RESTORE_KEY, '1');
+            rememberListPosition();
+        });
+    });
+
+    document.querySelectorAll('.product-return-form').forEach(form => {
+        form.addEventListener('submit', () => {
+            rememberListPosition();
+            const input = form.querySelector('.return-client-page');
             const state = getSavedState() || {};
-            sessionStorage.setItem(STATE_KEY, JSON.stringify({
-                ...state,
-                scrollY: window.scrollY || 0
-            }));
+            const currentPage = Number(state.currentPage || 1);
+            if (input instanceof HTMLInputElement) {
+                input.value = Number.isFinite(currentPage) && currentPage > 0
+                    ? String(currentPage)
+                    : '1';
+            }
         });
     });
 })();
