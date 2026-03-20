@@ -125,6 +125,29 @@
     text-decoration: none;
 }
 
+.product-actions .btn,
+.product-actions button.btn,
+.product-actions a.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 0 18px;
+    line-height: 1;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.product-actions .btn i,
+.product-actions button.btn i,
+.product-actions a.btn i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
 .btn-search:hover,
 .btn-primary-ghost:hover {
     background: #0a0a0a;
