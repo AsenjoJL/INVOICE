@@ -3,6 +3,7 @@ using HazelInvoice.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 using HazelInvoice.ViewModels;
@@ -548,8 +549,13 @@ public class WeeklyPricesController : Controller
 
     private IActionResult RedirectAfterImport(DateTime targetDate, string? searchTerm, int page, int pageSize, string? returnUrl)
         => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
-            ? LocalRedirect(returnUrl)
+            ? LocalRedirect(AttachTargetDate(returnUrl, targetDate))
             : RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+
+    private static string AttachTargetDate(string returnUrl, DateTime targetDate)
+    {
+        return QueryHelpers.AddQueryString(returnUrl, "date", targetDate.ToString("yyyy-MM-dd"));
+    }
 
     private static (DateTime WeekStart, DateTime WeekEnd) GetWeekRange(DateTime targetDate)
     {

@@ -25,9 +25,9 @@ public class ProductsController : Controller
     }
 
     // GET: Products
-    public async Task<IActionResult> Index(string? q = null)
+    public async Task<IActionResult> Index(string? q = null, DateTime? date = null)
     {
-        var businessDate = BusinessDate.Today();
+        var businessDate = (date ?? BusinessDate.Today()).Date;
         var query = _context.Products
             .AsNoTracking()
             .AsQueryable();
@@ -81,6 +81,7 @@ public class ProductsController : Controller
         }).ToList();
 
         ViewBag.SearchTerm = q ?? string.Empty;
+        ViewBag.TargetDate = businessDate;
         return View(viewModel);
     }
 

@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Products";
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
-    var importTargetDate = BusinessDate.Today().ToString("yyyy-MM-dd");
+    var targetDate = (ViewBag.TargetDate as DateTime?) ?? BusinessDate.Today();
     var searchTerm = (ViewBag.SearchTerm as string) ?? string.Empty;
     var zeroPriceCount = Model.Count(p => p.EffectiveDeliveryPrice == 0m);
     var totalCount = Model.Count();
@@ -26,6 +26,7 @@
                 <div class="eyebrow">Catalog</div>
                 <h1>Products</h1>
                 <div class="sub">Minimal dashboard view to keep pricing and availability tidy.</div>
+                <div class="product-date-chip">Viewing prices for @targetDate.ToString("MMM dd, yyyy")</div>
                 <div class="product-tools">
                     <form method="get" asp-action="Index" class="product-search-bar">
                         <i class="bi bi-search search-icon"></i>
@@ -121,7 +122,7 @@
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
                 <div class="col-lg-4">
                     <label class="form-label small text-uppercase fw-bold">Target Week Date</label>
-                    <input type="date" name="targetDate" value="@importTargetDate" class="form-control" />
+                    <input type="date" name="targetDate" value="@targetDate.ToString("yyyy-MM-dd")" class="form-control" />
                 </div>
                 <div class="col-lg-3">
                     <label class="form-label small text-uppercase fw-bold">Import Mode</label>
