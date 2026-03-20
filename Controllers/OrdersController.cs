@@ -529,17 +529,7 @@ public class OrdersController : Controller
             .ToListAsync();
 
         // Map by normalized Name and SKU to improve matching coverage
-        var productMap = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
-        foreach (var p in products)
-        {
-            var nameKey = OrderImportHelpers.NormalizeKey(p.Name);
-            if (!string.IsNullOrWhiteSpace(nameKey))
-                productMap[nameKey] = p;
-
-            var skuKey = OrderImportHelpers.NormalizeKey(p.SKU);
-            if (!string.IsNullOrWhiteSpace(skuKey) && !productMap.ContainsKey(skuKey))
-                productMap[skuKey] = p;
-        }
+        var productMap = OrderImportHelpers.BuildProductLookup(products);
 
         var matrix = new Dictionary<string, decimal>();
         var prices = new Dictionary<int, decimal>();
