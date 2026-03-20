@@ -18,6 +18,8 @@ namespace HazelInvoice.Controllers;
 [Authorize]
 public class ProfitReportController : Controller
 {
+    private static readonly DateTime ProfitReportOpeningDate = new(2026, 3, 19);
+
     private readonly ApplicationDbContext _context;
     private readonly IProfitReportService _profitReportService;
     private readonly IAppCacheInvalidator _cacheInvalidator;
@@ -33,7 +35,10 @@ public class ProfitReportController : Controller
     public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, bool includeUnpaid = true, decimal percentFee = 1.0m, decimal split1 = 40m)
     {
         var businessToday = BusinessDate.Today();
-        var start = startDate ?? businessToday.AddDays(-14);
+        var defaultStart = businessToday < ProfitReportOpeningDate
+            ? businessToday
+            : ProfitReportOpeningDate;
+        var start = startDate ?? defaultStart;
         var end = endDate ?? businessToday;
 
         var vm = await _profitReportService.BuildAsync(
