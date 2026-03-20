@@ -5,39 +5,214 @@
     Layout = "/Views/Shared/_AuthLayout.cshtml";
 }
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow border-0">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Sign In</h4>
+@section Styles {
+    <style>
+        .auth-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 20px;
+            background:
+                radial-gradient(circle at top left, rgba(58, 115, 255, 0.08), transparent 30%),
+                linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+        }
+
+        .auth-card {
+            width: min(100%, 720px);
+            background: #ffffff;
+            border: 1px solid #e8e8e8;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: none;
+        }
+
+        .auth-card-head {
+            padding: 26px 32px 12px;
+            background: linear-gradient(90deg, #2f58d7 0%, #1fa2e1 100%);
+        }
+
+        .auth-card-head h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: #08142b;
+        }
+
+        .auth-card-body {
+            padding: 22px 20px 20px;
+        }
+
+        .auth-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .auth-validation {
+            margin: 0;
+            font-size: 13px;
+        }
+
+        .auth-field {
+            position: relative;
+            border: 1px solid #dfe7f4;
+            border-radius: 22px;
+            background: #dfeafb;
+            padding: 34px 18px 14px;
+        }
+
+        .auth-field-label {
+            position: absolute;
+            top: 10px;
+            left: 14px;
+            display: inline-flex;
+            align-items: center;
+            min-height: 18px;
+            padding: 0 8px;
+            border: 1px solid #d6dce8;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #7d8593;
+            font-family: "DM Mono", "Consolas", "Courier New", monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .auth-input {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            color: #0a0a0a;
+            font-size: 18px;
+            line-height: 1.4;
+            outline: none;
+            box-shadow: none !important;
+            padding: 0;
+        }
+
+        .auth-input::placeholder {
+            color: #8e98aa;
+        }
+
+        .auth-input:focus {
+            outline: none;
+        }
+
+        .auth-check {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #0a0a0a;
+            font-size: 16px;
+            padding-left: 2px;
+        }
+
+        .auth-check .form-check-input {
+            width: 22px;
+            height: 22px;
+            margin: 0;
+            border: 1px solid #d6dce8;
+            box-shadow: none;
+        }
+
+        .auth-check .form-check-input:checked {
+            background-color: #0a0a0a;
+            border-color: #0a0a0a;
+        }
+
+        .auth-submit {
+            width: 100%;
+            min-height: 54px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #0a0a0a;
+            border-radius: 20px;
+            background: #0a0a0a;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: none;
+        }
+
+        .auth-submit:hover,
+        .auth-submit:focus {
+            background: #0a0a0a;
+            border-color: #0a0a0a;
+            color: #ffffff;
+        }
+
+        .field-validation-error {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        @@media (max-width: 640px) {
+            .auth-card-head {
+                padding: 22px 24px 10px;
+            }
+
+            .auth-card-head h1 {
+                font-size: 24px;
+            }
+
+            .auth-card-body {
+                padding: 18px 16px 18px;
+            }
+
+            .auth-field {
+                padding: 30px 16px 12px;
+            }
+
+            .auth-input {
+                font-size: 16px;
+            }
+        }
+    </style>
+}
+
+<div class="auth-shell">
+    <div class="auth-card">
+        <div class="auth-card-head">
+            <h1>Sign In</h1>
+        </div>
+        <div class="auth-card-body">
+            <form id="account" method="post" class="auth-form">
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <div asp-validation-summary="ModelOnly" class="text-danger auth-validation"></div>
+
+                <div class="auth-field">
+                    <label asp-for="Input.Email" class="auth-field-label">Email</label>
+                    <input asp-for="Input.Email"
+                           class="auth-input"
+                           autocomplete="username"
+                           aria-required="true"
+                           placeholder="name@example.com" />
+                    <span asp-validation-for="Input.Email" class="text-danger"></span>
                 </div>
-                <div class="card-body">
-                    <form id="account" method="post">
-                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                        <div class="form-floating mb-3">
-                            <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                            <label asp-for="Input.Email">Email</label>
-                            <span asp-validation-for="Input.Email" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-floating mb-3">
-                            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                            <label asp-for="Input.Password">Password</label>
-                            <span asp-validation-for="Input.Password" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" asp-for="Input.RememberMe" />
-                            <label class="form-check-label" asp-for="Input.RememberMe">Remember me</label>
-                        </div>
-
-                        <button id="login-submit" type="submit" class="w-100 btn btn-primary btn-lg">Login</button>
-                    </form>
+                <div class="auth-field">
+                    <label asp-for="Input.Password" class="auth-field-label">Password</label>
+                    <input asp-for="Input.Password"
+                           class="auth-input"
+                           autocomplete="current-password"
+                           aria-required="true"
+                           placeholder="password" />
+                    <span asp-validation-for="Input.Password" class="text-danger"></span>
                 </div>
-            </div>
+
+                <div class="form-check auth-check">
+                    <input class="form-check-input" asp-for="Input.RememberMe" />
+                    <label class="form-check-label" asp-for="Input.RememberMe">Remember me</label>
+                </div>
+
+                <button id="login-submit" type="submit" class="auth-submit">Login</button>
+            </form>
         </div>
     </div>
 </div>
