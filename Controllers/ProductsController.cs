@@ -142,13 +142,14 @@ public class ProductsController : Controller
         var product = await _context.Products.FindAsync(id);
         if (product == null) return NotFound();
 
+        ViewBag.ReturnUrl = Request.Query["returnUrl"].ToString();
         return View(product);
     }
 
     // POST: Products/Delete/5
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
+    public async Task<IActionResult> DeleteConfirmed(int id, string? returnUrl = null)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null) return NotFound();
@@ -158,6 +159,46 @@ public class ProductsController : Controller
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateProducts();
         _cacheInvalidator.InvalidateWeeklyPrices();
+
+        TempData["Message"] = $"Deactivated {product.Name}.";
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePermanent(int id, string? returnUrl = null)
+    {
+        var product = await _context.Products.FindAsync(id);
+        if (product == null) return NotFound();
+
+        var hasReceiptLines = await _context.ReceiptLines.AnyAsync(l => l.ProductId == id);
+        var hasPurchaseLines = await _context.PurchaseLines.AnyAsync(l => l.ProductId == id);
+        var hasStockMovements = await _context.ProductStockMovements.AnyAsync(m => m.ProductId == id);
+
+        if (hasReceiptLines || hasPurchaseLines || hasStockMovements)
+        {
+            TempData["Message"] = $"Cannot delete {product.Name} from the database because it already has receipts, purchases, or stock history. Deactivate it instead.";
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return LocalRedirect(returnUrl);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var weeklyPrices = await _context.WeeklyPrices.Where(w => w.ProductId == id).ToListAsync();
+        if (weeklyPrices.Count > 0)
+            _context.WeeklyPrices.RemoveRange(weeklyPrices);
+
+        _context.Products.Remove(product);
+        await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateProducts();
+        _cacheInvalidator.InvalidateWeeklyPrices();
+
+        TempData["Message"] = $"Deleted {product.Name} from the database.";
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
 
         return RedirectToAction(nameof(Index));
     }

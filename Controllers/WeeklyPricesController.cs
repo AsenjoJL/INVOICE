@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 using HazelInvoice.ViewModels;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services;
+using HazelInvoice.Services.Orders;
 
 namespace HazelInvoice.Controllers;
 
@@ -25,10 +27,10 @@ public class WeeklyPricesController : Controller
     }
 
     // GET: WeeklyPrices/PriceVersus
-    public async Task<IActionResult> PriceVersus(DateTime? date)
+    public async Task<IActionResult> PriceVersus(DateTime? date, string? q = null, int page = 1, int pageSize = 40)
     {
         var targetDate = date ?? DateTime.Today;
-        var vm = await BuildPriceVersusModelAsync(targetDate);
+        var vm = await BuildPriceVersusModelAsync(targetDate, q, page, pageSize);
         return View(vm);
     }
 
@@ -38,7 +40,7 @@ public class WeeklyPricesController : Controller
     {
         if (model.Items == null || model.Items.Count == 0)
         {
-            return RedirectToPriceVersus(model.TargetDate);
+            return RedirectToPriceVersus(model.TargetDate, model.SearchTerm, model.CurrentPage, model.PageSize);
         }
 
         var itemsToSave = GetItemsToSave(model, singleProductId);
@@ -46,7 +48,7 @@ public class WeeklyPricesController : Controller
         if (itemsToSave.Count == 0)
         {
             TempData["ErrorMessage"] = "No price row was selected to save.";
-            return RedirectToPriceVersus(model.TargetDate);
+            return RedirectToPriceVersus(model.TargetDate, model.SearchTerm, model.CurrentPage, model.PageSize);
         }
 
         var saveResult = await SavePriceItemsAsync(model.TargetDate, model.ApplyToMasterCost, itemsToSave);
@@ -56,7 +58,141 @@ public class WeeklyPricesController : Controller
                 : $"Saved changes for {saveResult.SavedChanges} price record(s)."
             : "No price changes were detected.";
 
-        return RedirectToPriceVersus(model.TargetDate);
+        return RedirectToPriceVersus(model.TargetDate, model.SearchTerm, model.CurrentPage, model.PageSize);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ImportTemplate(IFormFile? importFile, DateTime targetDate, string? searchTerm = null, int page = 1, int pageSize = 40)
+    {
+        if (importFile == null || importFile.Length == 0)
+        {
+            TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) price template.";
+            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+        }
+
+        if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
+            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+        }
+
+        await using var stream = new MemoryStream();
+        await importFile.CopyToAsync(stream);
+
+        SimpleXlsxSheet sheet;
+        try
+        {
+            sheet = SimpleXlsxReader.ReadFirstSheet(stream);
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
+            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+        }
+
+        var headerRow = FindPriceTemplateHeaderRow(sheet);
+        if (headerRow <= 0)
+        {
+            TempData["ErrorMessage"] = "Could not find the price template header row.";
+            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+        }
+
+        var itemCol = FindColumnByHeader(sheet, headerRow, "items");
+        var sellingPriceCol = FindColumnByHeader(sheet, headerRow, "price");
+        var unitCol = FindColumnByHeader(sheet, headerRow, "uom");
+        var purchasePriceCol = FindNextPriceColumn(sheet, headerRow, sellingPriceCol);
+
+        if (itemCol <= 0 || sellingPriceCol <= 0 || unitCol <= 0 || purchasePriceCol <= 0)
+        {
+            TempData["ErrorMessage"] = "The template must contain item, price, unit, and purchase-price columns.";
+            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+        }
+
+        var products = await _context.Products
+            .Where(p => p.IsActive)
+            .ToListAsync();
+
+        var productMap = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
+        foreach (var product in products)
+        {
+            var nameKey = OrderImportHelpers.NormalizeKey(product.Name);
+            if (!string.IsNullOrWhiteSpace(nameKey))
+                productMap[nameKey] = product;
+
+            var skuKey = OrderImportHelpers.NormalizeKey(product.SKU);
+            if (!string.IsNullOrWhiteSpace(skuKey) && !productMap.ContainsKey(skuKey))
+                productMap[skuKey] = product;
+        }
+
+        var importedItems = new List<PriceVersusItem>();
+        var matchedProducts = 0;
+        var updatedUnits = 0;
+        var unmatchedProducts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (var row = headerRow + 1; row <= sheet.MaxRow; row++)
+        {
+            var productNameRaw = sheet.GetCell(row, itemCol);
+            if (string.IsNullOrWhiteSpace(productNameRaw))
+                continue;
+
+            var normalizedName = OrderImportHelpers.NormalizeKey(productNameRaw);
+            if (string.IsNullOrWhiteSpace(normalizedName) || normalizedName == "items")
+                continue;
+
+            if (!OrderImportHelpers.TryResolveProductByName(productNameRaw, productMap, out var product))
+            {
+                unmatchedProducts.Add(productNameRaw.Trim());
+                continue;
+            }
+
+            if (!SimpleXlsxReader.TryParseDecimal(sheet.GetCell(row, sellingPriceCol), out var deliveryPrice) || deliveryPrice < 0)
+                continue;
+
+            if (!SimpleXlsxReader.TryParseDecimal(sheet.GetCell(row, purchasePriceCol), out var cost) || cost < 0)
+                cost = 0m;
+
+            var unit = sheet.GetCell(row, unitCol).Trim();
+            if (!string.IsNullOrWhiteSpace(unit) && !string.Equals(product.Unit, unit, StringComparison.OrdinalIgnoreCase))
+            {
+                product.Unit = unit;
+                updatedUnits++;
+            }
+
+            var markup = Math.Max(deliveryPrice - cost, 0m);
+            importedItems.Add(new PriceVersusItem
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                Unit = string.IsNullOrWhiteSpace(unit) ? product.Unit : unit,
+                Cost = cost,
+                Markup = markup,
+                BasePrice = deliveryPrice,
+                DeliveryPrice = deliveryPrice,
+                DeliveryFee = 0m,
+                MasterCost = product.UnitCost,
+                MasterMarkup = product.Markup,
+                MasterDeliveryFee = product.DeliveryFee
+            });
+            matchedProducts++;
+        }
+
+        if (importedItems.Count == 0)
+        {
+            TempData["ErrorMessage"] = unmatchedProducts.Count > 0
+                ? $"No matching products were imported. Unmatched: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
+                : "No valid price rows were found in the template.";
+            return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+        }
+
+        var saveResult = await SavePriceItemsAsync(targetDate, applyToMasterCost: false, importedItems);
+
+        var unmatchedNote = unmatchedProducts.Count > 0
+            ? $" Unmatched products: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
+            : string.Empty;
+
+        TempData["SuccessMessage"] = $"Imported weekly prices for {saveResult.Items.Count} product(s); updated {updatedUnits} unit value(s).{unmatchedNote}";
+        return RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
     }
 
     [HttpPost]
@@ -232,14 +368,45 @@ public class WeeklyPricesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task<PriceVersusViewModel> BuildPriceVersusModelAsync(DateTime targetDate, IEnumerable<PriceVersusItem>? postedItems = null)
+    private async Task<PriceVersusViewModel> BuildPriceVersusModelAsync(
+        DateTime targetDate,
+        string? searchTerm = null,
+        int page = 1,
+        int pageSize = 40,
+        IEnumerable<PriceVersusItem>? postedItems = null)
     {
         var day = targetDate.Date;
-
         var (weekStart, weekEnd) = GetWeekRange(targetDate);
+        var normalizedSearch = searchTerm?.Trim() ?? string.Empty;
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 20, 200);
 
-        var products = await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted);
-        var weeklyPrices = await _lookupCache.GetWeeklyPricesForDayAsync(day, HttpContext.RequestAborted);
+        var productsQuery = _context.Products
+            .AsNoTracking()
+            .Where(p => p.IsActive);
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            productsQuery = productsQuery.Where(p =>
+                p.Name.Contains(normalizedSearch) ||
+                p.SKU.Contains(normalizedSearch) ||
+                p.Unit.Contains(normalizedSearch) ||
+                (p.Category != null && p.Category.Contains(normalizedSearch)));
+        }
+
+        var totalItems = await productsQuery.CountAsync();
+        var products = await productsQuery
+            .OrderBy(p => p.Name)
+            .ThenBy(p => p.SKU)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var productIds = products.Select(p => p.Id).ToList();
+        var weeklyPrices = await _context.WeeklyPrices
+            .AsNoTracking()
+            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= day && w.EffectiveTo >= day)
+            .ToListAsync();
 
         var weeklyMap = weeklyPrices
             .GroupBy(w => w.ProductId)
@@ -312,6 +479,10 @@ public class WeeklyPricesController : Controller
             TargetDate = targetDate,
             WeekStart = weekStart,
             WeekEnd = weekEnd,
+            SearchTerm = normalizedSearch,
+            CurrentPage = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
             Items = items
         };
     }
@@ -327,14 +498,65 @@ public class WeeklyPricesController : Controller
             ? model.Items.Where(i => i.ProductId == singleProductId.Value).ToList()
             : model.Items.ToList();
 
-    private IActionResult RedirectToPriceVersus(DateTime targetDate)
-        => RedirectToAction(nameof(PriceVersus), new { date = targetDate.ToString("yyyy-MM-dd") });
+    private IActionResult RedirectToPriceVersus(DateTime targetDate, string? searchTerm, int page, int pageSize)
+        => RedirectToAction(nameof(PriceVersus), new
+        {
+            date = targetDate.ToString("yyyy-MM-dd"),
+            q = searchTerm,
+            page = Math.Max(1, page),
+            pageSize = Math.Clamp(pageSize, 20, 200)
+        });
 
     private static (DateTime WeekStart, DateTime WeekEnd) GetWeekRange(DateTime targetDate)
     {
         int diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
         var weekStart = targetDate.AddDays(-1 * diff).Date;
         return (weekStart, weekStart.AddDays(6).Date);
+    }
+
+    private static int FindPriceTemplateHeaderRow(SimpleXlsxSheet sheet)
+    {
+        for (var row = 1; row <= Math.Min(sheet.MaxRow, 10); row++)
+        {
+            var hasItems = false;
+            var hasPrice = false;
+            var hasUnit = false;
+            for (var col = 1; col <= sheet.MaxCol; col++)
+            {
+                var key = OrderImportHelpers.NormalizeKey(sheet.GetCell(row, col));
+                if (key == "items") hasItems = true;
+                if (key == "price") hasPrice = true;
+                if (key == "uom") hasUnit = true;
+            }
+
+            if (hasItems && hasPrice && hasUnit)
+                return row;
+        }
+
+        return 0;
+    }
+
+    private static int FindColumnByHeader(SimpleXlsxSheet sheet, int headerRow, string expectedKey)
+    {
+        for (var col = 1; col <= sheet.MaxCol; col++)
+        {
+            if (OrderImportHelpers.NormalizeKey(sheet.GetCell(headerRow, col)) == expectedKey)
+                return col;
+        }
+
+        return 0;
+    }
+
+    private static int FindNextPriceColumn(SimpleXlsxSheet sheet, int headerRow, int firstPriceColumn)
+    {
+        if (firstPriceColumn <= 0) return 0;
+        for (var col = firstPriceColumn + 1; col <= sheet.MaxCol; col++)
+        {
+            if (OrderImportHelpers.NormalizeKey(sheet.GetCell(headerRow, col)) == "price")
+                return col;
+        }
+
+        return 0;
     }
 
     private void ValidateWeeklyPriceInput(WeeklyPrice weeklyPrice, Product? product)

@@ -9,6 +9,11 @@ public class PriceVersusViewModel
     public DateTime WeekStart { get; set; }
     public DateTime WeekEnd { get; set; }
     public bool ApplyToMasterCost { get; set; } = false;
+    public string SearchTerm { get; set; } = string.Empty;
+    public int CurrentPage { get; set; } = 1;
+    public int PageSize { get; set; } = 40;
+    public int TotalItems { get; set; }
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalItems / (double)Math.Max(PageSize, 1)));
     
     public List<PriceVersusItem> Items { get; set; } = new();
 }

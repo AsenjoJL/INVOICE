@@ -2,8 +2,8 @@
 
 @{
     ViewData["Title"] = "Price Versus Setup";
-    ViewData["NotePurpose"] = "Set weekly cost, markup, and base price for each product.";
-    ViewData["NoteInstructions"] = "Reset restores master cost/markup; saved weekly prices apply to future sales and orders for the selected week and do not rewrite old receipt profit records.";
+    ViewData["NotePurpose"] = "Review and adjust weekly selling prices for the selected week.";
+    ViewData["NoteInstructions"] = "Vegetable Order Excel import now updates weekly prices automatically. Use this page for quick review or manual adjustments for the selected week.";
 }
 
 <style>
@@ -73,18 +73,52 @@
     }
     .price-control-row {
         display: grid;
-        grid-template-columns: minmax(220px, 280px) 1fr;
-        gap: 1.5rem;
+        grid-template-columns: minmax(220px, 280px) minmax(260px, 1fr);
+        gap: 1rem;
         align-items: start;
         margin-bottom: 1.75rem;
     }
-    .price-date-form,
-    .price-master-toggle {
+    .price-date-form {
         background: #ffffff;
         border: 1px solid var(--price-line);
         border-radius: var(--ui-radius-md);
         box-shadow: none;
         padding: 1rem 1.1rem;
+    }
+    .price-search-form {
+        display: grid;
+        grid-template-columns: minmax(200px, 1fr) 100px 130px;
+        gap: 0.75rem;
+        align-items: end;
+        background: #ffffff;
+        border: 1px solid var(--price-line);
+        border-radius: var(--ui-radius-md);
+        box-shadow: none;
+        padding: 1rem 1.1rem;
+    }
+    .price-search-form .form-control,
+    .price-search-form .form-select {
+        border-radius: var(--ui-radius-md);
+        border: 1px solid var(--price-line);
+        min-height: 44px;
+        box-shadow: none;
+    }
+    .price-import-form {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) 180px;
+        gap: 0.75rem;
+        align-items: end;
+        background: #ffffff;
+        border: 1px solid var(--price-line);
+        border-radius: var(--ui-radius-md);
+        box-shadow: none;
+        padding: 1rem 1.1rem;
+    }
+    .price-import-form .form-control {
+        border-radius: var(--ui-radius-md);
+        border: 1px solid var(--price-line);
+        min-height: 44px;
+        box-shadow: none;
     }
     .price-date-form label {
         display: block;
@@ -101,26 +135,6 @@
         border-radius: var(--ui-radius-md);
         box-shadow: none;
         overflow: hidden;
-    }
-    .price-master-toggle {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1rem;
-    }
-    .price-master-toggle .form-check {
-        margin: 0;
-    }
-    .price-master-toggle .form-check-label {
-        font-size: 15px;
-        font-weight: 500;
-        color: var(--price-text);
-    }
-    .price-master-toggle-note {
-        margin: 0.4rem 0 0;
-        color: var(--price-muted);
-        font-size: 14px;
-        line-height: 1.5;
     }
     .price-table-toolbar {
         display: flex;
@@ -155,10 +169,19 @@
         font-size: 14px;
         line-height: 1.6;
     }
+    .price-table-toolbar-meta {
+        margin-top: 0.55rem;
+        color: var(--price-muted);
+        font-size: 12px;
+    }
     .price-save-btn {
         min-width: 180px;
         min-height: 46px;
         padding-inline: 1.15rem;
+    }
+    .price-save-btn.is-saving {
+        opacity: 0.72;
+        pointer-events: none;
     }
     .price-feedback {
         padding: 0.85rem 1.25rem;
@@ -237,15 +260,6 @@
         border-radius: var(--ui-radius-md);
         font-weight: 500;
     }
-    .price-row-save-btn {
-        border-radius: var(--ui-radius-md);
-        font-weight: 500;
-        min-width: 92px;
-    }
-    .price-row-save-btn.is-saving {
-        opacity: 0.7;
-        pointer-events: none;
-    }
     .price-status {
         border-radius: 999px;
         font-family: 'DM Mono', monospace;
@@ -267,6 +281,24 @@
         background: #f8f8f8 !important;
         transition: background-color 0.25s ease;
     }
+    .price-pager {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.95rem 1.25rem 1.1rem;
+        border-top: 1px solid var(--price-line);
+        background: #ffffff;
+    }
+    .price-pager-text {
+        color: var(--price-muted);
+        font-size: 13px;
+    }
+    .price-pager-actions {
+        display: flex;
+        gap: 0.65rem;
+        align-items: center;
+    }
     @@media (max-width: 768px) {
         .price-setup-header,
         .price-table-toolbar,
@@ -276,8 +308,21 @@
         .price-control-row {
             grid-template-columns: 1fr;
         }
+        .price-search-form {
+            grid-template-columns: 1fr;
+        }
+        .price-import-form {
+            grid-template-columns: 1fr;
+        }
         .price-save-btn {
             width: 100%;
+        }
+        .price-pager {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .price-pager-actions {
+            justify-content: space-between;
         }
     }
 </style>
@@ -307,25 +352,55 @@
             <label class="price-field-label">View Prices For Date</label>
             <input type="date" name="date" class="form-control" value="@Model.TargetDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
         </form>
-        <div class="price-master-toggle">
+        <form method="get" class="price-search-form">
+            <input type="hidden" name="date" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
+            <input type="hidden" name="page" value="1" />
             <div>
-                <div class="price-field-label">Save Mode</div>
-                <div class="form-check">
-                    <input class="form-check-input" asp-for="ApplyToMasterCost" form="versusForm" />
-                    <label class="form-check-label" asp-for="ApplyToMasterCost" form="versusForm">
-                        Apply cost changes to master product cost
-                    </label>
-                </div>
-                <p class="price-master-toggle-note">Leave this off if cost edits should apply only to the selected week.</p>
+                <label class="price-field-label">Search Product</label>
+                <input type="text" name="q" class="form-control" value="@Model.SearchTerm" placeholder="Name, SKU, category, unit" />
             </div>
-        </div>
+            <div>
+                <label class="price-field-label">Page Size</label>
+                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                    <option value="20" selected="@(Model.PageSize == 20)">20</option>
+                    <option value="40" selected="@(Model.PageSize == 40)">40</option>
+                    <option value="80" selected="@(Model.PageSize == 80)">80</option>
+                    <option value="120" selected="@(Model.PageSize == 120)">120</option>
+                </select>
+            </div>
+            <div>
+                <label class="price-field-label">Apply</label>
+                <button type="submit" class="btn price-btn price-btn-neutral w-100">Filter</button>
+            </div>
+        </form>
     </div>
+
+    <form asp-action="ImportTemplate" method="post" enctype="multipart/form-data" class="price-import-form mb-4">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="targetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
+        <input type="hidden" name="page" value="@Model.CurrentPage" />
+        <input type="hidden" name="pageSize" value="@Model.PageSize" />
+        <div>
+            <label class="price-field-label">Import Weekly Price Template</label>
+            <input type="file" name="importFile" accept=".xlsx" class="form-control" required />
+        </div>
+        <div>
+            <label class="price-field-label">Apply</label>
+            <button type="submit" class="btn price-btn price-btn-primary w-100">
+                <i class="bi bi-upload me-1"></i> Import Prices
+            </button>
+        </div>
+    </form>
 
     <div class="card price-card">
         <div class="card-body p-0">
             <form method="post" id="versusForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="TargetDate" />
+                <input type="hidden" asp-for="SearchTerm" />
+                <input type="hidden" asp-for="CurrentPage" />
+                <input type="hidden" asp-for="PageSize" />
 
                 <div asp-validation-summary="All" class="text-danger px-4 pt-3"></div>
 
@@ -341,10 +416,13 @@
                 <div class="price-table-toolbar" id="priceTableAnchor">
                     <div class="price-table-toolbar-copy">
                         <div class="price-table-toolbar-label">Table Actions</div>
-                        <h3 class="price-table-toolbar-title">Save changes without losing your place.</h3>
-                        <p class="price-table-toolbar-sub">Use Save Changes for the full table, or Save Row for one product. After saving, the page restores you to this pricing area so work stays smooth.</p>
+                        <h3 class="price-table-toolbar-title">Weekly prices for the selected week.</h3>
+                        <p class="price-table-toolbar-sub">Vegetable Order Excel import now sets weekly prices automatically. Use this table only to review or adjust product pricing before future sales and outlet orders are created.</p>
+                        <div class="price-table-toolbar-meta">
+                            Showing @Model.Items.Count of @Model.TotalItems product@(Model.TotalItems == 1 ? "" : "s") on page @Model.CurrentPage of @Model.TotalPages.
+                        </div>
                     </div>
-                    <button type="submit" class="btn price-btn price-btn-primary price-save-btn">
+                    <button type="submit" class="btn price-btn price-btn-primary price-save-btn" id="priceSaveButton">
                         <i class="bi bi-save me-1"></i> Save Changes
                     </button>
                 </div>
@@ -359,7 +437,6 @@
                                 <th class="text-end py-3" style="width: 140px;">Markup (Added)</th>
                                 <th class="text-end py-3" style="width: 140px;">Base Price</th>
                                 <th class="text-end py-3" style="width: 140px;">Delivery Price</th>
-                                <th class="text-center py-3" style="width: 110px;">Save</th>
                                 <th class="text-center py-3" style="width: 90px;">Reset</th>
                                 <th class="text-center py-3" style="width: 100px;">Status</th>
                             </tr>
@@ -413,15 +490,6 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <button type="submit"
-                                                name="singleProductId"
-                                                value="@item.ProductId"
-                                                class="btn btn-sm price-btn price-btn-primary price-row-save-btn">
-                                            Save Row
-                                        </button>
-                                    </td>
-
-                                    <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-secondary price-reset-btn reset-cost-btn">Reset</button>
                                     </td>
                                     
@@ -440,6 +508,25 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="price-pager">
+                    <div class="price-pager-text">
+                        Page @Model.CurrentPage of @Model.TotalPages
+                    </div>
+                    <div class="price-pager-actions">
+                        <a class="btn price-btn price-btn-neutral @(Model.CurrentPage <= 1 ? "disabled" : "")"
+                           asp-action="PriceVersus"
+                           asp-route-date="@Model.TargetDate.ToString("yyyy-MM-dd")"
+                           asp-route-q="@Model.SearchTerm"
+                           asp-route-page="@(Math.Max(1, Model.CurrentPage - 1))"
+                           asp-route-pageSize="@Model.PageSize">Previous</a>
+                        <a class="btn price-btn price-btn-neutral @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")"
+                           asp-action="PriceVersus"
+                           asp-route-date="@Model.TargetDate.ToString("yyyy-MM-dd")"
+                           asp-route-q="@Model.SearchTerm"
+                           asp-route-page="@(Math.Min(Model.TotalPages, Model.CurrentPage + 1))"
+                           asp-route-pageSize="@Model.PageSize">Next</a>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
@@ -453,9 +540,9 @@
         const tableWrap = document.getElementById('priceTableWrap');
         const tableAnchor = document.getElementById('priceTableAnchor');
         const feedback = document.getElementById('priceFeedback');
+        const saveButton = document.getElementById('priceSaveButton');
         const scrollKey = 'priceVersus:windowScroll';
         const tableScrollKey = 'priceVersus:tableScroll';
-        const savedRowKey = 'priceVersus:savedRow';
         const restoreFlagKey = 'priceVersus:restoreAfterSave';
 
         const parseNumber = (value) => {
@@ -463,15 +550,10 @@
             return parseFloat(value.toString().replace(',', '.')) || 0;
         };
 
-        const saveScrollState = (productId) => {
+        const saveScrollState = () => {
             sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
             if (tableWrap) {
                 sessionStorage.setItem(tableScrollKey, String(tableWrap.scrollTop || 0));
-            }
-            if (productId) {
-                sessionStorage.setItem(savedRowKey, String(productId));
-            } else {
-                sessionStorage.removeItem(savedRowKey);
             }
             sessionStorage.setItem(restoreFlagKey, 'true');
         };
@@ -481,8 +563,6 @@
 
             const windowScroll = parseInt(sessionStorage.getItem(scrollKey) || '', 10);
             const tableScroll = parseInt(sessionStorage.getItem(tableScrollKey) || '', 10);
-            const savedRowId = sessionStorage.getItem(savedRowKey);
-
             requestAnimationFrame(() => {
                 if (!Number.isNaN(windowScroll)) {
                     window.scrollTo({ top: windowScroll, behavior: 'instant' });
@@ -494,16 +574,8 @@
                     tableWrap.scrollTop = tableScroll;
                 }
 
-                if (savedRowId) {
-                    const savedRow = table?.querySelector(`tr[data-product-id="${savedRowId}"]`);
-                    if (savedRow) {
-                        savedRow.classList.add('price-saved-row');
-                    }
-                }
-
                 sessionStorage.removeItem(scrollKey);
                 sessionStorage.removeItem(tableScrollKey);
-                sessionStorage.removeItem(savedRowKey);
                 sessionStorage.removeItem(restoreFlagKey);
             });
         };
@@ -514,89 +586,6 @@
             if (!feedback) return;
             feedback.textContent = message;
             feedback.className = `price-feedback ${isError ? 'price-feedback-error' : 'price-feedback-success'}`;
-        };
-
-        const applySavedRowState = (row, item) => {
-            row.dataset.masterCost = item.masterCost;
-            row.dataset.masterMarkup = item.masterMarkup;
-            row.dataset.deliveryFee = item.deliveryFee;
-
-            const costInput = row.querySelector('.cost-input');
-            const markupInput = row.querySelector('.markup-input');
-            const basePriceInput = row.querySelector('.base-price-input');
-            const deliveryPriceInput = row.querySelector('.delivery-price-input');
-            const hiddenDeliveryFee = row.querySelector('.delivery-fee-hidden');
-            const status = row.querySelector('.price-status');
-
-            if (costInput) costInput.value = item.cost;
-            if (markupInput) markupInput.value = item.markup;
-            if (basePriceInput) basePriceInput.value = item.basePrice;
-            if (deliveryPriceInput) deliveryPriceInput.value = item.deliveryPrice;
-            if (hiddenDeliveryFee) hiddenDeliveryFee.value = item.deliveryFee;
-
-            if (status) {
-                status.textContent = item.hasWeeklyRecord ? 'Weekly' : 'Default';
-                status.classList.toggle('price-status-weekly', item.hasWeeklyRecord);
-                status.classList.toggle('price-status-default', !item.hasWeeklyRecord);
-            }
-
-            row.classList.remove('row-edited');
-            row.classList.add('price-saved-row');
-        };
-
-        const submitSingleRow = async (row, productId, button) => {
-            if (!versusForm) return;
-
-            const formData = new FormData();
-            const antiForgery = versusForm.querySelector('input[name="__RequestVerificationToken"]');
-            const targetDate = versusForm.querySelector('input[name="TargetDate"]');
-            const applyToMaster = versusForm.querySelector('input[name="ApplyToMasterCost"]');
-
-            if (antiForgery) {
-                formData.append('__RequestVerificationToken', antiForgery.value);
-            }
-            if (targetDate) {
-                formData.append('TargetDate', targetDate.value);
-            }
-
-            formData.append('ApplyToMasterCost', applyToMaster && applyToMaster.checked ? 'true' : 'false');
-            formData.append('singleProductId', productId);
-
-            const rowInputs = row.querySelectorAll('input[name], select[name], textarea[name]');
-            rowInputs.forEach((source) => {
-                formData.append(source.name.replace(/Items\[\d+\]/, 'Items[0]'), source.value);
-            });
-
-            const originalText = button ? button.innerHTML : '';
-            if (button) {
-                button.classList.add('is-saving');
-                button.innerHTML = 'Saving...';
-            }
-
-            try {
-                const response = await fetch('@Url.Action("SavePriceRow", "WeeklyPrices")', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                const result = await response.json().catch(() => ({ success: false, message: 'The server returned an unexpected response.' }));
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Unable to save the selected product price.');
-                }
-
-                applySavedRowState(row, result.item);
-                showFeedback(result.message, false);
-            } catch (error) {
-                showFeedback(error.message || 'Unable to save the selected product price.', true);
-            } finally {
-                if (button) {
-                    button.classList.remove('is-saving');
-                    button.innerHTML = originalText;
-                }
-            }
         };
 
         const updateRowFromCostMarkup = (row) => {
@@ -675,17 +664,6 @@
         });
 
         table.addEventListener('click', function(e) {
-            const saveBtn = e.target.closest('.price-row-save-btn');
-            if (saveBtn) {
-                e.preventDefault();
-                const row = saveBtn.closest('tr');
-                const productId = saveBtn.value;
-                if (row && productId) {
-                    submitSingleRow(row, productId, saveBtn);
-                }
-                return;
-            }
-
             const btn = e.target.closest('.reset-cost-btn');
             if (!btn) return;
 
@@ -706,7 +684,11 @@
         });
 
         versusForm.addEventListener('submit', function() {
-            saveScrollState(null);
+            saveScrollState();
+            if (saveButton) {
+                saveButton.classList.add('is-saving');
+                saveButton.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Saving...';
+            }
         });
     });
 </script>

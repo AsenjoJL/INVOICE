@@ -29,7 +29,7 @@
             </div>
 
             <div class="product-form-body">
-                <form asp-action="Edit">
+                <form asp-action="Edit" method="post" id="productEditForm">
                     <input type="hidden" asp-for="Id" />
                     <input type="hidden" name="returnUrl" value="@returnUrl" />
                     <div asp-validation-summary="ModelOnly" class="text-danger product-form-alert"></div>
@@ -152,4 +152,14 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const form = document.getElementById('productEditForm');
+            if (!form) return;
+
+            form.addEventListener('submit', () => {
+                sessionStorage.setItem('products:index:restore', '1');
+            });
+        })();
+    </script>
 }

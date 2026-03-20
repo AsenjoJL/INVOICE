@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Deactivate Product";
+    var returnUrl = ViewBag.ReturnUrl as string;
 }
 
 <div class="container p-4">
@@ -26,11 +27,19 @@
                 <dd class="col-sm-8">@Model.Unit</dd>
             </dl>
 
-            <form asp-action="Delete">
+            <form asp-action="Delete" method="post">
                 <input type="hidden" asp-for="Id" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-danger">Deactivate</button>
-                    <a asp-action="Index" class="btn btn-light">Cancel</a>
+                    @if (!string.IsNullOrWhiteSpace(returnUrl))
+                    {
+                        <a href="@returnUrl" class="btn btn-light">Cancel</a>
+                    }
+                    else
+                    {
+                        <a asp-action="Index" class="btn btn-light">Cancel</a>
+                    }
                 </div>
             </form>
         </div>
