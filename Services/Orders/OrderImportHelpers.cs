@@ -10,6 +10,28 @@ namespace HazelInvoice.Services.Orders;
 /// </summary>
 public static class OrderImportHelpers
 {
+    public static Dictionary<string, Product> BuildProductLookup(IEnumerable<Product> products)
+    {
+        var productLookup = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var product in products
+            .OrderByDescending(p => p.IsActive)
+            .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var key in GetCandidateKeys(product.Name))
+            {
+                AddLookupEntry(productLookup, key, product);
+            }
+
+            foreach (var key in GetCandidateKeys(product.SKU))
+            {
+                AddLookupEntry(productLookup, key, product);
+            }
+        }
+
+        return productLookup;
+    }
+
     public static Dictionary<int, Dictionary<int, decimal>> BuildMatrixInputsByCustomer(
         Dictionary<string, decimal> rawMatrix,
         out HashSet<int> productIds,
@@ -52,20 +74,24 @@ public static class OrderImportHelpers
         out Product product)
     {
         product = default!;
-        var key = NormalizeKey(productName);
-        if (string.IsNullOrWhiteSpace(key))
+        var keys = GetCandidateKeys(productName).ToList();
+        if (keys.Count == 0)
             return false;
 
-        if (productMap.TryGetValue(key, out var matchedProduct) && matchedProduct != null)
+        foreach (var key in keys)
         {
-            product = matchedProduct;
-            return true;
+            if (productMap.TryGetValue(key, out var matchedProduct) && matchedProduct != null)
+            {
+                product = matchedProduct;
+                return true;
+            }
         }
 
         // Fallback: best contains/prefix match for minor naming variants.
         var containMatches = productMap
-            .Where(kvp => kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                          key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase))
+            .Where(kvp => keys.Any(key =>
+                kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase) ||
+                key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase)))
             .Select(kvp => kvp.Value)
             .DistinctBy(p => p.Id)
             .ToList();
@@ -79,7 +105,8 @@ public static class OrderImportHelpers
         {
             // Pick the closest length match to reduce ambiguity.
             product = containMatches
-                .OrderBy(p => Math.Abs(NormalizeKey(p.Name).Length - key.Length))
+                .OrderByDescending(p => p.IsActive)
+                .ThenBy(p => Math.Abs(NormalizeKey(p.Name).Length - keys[0].Length))
                 .ThenBy(p => p.Name.Length)
                 .First();
             return true;
@@ -126,6 +153,33 @@ public static class OrderImportHelpers
         return Regex.Replace(raw.Trim().ToLowerInvariant(), @"[^a-z0-9]+", "");
     }
 
+    public static IEnumerable<string> GetCandidateKeys(string? raw)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void Add(string? value)
+        {
+            var key = NormalizeKey(value);
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                seen.Add(CanonicalizeProductKey(key));
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return seen;
+
+        Add(raw);
+
+        var withoutParen = Regex.Replace(raw, @"\([^)]*\)", " ");
+        Add(withoutParen);
+
+        var normalizedWhitespace = Regex.Replace(withoutParen, @"\s+", " ").Trim();
+        Add(normalizedWhitespace);
+
+        return seen;
+    }
+
     public static bool TryParseMatrixKey(string? key, out int productId, out int customerId)
     {
         productId = 0;
@@ -142,5 +196,21 @@ public static class OrderImportHelpers
         var right = key[(sep + 1)..];
 
         return int.TryParse(left, out productId) && int.TryParse(right, out customerId);
+    }
+
+    private static void AddLookupEntry(Dictionary<string, Product> lookup, string key, Product product)
+    {
+        if (!lookup.TryGetValue(key, out var existing) || (!existing.IsActive && product.IsActive))
+        {
+            lookup[key] = product;
+        }
+    }
+
+    private static string CanonicalizeProductKey(string key)
+    {
+        return key
+            .Replace("petchay", "pechay", StringComparison.OrdinalIgnoreCase)
+            .Replace("petsay", "pechay", StringComparison.OrdinalIgnoreCase)
+            .Replace("chilli", "chili", StringComparison.OrdinalIgnoreCase);
     }
 }

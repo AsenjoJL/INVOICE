@@ -1,4 +1,4 @@
-@model IEnumerable<HazelInvoice.Models.Product>
+@model IEnumerable<HazelInvoice.ViewModels.ProductListItemViewModel>
 @using HazelInvoice.Helpers
 
 @{
@@ -6,7 +6,7 @@
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var importTargetDate = BusinessDate.Today().ToString("yyyy-MM-dd");
     var searchTerm = (ViewBag.SearchTerm as string) ?? string.Empty;
-    var zeroPriceCount = Model.Count(p => p.UnitCost == 0m);
+    var zeroPriceCount = Model.Count(p => p.EffectiveDeliveryPrice == 0m);
     var totalCount = Model.Count();
     var activeCount = Model.Count(p => p.IsActive);
     var inactiveCount = totalCount - activeCount;
@@ -189,7 +189,7 @@
                             <th>Unit</th>
                             <th class="col-cost">
                                 <button type="button" class="sort-trigger" data-sort-key="cost">
-                                    Cost <i class="bi bi-arrow-down-up"></i>
+                                    Price <i class="bi bi-arrow-down-up"></i>
                                 </button>
                             </th>
                             <th>Status</th>
@@ -215,7 +215,7 @@
                                 data-name="@item.Name"
                                 data-category="@categoryText"
                                 data-unit="@item.Unit"
-                                data-cost="@item.UnitCost"
+                                data-cost="@item.EffectiveDeliveryPrice"
                                 data-status="@statusText">
                                 <td class="col-check">
                                     <input type="checkbox"
@@ -231,7 +231,16 @@
                                 </td>
                                 <td class="product-meta fw-semibold">@item.Unit</td>
                                 <td class="product-cost">
-                                    <span class="@(item.UnitCost == 0 ? "zero" : "")">₱@item.UnitCost.ToString("N2")</span>
+                                    <div class="product-price-primary @(item.EffectiveDeliveryPrice == 0 ? "zero" : "")">
+                                        ₱@item.EffectiveDeliveryPrice.ToString("N2")
+                                    </div>
+                                    <div class="product-meta">
+                                        Cost ₱@item.UnitCost.ToString("N2")
+                                        @if (item.HasWeeklyPrice)
+                                        {
+                                            <span class="product-weekly-flag">Weekly</span>
+                                        }
+                                    </div>
                                 </td>
                                 <td>
                                     @if (item.IsActive)

@@ -1,6 +1,8 @@
 using HazelInvoice.Data;
+using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -25,6 +27,7 @@ public class ProductsController : Controller
     // GET: Products
     public async Task<IActionResult> Index(string? q = null)
     {
+        var businessDate = BusinessDate.Today();
         var query = _context.Products
             .AsNoTracking()
             .AsQueryable();
@@ -39,8 +42,46 @@ public class ProductsController : Controller
                 p.Unit.Contains(term));
         }
 
+        var products = await query
+            .OrderBy(p => p.Name)
+            .ThenBy(p => p.SKU)
+            .ToListAsync();
+
+        var productIds = products.Select(p => p.Id).ToList();
+        var weeklyPrices = await _context.WeeklyPrices
+            .AsNoTracking()
+            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= businessDate && w.EffectiveTo >= businessDate)
+            .ToListAsync();
+
+        var weeklyMap = weeklyPrices
+            .GroupBy(w => w.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
+
+        var viewModel = products.Select(product =>
+        {
+            var weeklyPrice = weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
+            var effectiveDeliveryPrice = weeklyPrice?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
+
+            return new ProductListItemViewModel
+            {
+                Id = product.Id,
+                SKU = product.SKU,
+                Name = product.Name,
+                Category = product.Category,
+                Unit = product.Unit,
+                UnitCost = product.UnitCost,
+                EffectiveDeliveryPrice = effectiveDeliveryPrice,
+                HasWeeklyPrice = weeklyPrice != null,
+                IsActive = product.IsActive
+            };
+        }).ToList();
+
         ViewBag.SearchTerm = q ?? string.Empty;
-        return View(await query.OrderBy(p => p.Name).ThenBy(p => p.SKU).ToListAsync());
+        return View(viewModel);
     }
 
     // GET: Products/Create

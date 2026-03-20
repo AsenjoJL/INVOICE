@@ -113,21 +113,8 @@ public class WeeklyPricesController : Controller
             return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
-        var products = await _context.Products
-            .Where(p => p.IsActive)
-            .ToListAsync();
-
-        var productMap = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
-        foreach (var product in products)
-        {
-            var nameKey = OrderImportHelpers.NormalizeKey(product.Name);
-            if (!string.IsNullOrWhiteSpace(nameKey))
-                productMap[nameKey] = product;
-
-            var skuKey = OrderImportHelpers.NormalizeKey(product.SKU);
-            if (!string.IsNullOrWhiteSpace(skuKey) && !productMap.ContainsKey(skuKey))
-                productMap[skuKey] = product;
-        }
+        var products = await _context.Products.ToListAsync();
+        var productMap = OrderImportHelpers.BuildProductLookup(products);
 
         var productIds = products.Select(p => p.Id).ToList();
         var existingWeeklyPrices = await _context.WeeklyPrices
