@@ -1,16 +1,21 @@
 using HazelInvoice.Data;
+using HazelInvoice.Configuration;
 using HazelInvoice.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Services.Orders;
 
 public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateService
 {
     private readonly ApplicationDbContext _context;
+    private readonly HashSet<string> _outletGroups;
 
-    public VegetableMatrixTemplateService(ApplicationDbContext context)
+    public VegetableMatrixTemplateService(ApplicationDbContext context, IOptions<OperationsOptions> operations)
     {
         _context = context;
+        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<byte[]> BuildTemplateAsync(DateTime date, CancellationToken cancellationToken = default)
@@ -20,8 +25,7 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
         // - Outlet headers should match Customer.Name values.
         var outlets = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive &&
-                        (c.GroupName == "EIGHT2EIGHT OUTLETS" || c.GroupName == "Taste 8 outlets"))
+            .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
             .OrderBy(c => c.GroupName)
             .ThenBy(c => c.Name)
             .Select(c => c.Name)
@@ -60,4 +64,3 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
         return SimpleXlsxWriter.WriteSingleSheet("Template", rows);
     }
 }
-

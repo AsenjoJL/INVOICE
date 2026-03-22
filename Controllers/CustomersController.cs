@@ -1,9 +1,11 @@
 using HazelInvoice.Data;
+using HazelInvoice.Configuration;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Controllers;
 
@@ -12,12 +14,18 @@ public class CustomersController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IAppCacheInvalidator _cacheInvalidator;
-    private static readonly string[] OutletGroups = { "EIGHT2EIGHT OUTLETS", "Taste 8 outlets" };
+    private readonly IReadOnlyList<string> _outletGroups;
+    private readonly string _defaultOutletGroup;
 
-    public CustomersController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
+    public CustomersController(
+        ApplicationDbContext context,
+        IAppCacheInvalidator cacheInvalidator,
+        IOptions<OperationsOptions> operations)
     {
         _context = context;
         _cacheInvalidator = cacheInvalidator;
+        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g)).ToList();
+        _defaultOutletGroup = operations.Value.DefaultOutletGroup;
     }
 
     public async Task<IActionResult> Index()
@@ -33,8 +41,8 @@ public class CustomersController : Controller
 
     public IActionResult Create()
     {
-        ViewBag.OutletGroups = OutletGroups;
-        return View(new Customer { GroupName = OutletGroups[0], IsActive = true });
+        ViewBag.OutletGroups = _outletGroups;
+        return View(new Customer { GroupName = _defaultOutletGroup, IsActive = true });
     }
 
     [HttpPost]
@@ -42,7 +50,7 @@ public class CustomersController : Controller
     public async Task<IActionResult> Create(Customer customer)
     {
         if (string.IsNullOrWhiteSpace(customer.GroupName))
-            customer.GroupName = OutletGroups[0];
+            customer.GroupName = _defaultOutletGroup;
 
         customer.Name = (customer.Name ?? string.Empty).Trim();
         if (!string.IsNullOrWhiteSpace(customer.Name))
@@ -63,7 +71,7 @@ public class CustomersController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        ViewBag.OutletGroups = OutletGroups;
+        ViewBag.OutletGroups = _outletGroups;
         return View(customer);
     }
 
@@ -74,7 +82,7 @@ public class CustomersController : Controller
         var customer = await _context.Customers.FindAsync(id);
         if (customer == null) return NotFound();
 
-        ViewBag.OutletGroups = OutletGroups;
+        ViewBag.OutletGroups = _outletGroups;
         return View(customer);
     }
 
@@ -85,7 +93,7 @@ public class CustomersController : Controller
         if (id != customer.Id) return NotFound();
 
         if (string.IsNullOrWhiteSpace(customer.GroupName))
-            customer.GroupName = OutletGroups[0];
+            customer.GroupName = _defaultOutletGroup;
 
         customer.Name = (customer.Name ?? string.Empty).Trim();
         if (!string.IsNullOrWhiteSpace(customer.Name))
@@ -106,7 +114,7 @@ public class CustomersController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        ViewBag.OutletGroups = OutletGroups;
+        ViewBag.OutletGroups = _outletGroups;
         return View(customer);
     }
 

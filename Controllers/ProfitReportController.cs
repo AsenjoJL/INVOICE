@@ -12,32 +12,38 @@ using HazelInvoice.Services.Caching;
 using HazelInvoice.Services.Reports;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using HazelInvoice.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Controllers;
 
 [Authorize]
 public class ProfitReportController : Controller
 {
-    private static readonly DateTime ProfitReportOpeningDate = new(2026, 3, 19);
-
     private readonly ApplicationDbContext _context;
     private readonly IProfitReportService _profitReportService;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly DateTime _profitReportOpeningDate;
 
-    public ProfitReportController(ApplicationDbContext context, IProfitReportService profitReportService, IAppCacheInvalidator cacheInvalidator)
+    public ProfitReportController(
+        ApplicationDbContext context,
+        IProfitReportService profitReportService,
+        IAppCacheInvalidator cacheInvalidator,
+        IOptions<OperationsOptions> operations)
     {
         _context = context;
         _profitReportService = profitReportService;
         _cacheInvalidator = cacheInvalidator;
+        _profitReportOpeningDate = operations.Value.ProfitReportOpeningDate.Date;
     }
 
     // GET: ProfitReport
     public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, bool includeUnpaid = true, decimal percentFee = 1.0m, decimal split1 = 40m)
     {
         var businessToday = BusinessDate.Today();
-        var defaultStart = businessToday < ProfitReportOpeningDate
+        var defaultStart = businessToday < _profitReportOpeningDate
             ? businessToday
-            : ProfitReportOpeningDate;
+            : _profitReportOpeningDate;
         var start = startDate ?? defaultStart;
         var end = endDate ?? businessToday;
 

@@ -7,9 +7,11 @@ using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using HazelInvoice.Helpers;
+using HazelInvoice.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -26,29 +28,13 @@ public class OrdersController : Controller
     private readonly IAppSettingStore _appSettings;
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
-
-    private static readonly string[] OutletOrderTokens = new[]
-    {
-        "autoliv", "autolive", "taiyo", "gmc", "global", "uct", "knowles", "knowless",
-        "merasenko", "teradyne", "jpkitchen", "jpmorgan", "cebukitchen", "cebukit",
-        "bakery", "wlahug", "mitsumi", "feeder", "mphokim", "phokim"
-    };
+    private readonly HashSet<string> _outletGroups;
+    private readonly string[] _outletOrderTokens;
+    private readonly Dictionary<string, string> _outletImportAliasMap;
 
     private static readonly HashSet<string> NonOutletHeaderKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "vegetables", "price", "total", "uom", "unit", "ponumber"
-    };
-
-    // Excel header aliases -> canonical outlet key used in Customers.Name
-    private static readonly Dictionary<string, string> OutletImportAliasMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["cebukit"] = "cebukitchen",
-        ["cebu"] = "cebukitchen",
-        ["mphokim"] = "mpt",
-        ["phokim"] = "mpt",
-        ["jpkitchen"] = "jpmorgan",
-        ["jpebloc"] = "jpmorgan",
-        ["jpcbloc"] = "jpmorgan"
     };
 
     public OrdersController(
@@ -59,7 +45,8 @@ public class OrdersController : Controller
         IVegetableMatrixTemplateService vegetableMatrixTemplateService,
         IAppSettingStore appSettings,
         ILookupCacheService lookupCache,
-        IAppCacheInvalidator cacheInvalidator)
+        IAppCacheInvalidator cacheInvalidator,
+        IOptions<OperationsOptions> operations)
     {
         _context = context;
         _receiptService = receiptService;
@@ -69,6 +56,10 @@ public class OrdersController : Controller
         _appSettings = appSettings;
         _lookupCache = lookupCache;
         _cacheInvalidator = cacheInvalidator;
+        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
+        _outletImportAliasMap = operations.Value.OutletImportAliases ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 
     // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1&print=false&details=false
@@ -482,8 +473,7 @@ public class OrdersController : Controller
 
         var customers = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive &&
-                        (c.GroupName == "EIGHT2EIGHT OUTLETS" || c.GroupName == "Taste 8 outlets"))
+            .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
             .ToListAsync();
 
         var customerMap = customers
@@ -494,7 +484,7 @@ public class OrdersController : Controller
         var unmatchedOutletHeaders = new List<string>();
         foreach (var kvp in outletColumns)
         {
-            if (TryResolveOutletByHeader(kvp.Value, customerMap, out var customer))
+            if (TryResolveOutletByHeader(kvp.Value, customerMap, _outletImportAliasMap, out var customer))
             {
                 matchedOutletCols[kvp.Key] = customer;
             }
@@ -1209,6 +1199,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     private static bool TryResolveOutletByHeader(
         string header,
         Dictionary<string, Customer> customerMap,
+        Dictionary<string, string> outletImportAliasMap,
         out Customer customer)
     {
         customer = default!;
@@ -1222,7 +1213,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             return true;
         }
 
-        if (OutletImportAliasMap.TryGetValue(key, out var aliasKey) &&
+        if (outletImportAliasMap.TryGetValue(key, out var aliasKey) &&
             customerMap.TryGetValue(aliasKey, out matchedCustomer) &&
             matchedCustomer != null)
         {
@@ -1259,13 +1250,13 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         return false;
     }
 
-    private static int GetOutletOrderIndex(string? name)
+    private int GetOutletOrderIndex(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return int.MaxValue;
         var normalized = new string(name.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
-        for (int i = 0; i < OutletOrderTokens.Length; i++)
+        for (int i = 0; i < _outletOrderTokens.Length; i++)
         {
-            var token = OutletOrderTokens[i];
+            var token = _outletOrderTokens[i];
             if (normalized.Contains(token) || token.Contains(normalized))
                 return i;
         }

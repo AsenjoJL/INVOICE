@@ -21,18 +21,21 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
 
     private readonly ApplicationDbContext _context;
     private readonly bool _partnersEnabled;
+    private readonly HashSet<string> _outletGroups;
+    private readonly string[] _outletOrderTokens;
+    private readonly string _defaultOutletGroup;
 
-    private static readonly string[] OutletOrderTokens = new[]
-    {
-        "autoliv", "autolive", "taiyo", "gmc", "global", "uct", "knowles", "knowless",
-        "merasenko", "teradyne", "jpkitchen", "jpmorgan", "cebukitchen", "cebukit",
-        "bakery", "wlahug", "mitsumi", "feeder", "mphokim", "phokim"
-    };
-
-    public VegetableMatrixService(ApplicationDbContext context, IOptions<FeaturesOptions> features)
+    public VegetableMatrixService(
+        ApplicationDbContext context,
+        IOptions<FeaturesOptions> features,
+        IOptions<OperationsOptions> operations)
     {
         _context = context;
         _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
+        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
+        _defaultOutletGroup = operations.Value.DefaultOutletGroup;
     }
 
     public async Task<VegetableMatrixViewModel> GetAsync(VegetableMatrixQueryOptions options, CancellationToken cancellationToken = default)
@@ -63,8 +66,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         // 1) OUTLETS (base query)
         var outletsAll = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive &&
-                        (c.GroupName == "EIGHT2EIGHT OUTLETS" || c.GroupName == "Taste 8 outlets"))
+            .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
             .ToListAsync(cancellationToken);
 
         var totalOutlets = outletsAll.Count;
@@ -78,13 +80,12 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
 
             if (fix.Count > 0)
             {
-                foreach (var c in fix) c.GroupName = "EIGHT2EIGHT OUTLETS";
+                foreach (var c in fix) c.GroupName = _defaultOutletGroup;
                 await _context.SaveChangesAsync(cancellationToken);
 
                 outletsAll = await _context.Customers
                     .AsNoTracking()
-                    .Where(c => c.IsActive &&
-                                (c.GroupName == "EIGHT2EIGHT OUTLETS" || c.GroupName == "Taste 8 outlets"))
+                    .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
                     .ToListAsync(cancellationToken);
 
                 totalOutlets = outletsAll.Count;
@@ -757,13 +758,13 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         };
     }
 
-    private static int GetOutletOrderIndex(string? name)
+    private int GetOutletOrderIndex(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return int.MaxValue;
         var normalized = new string(name.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
-        for (var i = 0; i < OutletOrderTokens.Length; i++)
+        for (var i = 0; i < _outletOrderTokens.Length; i++)
         {
-            var token = OutletOrderTokens[i];
+            var token = _outletOrderTokens[i];
             if (normalized.Contains(token) || token.Contains(normalized))
                 return i;
         }

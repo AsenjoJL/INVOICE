@@ -135,6 +135,7 @@ builder.Services.AddScoped<IInvoicePrintManager, InvoicePrintManager>();
 
 // Feature flags (safe defaults; can be extended later)
 builder.Services.Configure<FeaturesOptions>(builder.Configuration.GetSection("Features"));
+builder.Services.Configure<OperationsOptions>(builder.Configuration.GetSection("Operations"));
 
 // Orders / Vegetable matrix (keep controller thin / scalable)
 builder.Services.AddScoped<IVegetableMatrixService, VegetableMatrixService>();
