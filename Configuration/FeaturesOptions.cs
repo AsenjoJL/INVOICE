@@ -7,5 +7,6 @@ namespace HazelInvoice.Configuration;
 public sealed class FeaturesOptions
 {
     public bool PartnersEnabled { get; set; } = false;
+    public bool AllowDangerousDatabaseReset { get; set; } = false;
+    public bool AllowPublicRegistration { get; set; } = false;
 }
-

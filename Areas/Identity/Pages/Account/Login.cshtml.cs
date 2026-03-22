@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 
 namespace HazelInvoice.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
+[EnableRateLimiting("auth")]
 public class LoginModel : PageModel
 {
     private readonly SignInManager<IdentityUser> _signInManager;
@@ -38,11 +40,17 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
         if (result.Succeeded)
         {
             _logger.LogInformation("User logged in.");
             return LocalRedirect(ReturnUrl);
+        }
+
+        if (result.IsLockedOut)
+        {
+            ModelState.AddModelError(string.Empty, "This account is temporarily locked after repeated failed sign-in attempts. Please try again later.");
+            return Page();
         }
 
         ModelState.AddModelError(string.Empty, "Invalid login attempt.");

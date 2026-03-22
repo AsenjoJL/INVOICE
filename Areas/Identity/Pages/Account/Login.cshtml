@@ -1,8 +1,10 @@
 @page
 @model HazelInvoice.Areas.Identity.Pages.Account.LoginModel
+@inject Microsoft.Extensions.Options.IOptions<HazelInvoice.Configuration.FeaturesOptions> Features
 @{
     ViewData["Title"] = "Login";
     Layout = "/Views/Shared/_AuthLayout.cshtml";
+    var allowPublicRegistration = Features.Value.AllowPublicRegistration;
 }
 
 @section Styles {
@@ -275,10 +277,13 @@
 
                 <button id="login-submit" type="submit" class="auth-submit">Sign in</button>
 
-                <div class="auth-footer">
-                    Don't have an account?
-                    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="auth-link">Create one</a>
-                </div>
+                @if (allowPublicRegistration)
+                {
+                    <div class="auth-footer">
+                        Don't have an account?
+                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="auth-link">Create one</a>
+                    </div>
+                }
             </form>
         </div>
     </div>

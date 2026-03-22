@@ -1,9 +1,11 @@
 @using HazelInvoice.Helpers
 @model HazelInvoice.ViewModels.DashboardViewModel
+@inject Microsoft.Extensions.Options.IOptions<HazelInvoice.Configuration.FeaturesOptions> Features
 @{
     ViewData["Title"] = "Dashboard";
     var businessNow = BusinessDate.Now();
     var nextDeliveryDate = BusinessDate.Tomorrow().ToString("yyyy-MM-dd");
+    var allowDangerousDatabaseReset = Features.Value.AllowDangerousDatabaseReset;
     string TrendBadgeClass(decimal value) => value > 0 ? "is-up" : (value < 0 ? "is-down" : "is-flat");
     string TrendIcon(decimal value) => value > 0 ? "bi-arrow-up-right" : (value < 0 ? "bi-arrow-down-right" : "bi-dash");
     string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";
@@ -396,36 +398,39 @@
         </div>
     </div>
 
-    <div class="row g-4 mt-4">
-        <div class="col-12">
-            <div class="surface-card border border-danger">
-                <div class="surface-card-header">
-                    <h6 class="surface-card-title text-danger"><i class="bi bi-exclamation-octagon me-2"></i> Reset Database</h6>
-                </div>
-                <div class="surface-card-body">
-                    @if (TempData["ResetSuccess"] != null)
-                    {
-                        <div class="alert alert-success py-2">@TempData["ResetSuccess"]</div>
-                    }
-                    @if (TempData["ResetError"] != null)
-                    {
-                        <div class="alert alert-danger py-2">@TempData["ResetError"]</div>
-                    }
-                    <p class="text-muted mb-2">This will delete sales, purchases, expenses, deductions, payroll, and related transactions. Products, outlets, suppliers, and weekly prices will be kept.</p>
-                    <form asp-action="ResetDatabase" method="post" class="row g-2 align-items-center">
-                        @Html.AntiForgeryToken()
-                        <div class="col-md-4">
-                            <input type="text" name="confirmText" id="resetConfirmInput" class="form-control" placeholder="Type RESET to confirm" />
-                        </div>
-                        <div class="col-md-3">
-                            <button type="submit" id="resetConfirmBtn" class="btn btn-danger w-100" disabled>Reset Database</button>
-                        </div>
-                    </form>
-                    <div class="small text-muted mt-2">This action cannot be undone.</div>
+    @if (allowDangerousDatabaseReset)
+    {
+        <div class="row g-4 mt-4">
+            <div class="col-12">
+                <div class="surface-card border border-danger">
+                    <div class="surface-card-header">
+                        <h6 class="surface-card-title text-danger"><i class="bi bi-exclamation-octagon me-2"></i> Reset Database</h6>
+                    </div>
+                    <div class="surface-card-body">
+                        @if (TempData["ResetSuccess"] != null)
+                        {
+                            <div class="alert alert-success py-2">@TempData["ResetSuccess"]</div>
+                        }
+                        @if (TempData["ResetError"] != null)
+                        {
+                            <div class="alert alert-danger py-2">@TempData["ResetError"]</div>
+                        }
+                        <p class="text-muted mb-2">This will delete sales, purchases, expenses, deductions, payroll, and related transactions. Products, outlets, suppliers, and weekly prices will be kept.</p>
+                        <form asp-action="ResetDatabase" method="post" class="row g-2 align-items-center">
+                            @Html.AntiForgeryToken()
+                            <div class="col-md-4">
+                                <input type="text" name="confirmText" id="resetConfirmInput" class="form-control" placeholder="Type RESET to confirm" />
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" id="resetConfirmBtn" class="btn btn-danger w-100" disabled>Reset Database</button>
+                            </div>
+                        </form>
+                        <div class="small text-muted mt-2">This action cannot be undone.</div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

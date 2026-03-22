@@ -7,6 +7,7 @@ using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using HazelInvoice.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -14,6 +15,7 @@ using System.Text.RegularExpressions;
 
 namespace HazelInvoice.Controllers;
 
+[Authorize]
 public class OrdersController : Controller
 {
     private readonly ApplicationDbContext _context;

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using HazelInvoice.Configuration;
 
 namespace HazelInvoice.Areas.Identity.Pages.Account;
 
@@ -13,15 +15,18 @@ public class RegisterModel : PageModel
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly ILogger<RegisterModel> _logger;
+    private readonly IOptions<FeaturesOptions> _features;
 
     public RegisterModel(
         UserManager<IdentityUser> userManager,
         SignInManager<IdentityUser> signInManager,
-        ILogger<RegisterModel> logger)
+        ILogger<RegisterModel> logger,
+        IOptions<FeaturesOptions> features)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _logger = logger;
+        _features = features;
     }
 
     [BindProperty]
@@ -31,11 +36,22 @@ public class RegisterModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
+        if (!_features.Value.AllowPublicRegistration)
+        {
+            Response.StatusCode = 404;
+            return;
+        }
+
         ReturnUrl = returnUrl;
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
+        if (!_features.Value.AllowPublicRegistration)
+        {
+            return NotFound();
+        }
+
         ReturnUrl = returnUrl ?? Url.Content("~/");
         if (!ModelState.IsValid)
         {

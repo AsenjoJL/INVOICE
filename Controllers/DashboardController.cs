@@ -1,9 +1,11 @@
 using HazelInvoice.Data;
+using HazelInvoice.Configuration;
 using HazelInvoice.Helpers;
 using HazelInvoice.Services.Dashboard;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,11 +17,19 @@ public class DashboardController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IDashboardMetricsService _metrics;
+    private readonly IOptions<FeaturesOptions> _features;
+    private readonly IWebHostEnvironment _environment;
 
-    public DashboardController(ApplicationDbContext context, IDashboardMetricsService metrics)
+    public DashboardController(
+        ApplicationDbContext context,
+        IDashboardMetricsService metrics,
+        IOptions<FeaturesOptions> features,
+        IWebHostEnvironment environment)
     {
         _context = context;
         _metrics = metrics;
+        _features = features;
+        _environment = environment;
     }
 
     public async Task<IActionResult> Index()
@@ -33,6 +43,12 @@ public class DashboardController : Controller
     [Authorize]
     public async Task<IActionResult> ResetDatabase(string confirmText)
     {
+        if (!_environment.IsDevelopment() && !_features.Value.AllowDangerousDatabaseReset)
+        {
+            TempData["ResetError"] = "Database reset is disabled in this environment.";
+            return RedirectToAction(nameof(Index));
+        }
+
         if (!string.Equals(confirmText?.Trim(), "RESET", StringComparison.OrdinalIgnoreCase))
         {
             TempData["ResetError"] = "Reset cancelled. Please type RESET to confirm.";

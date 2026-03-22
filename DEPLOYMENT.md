@@ -55,8 +55,15 @@ This guide walks you through deploying the **HazelInvoice** ASP.NET Core 8.0 app
     | --- | --- |
     | `ASPNETCORE_ENVIRONMENT` | `Production` |
     | `ConnectionStrings__DefaultConnection` | `Host=YOUR_HOST;Port=YOUR_PORT;Database=YOUR_DB;Username=YOUR_USER;Password=YOUR_PASSWORD;` |
+    | `Features__AllowDangerousDatabaseReset` | `false` |
+    | `Features__AllowPublicRegistration` | `false` |
     
     *Note: `ConnectionStrings__DefaultConnection` (double underscore) overrides dependencies in `appsettings.json`.*
+
+### Security Notes
+- `Features__AllowDangerousDatabaseReset=false` keeps the dashboard reset tool hidden and blocks the reset action in production.
+- If you ever need to allow it temporarily, set `Features__AllowDangerousDatabaseReset=true`, restart/redeploy, use the feature, then turn it back to `false`.
+- `Features__AllowPublicRegistration=false` disables public self-signup. Existing users can still log in normally.
 
 6.  Click **Create Web Service**.
 
