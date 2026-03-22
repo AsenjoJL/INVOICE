@@ -1,7 +1,9 @@
 using HazelInvoice.Data;
+using HazelInvoice.Configuration;
 using HazelInvoice.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Services.Expenses;
 
@@ -18,11 +20,19 @@ public sealed class ExpenseCategoryCatalogService : IExpenseCategoryCatalogServi
 
     private readonly ApplicationDbContext _context;
     private readonly IMemoryCache _cache;
+    private readonly HashSet<string> _systemDefaultNames;
 
-    public ExpenseCategoryCatalogService(ApplicationDbContext context, IMemoryCache cache)
+    public ExpenseCategoryCatalogService(
+        ApplicationDbContext context,
+        IMemoryCache cache,
+        IOptions<ExpenseCatalogOptions> expenseCatalog)
     {
         _context = context;
         _cache = cache;
+        _systemDefaultNames = (expenseCatalog.Value.Defaults ?? [])
+            .Select(x => ExpenseCategoryCatalog.NormalizeName(x.Name))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<List<ExpenseCategoryDefinition>> GetDefinitionsAsync(CancellationToken ct = default)
@@ -68,7 +78,7 @@ public sealed class ExpenseCategoryCatalogService : IExpenseCategoryCatalogServi
             {
                 Name = normalized,
                 Group = group,
-                IsSystem = ExpenseCategoryCatalog.Defaults.Any(x => x.Name == normalized)
+                IsSystem = _systemDefaultNames.Contains(normalized)
             });
         }
         else if (existing.Group != group)

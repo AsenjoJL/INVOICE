@@ -136,6 +136,8 @@ builder.Services.AddScoped<IInvoicePrintManager, InvoicePrintManager>();
 // Feature flags (safe defaults; can be extended later)
 builder.Services.Configure<FeaturesOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.Configure<OperationsOptions>(builder.Configuration.GetSection("Operations"));
+builder.Services.Configure<BootstrapSeedOptions>(builder.Configuration.GetSection("BootstrapSeed"));
+builder.Services.Configure<ExpenseCatalogOptions>(builder.Configuration.GetSection("ExpenseCatalog"));
 
 // Orders / Vegetable matrix (keep controller thin / scalable)
 builder.Services.AddScoped<IVegetableMatrixService, VegetableMatrixService>();
@@ -218,7 +220,9 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<ApplicationDbContext>();
     context.Database.Migrate();
-    await DbInitializer.Initialize(context);
+    var bootstrapSeed = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<BootstrapSeedOptions>>().Value;
+    var expenseCatalog = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ExpenseCatalogOptions>>().Value;
+    await DbInitializer.Initialize(context, bootstrapSeed, expenseCatalog);
 }
 
 app.Run();
