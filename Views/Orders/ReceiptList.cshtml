@@ -7,6 +7,7 @@
     var receiptCount = Model.Receipts?.Count ?? 0;
     var totalItems = Model.Receipts?.Sum(r => r.Lines.Sum(l => l.Quantity)) ?? 0m;
     var dateValue = Model.Date.ToString("yyyy-MM-dd");
+    var dateGroups = Model.DateGroups ?? new List<HazelInvoice.ViewModels.ReceiptDateGroupViewModel>();
 
     string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
     {
@@ -59,85 +60,104 @@
             }
             else
             {
-                <div class="table-responsive">
-                    <table class="invoice-table mb-0" id="receiptListTable">
-                        <thead>
-                            <tr>
-                                <th>Outlet</th>
-                                <th>Receipt #</th>
-                                <th>Time</th>
-                                <th class="text-end">Total</th>
-                                <th class="text-end">Paid</th>
-                                <th class="text-end">Balance</th>
-                                <th>Status</th>
-                                <th>Items</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var r in Model.Receipts.OrderBy(x => x.CustomerName))
-                            {
-                                var hay = $"{r.CustomerName} {r.ReceiptNumber}".ToLowerInvariant();
-                                <tr data-receipt-row data-search="@hay">
-                                    <td class="fw-bold">@r.CustomerName</td>
-                                    <td>@r.ReceiptNumber</td>
-                                    <td>@r.Date.ToString("h:mm tt")</td>
-                                    <td class="text-end fw-bold">@r.TotalAmount.ToString("N2")</td>
-                                    <td class="text-end">@r.PaidAmount.ToString("N2")</td>
-                                    <td class="text-end">@((r.TotalAmount - r.PaidAmount).ToString("N2"))</td>
-                                    <td><span class="@StatusClass(r.Status)">@r.Status</span></td>
-                                    <td>
-                                        <details class="receiptlist-details">
-                                            <summary>@r.Lines.Count item@(r.Lines.Count == 1 ? "" : "s")</summary>
-                                            <div class="receiptlist-lines">
-                                                <table class="table table-sm mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Item</th>
-                                                            <th class="text-end">Price</th>
-                                                            <th class="text-center">Qty</th>
-                                                            <th class="text-end">Amt</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var line in r.Lines)
-                                                        {
-                                                            <tr>
-                                                                <td>@line.ItemName</td>
-                                                                <td class="text-end">@line.Price.ToString("N0")</td>
-                                                                <td class="text-center">@line.Quantity.ToString("0.###") @line.Unit</td>
-                                                                <td class="text-end">@line.Amount.ToString("N2")</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </details>
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="btn-group">
-                                            <a asp-controller="Receipts" asp-action="Print" asp-route-id="@r.Id" class="invoice-icon-btn" title="Print"><i class="bi bi-printer"></i></a>
-                                            <a asp-controller="Receipts" asp-action="Details" asp-route-id="@r.Id" class="invoice-icon-btn" title="View"><i class="bi bi-eye"></i></a>
-                                        </div>
+                <div class="d-flex flex-column gap-4 p-3">
+                    @foreach (var group in dateGroups)
+                    {
+                        <section class="receiptlist-group" data-receipt-group>
+                            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 px-1 pb-2">
+                                <div>
+                                    <div class="admin-section-kicker">Delivery Date</div>
+                                    <h6 class="mb-1 fw-bold">@group.Date.ToString("dddd, MMM dd, yyyy")</h6>
+                                    <div class="text-muted small">@group.Receipts.Count receipt@(group.Receipts.Count == 1 ? "" : "s")</div>
+                                </div>
+                                <div class="receiptlist-stats">
+                                    <span>Items: <strong>@group.TotalItems.ToString("0.###")</strong></span>
+                                    <span>Total: <strong>₱@group.TotalAmount.ToString("N2")</strong></span>
+                                </div>
+                            </div>
 
-                                        @if (isUnpaid)
+                            <div class="table-responsive">
+                                <table class="invoice-table mb-0" id="receiptListTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Outlet</th>
+                                            <th>Receipt #</th>
+                                            <th>Time</th>
+                                            <th class="text-end">Total</th>
+                                            <th class="text-end">Paid</th>
+                                            <th class="text-end">Balance</th>
+                                            <th>Status</th>
+                                            <th>Items</th>
+                                            <th class="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var r in group.Receipts)
                                         {
-                                            <form asp-action="MarkAsPaid" method="post" class="d-inline-block ms-2">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@r.Id" />
-                                                <input type="hidden" name="returnDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
-                                                <button type="submit"
-                                                        class="invoice-btn invoice-btn-ghost"
-                                                        onclick="return confirm('Mark this receipt as PAID?');">
-                                                    Mark Paid
-                                                </button>
-                                            </form>
+                                            var hay = $"{r.CustomerName} {r.ReceiptNumber}".ToLowerInvariant();
+                                            <tr data-receipt-row data-search="@hay">
+                                                <td class="fw-bold">@r.CustomerName</td>
+                                                <td>@r.ReceiptNumber</td>
+                                                <td>@r.Date.ToString("h:mm tt")</td>
+                                                <td class="text-end fw-bold">@r.TotalAmount.ToString("N2")</td>
+                                                <td class="text-end">@r.PaidAmount.ToString("N2")</td>
+                                                <td class="text-end">@((r.TotalAmount - r.PaidAmount).ToString("N2"))</td>
+                                                <td><span class="@StatusClass(r.Status)">@r.Status</span></td>
+                                                <td>
+                                                    <details class="receiptlist-details">
+                                                        <summary>@r.Lines.Count item@(r.Lines.Count == 1 ? "" : "s")</summary>
+                                                        <div class="receiptlist-lines">
+                                                            <table class="table table-sm mb-0">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Item</th>
+                                                                        <th class="text-end">Price</th>
+                                                                        <th class="text-center">Qty</th>
+                                                                        <th class="text-end">Amt</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach (var line in r.Lines)
+                                                                    {
+                                                                        <tr>
+                                                                            <td>@line.ItemName</td>
+                                                                            <td class="text-end">@line.Price.ToString("N0")</td>
+                                                                            <td class="text-center">@line.Quantity.ToString("0.###") @line.Unit</td>
+                                                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </details>
+                                                </td>
+                                                <td class="text-end">
+                                                    <div class="btn-group">
+                                                        <a asp-controller="Receipts" asp-action="Print" asp-route-id="@r.Id" class="invoice-icon-btn" title="Print"><i class="bi bi-printer"></i></a>
+                                                        <a asp-controller="Receipts" asp-action="Details" asp-route-id="@r.Id" class="invoice-icon-btn" title="View"><i class="bi bi-eye"></i></a>
+                                                    </div>
+
+                                                    @if (isUnpaid)
+                                                    {
+                                                        <form asp-action="MarkAsPaid" method="post" class="d-inline-block ms-2">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="id" value="@r.Id" />
+                                                            <input type="hidden" name="returnDate" value="@r.Date.ToString("yyyy-MM-dd")" />
+                                                            <button type="submit"
+                                                                    class="invoice-btn invoice-btn-ghost"
+                                                                    onclick="return confirm('Mark this receipt as PAID?');">
+                                                                Mark Paid
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                </td>
+                                            </tr>
                                         }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    }
                 </div>
             }
         </div>
@@ -148,6 +168,7 @@
     (function () {
         const input = document.getElementById("receiptSearch");
         const rows = Array.from(document.querySelectorAll("[data-receipt-row]"));
+        const groups = Array.from(document.querySelectorAll("[data-receipt-group]"));
         if (!input || rows.length === 0) return;
 
         input.addEventListener("input", () => {
@@ -156,6 +177,11 @@
                 const hay = (r.dataset.search || "");
                 const match = !term || hay.includes(term);
                 r.style.display = match ? "" : "none";
+            });
+
+            groups.forEach(group => {
+                const visibleRows = group.querySelectorAll("[data-receipt-row]:not([style*='display: none'])");
+                group.style.display = visibleRows.length > 0 ? "" : "none";
             });
         });
     })();

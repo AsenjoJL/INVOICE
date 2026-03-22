@@ -1028,6 +1028,17 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             Date = date,
             Status = status,
             Receipts = receipts,
+            DateGroups = receipts
+                .GroupBy(r => r.Date.Date)
+                .OrderByDescending(g => g.Key)
+                .Select(g => new HazelInvoice.ViewModels.ReceiptDateGroupViewModel
+                {
+                    Date = g.Key,
+                    Receipts = g.OrderBy(r => r.CustomerName).ThenBy(r => r.ReceiptNumber).ToList(),
+                    TotalAmount = g.Sum(r => r.TotalAmount),
+                    TotalItems = g.Sum(r => r.Lines.Sum(l => l.Quantity))
+                })
+                .ToList(),
             GrandTotal = receipts.Sum(r => r.TotalAmount)
         };
 
