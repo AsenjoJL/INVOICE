@@ -33,12 +33,19 @@
         form.addEventListener('submit', () => {
             rememberListPosition();
             const input = form.querySelector('.return-client-page');
+            const scrollInput = form.querySelector('.return-scroll-y');
             const state = getSavedState() || {};
             const currentPage = Number(state.currentPage || 1);
+            const scrollY = Number(state.scrollY || window.scrollY || 0);
             if (input instanceof HTMLInputElement) {
                 input.value = Number.isFinite(currentPage) && currentPage > 0
                     ? String(currentPage)
                     : '1';
+            }
+            if (scrollInput instanceof HTMLInputElement) {
+                scrollInput.value = Number.isFinite(scrollY) && scrollY > 0
+                    ? String(scrollY)
+                    : '0';
             }
         });
     });
@@ -49,6 +56,7 @@
 
     const url = new URL(window.location.href);
     const restorePageParam = parseInt(url.searchParams.get('restorePage') || '0', 10);
+    const restoreScrollParam = parseInt(url.searchParams.get('restoreScrollY') || '0', 10);
     const highlightProductId = url.searchParams.get('highlightProductId');
 
     const STATUS_FILTER = {
@@ -380,7 +388,7 @@
                 window.setTimeout(() => highlightedRow.classList.remove('product-row-highlight'), 2200);
             });
         } else {
-            const y = parseInt(String(saved?.scrollY ?? sessionStorage.getItem('products:index:scrollY') ?? '0'), 10);
+            const y = parseInt(String(restoreScrollParam > 0 ? restoreScrollParam : (saved?.scrollY ?? sessionStorage.getItem('products:index:scrollY') ?? '0')), 10);
             if (!Number.isNaN(y) && y > 0) {
                 window.requestAnimationFrame(() => window.scrollTo(0, y));
             }
@@ -390,8 +398,9 @@
         sessionStorage.removeItem('products:index:scrollY');
     }
 
-    if ((Number.isFinite(restorePageParam) && restorePageParam > 0) || highlightProductId) {
+    if ((Number.isFinite(restorePageParam) && restorePageParam > 0) || (Number.isFinite(restoreScrollParam) && restoreScrollParam > 0) || highlightProductId) {
         url.searchParams.delete('restorePage');
+        url.searchParams.delete('restoreScrollY');
         url.searchParams.delete('highlightProductId');
         window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
     }

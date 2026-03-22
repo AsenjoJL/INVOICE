@@ -4,9 +4,17 @@
     ViewData["Title"] = "Outlets";
     ViewData["NotePurpose"] = "Maintain outlet records used in vegetable orders and sales.";
     ViewData["NoteInstructions"] = "Only outlets in the EIGHT2EIGHT OUTLETS or Taste 8 outlets groups appear in the vegetable order matrix.";
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <partial name="_OutletStyles" />
+
+<style>
+    .outlet-table tbody tr.outlet-row-highlight td {
+        background: rgba(59, 130, 246, 0.08);
+        transition: background-color 0.2s ease;
+    }
+</style>
 
 <div class="container-fluid p-4 outlet-page">
     <div class="outlet-header d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 admin-page-hero admin-page-hero-soft">
@@ -39,7 +47,7 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            <tr>
+                            <tr class="outlet-row" data-id="@item.Id">
                                 <td>
                                     <div class="outlet-name">@item.Name</div>
                                     <div class="outlet-meta">@(!string.IsNullOrWhiteSpace(item.SubLabel) ? item.SubLabel : "No sub label")</div>
@@ -64,10 +72,20 @@
                                 </td>
                                 <td>
                                     <div class="outlet-actions-row d-flex gap-2">
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <a asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           asp-route-returnUrl="@returnUrl"
+                                           class="btn btn-sm btn-outline-primary outlet-return-link"
+                                           data-outlet-id="@item.Id"
+                                           title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                        <a asp-action="Delete"
+                                           asp-route-id="@item.Id"
+                                           asp-route-returnUrl="@returnUrl"
+                                           class="btn btn-sm btn-outline-danger outlet-return-link"
+                                           data-outlet-id="@item.Id"
+                                           title="Deactivate">
                                             <i class="bi bi-trash"></i>
                                         </a>
                                     </div>
@@ -80,3 +98,5 @@
         </div>
     </div>
 </div>
+
+<script src="~/js/outlets-index.js" asp-append-version="true"></script>

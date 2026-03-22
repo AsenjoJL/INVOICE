@@ -75,20 +75,21 @@ public class CustomersController : Controller
         return View(customer);
     }
 
-    public async Task<IActionResult> Edit(int? id)
+    public async Task<IActionResult> Edit(int? id, string? returnUrl = null)
     {
         if (id == null) return NotFound();
 
         var customer = await _context.Customers.FindAsync(id);
         if (customer == null) return NotFound();
 
+        ViewBag.ReturnUrl = returnUrl;
         ViewBag.OutletGroups = _outletGroups;
         return View(customer);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, Customer customer)
+    public async Task<IActionResult> Edit(int id, Customer customer, string? returnUrl = null, int? returnScrollY = null)
     {
         if (id != customer.Id) return NotFound();
 
@@ -111,26 +112,40 @@ public class CustomersController : Controller
             _context.Update(customer);
             await _context.SaveChangesAsync();
             _cacheInvalidator.InvalidateCustomers();
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                var redirectUrl = returnUrl;
+                redirectUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "highlightCustomerId", customer.Id.ToString());
+                if (returnScrollY.HasValue && returnScrollY.Value > 0)
+                {
+                    redirectUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+                }
+
+                return LocalRedirect(redirectUrl);
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
+        ViewBag.ReturnUrl = returnUrl;
         ViewBag.OutletGroups = _outletGroups;
         return View(customer);
     }
 
-    public async Task<IActionResult> Delete(int? id)
+    public async Task<IActionResult> Delete(int? id, string? returnUrl = null)
     {
         if (id == null) return NotFound();
 
         var customer = await _context.Customers.FindAsync(id);
         if (customer == null) return NotFound();
 
+        ViewBag.ReturnUrl = returnUrl;
         return View(customer);
     }
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
+    public async Task<IActionResult> DeleteConfirmed(int id, string? returnUrl = null, int? returnScrollY = null)
     {
         var customer = await _context.Customers.FindAsync(id);
         if (customer == null) return NotFound();
@@ -139,6 +154,17 @@ public class CustomersController : Controller
         _context.Update(customer);
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateCustomers();
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            var redirectUrl = returnUrl;
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
+        }
 
         return RedirectToAction(nameof(Index));
     }

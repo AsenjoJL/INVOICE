@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Edit Outlet";
     var groupOptions = ViewBag.OutletGroups as string[] ?? Array.Empty<string>();
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Index", "Customers") ?? "/Customers";
 }
 
 <partial name="_OutletStyles" />
@@ -17,13 +18,15 @@
                         <h4>Update Outlet</h4>
                         <p class="subtitle">Keep contact and group details accurate for reporting.</p>
                     </div>
-                    <a asp-action="Index" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
+                    <a href="@returnUrl" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
                 </div>
             </div>
 
             <div class="outlet-form-body">
                 <form asp-action="Edit">
                     <input type="hidden" asp-for="Id" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="returnScrollY" id="returnScrollY" value="0" />
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
                     <div class="outlet-form-section">
@@ -93,7 +96,7 @@
                     </div>
 
                     <div class="outlet-form-section outlet-form-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <a href="@returnUrl" class="btn btn-outline-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
                     </div>
                 </form>
@@ -104,4 +107,13 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (function () {
+            const scrollInput = document.getElementById('returnScrollY');
+            if (!scrollInput) return;
+
+            const savedY = parseInt(sessionStorage.getItem('outlets:index:scrollY') || '0', 10);
+            scrollInput.value = !Number.isNaN(savedY) && savedY > 0 ? String(savedY) : '0';
+        })();
+    </script>
 }

@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Deactivate Outlet";
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Index", "Customers") ?? "/Customers";
 }
 
 <partial name="_OutletStyles" />
@@ -28,13 +29,27 @@
                 <dd class="col-sm-8">@Model.Address</dd>
             </dl>
 
-            <form asp-action="Delete">
+            <form asp-action="Delete" class="outlet-return-form">
                 <input type="hidden" asp-for="Id" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <input type="hidden" name="returnScrollY" id="returnScrollY" value="0" />
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn outlet-btn-danger">Deactivate</button>
-                    <a asp-action="Index" class="btn outlet-btn-neutral">Cancel</a>
+                    <a href="@returnUrl" class="btn outlet-btn-neutral">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const scrollInput = document.getElementById('returnScrollY');
+            if (!scrollInput) return;
+
+            const savedY = parseInt(sessionStorage.getItem('outlets:index:scrollY') || '0', 10);
+            scrollInput.value = !Number.isNaN(savedY) && savedY > 0 ? String(savedY) : '0';
+        })();
+    </script>
+}
