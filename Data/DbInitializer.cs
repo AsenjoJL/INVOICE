@@ -17,29 +17,43 @@ public static class DbInitializer
         // Ensure database is created
         await context.Database.MigrateAsync();
 
-        foreach (var item in expenseCatalog.Defaults)
-        {
-            var normalized = ExpenseCategoryCatalog.NormalizeName(item.Name);
-            var existing = await context.ExpenseCategoryDefinitions
-                .FirstOrDefaultAsync(x => x.Name == normalized);
+        var normalizedDefaults = (expenseCatalog.Defaults ?? [])
+            .Select(item => new
+            {
+                Name = ExpenseCategoryCatalog.NormalizeName(item.Name),
+                item.Group
+            })
+            .Where(item => !string.IsNullOrWhiteSpace(item.Name))
+            .DistinctBy(item => item.Name)
+            .ToList();
 
-            if (existing is null)
+        var defaultNames = normalizedDefaults.Select(item => item.Name).ToList();
+        var existingDefinitions = await context.ExpenseCategoryDefinitions
+            .Where(x => defaultNames.Contains(x.Name))
+            .ToDictionaryAsync(x => x.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in normalizedDefaults)
+        {
+            if (!existingDefinitions.TryGetValue(item.Name, out var existing))
             {
                 context.ExpenseCategoryDefinitions.Add(new ExpenseCategoryDefinition
                 {
-                    Name = normalized,
+                    Name = item.Name,
                     Group = item.Group,
                     IsSystem = true
                 });
             }
-            else if (existing.Group != item.Group)
+            else if (existing.Group != item.Group || !existing.IsSystem)
             {
                 existing.Group = item.Group;
                 existing.IsSystem = true;
             }
         }
 
-        await context.SaveChangesAsync();
+        if (context.ChangeTracker.HasChanges())
+        {
+            await context.SaveChangesAsync();
+        }
 
         // 1. Seed Customers
         if (!await context.Customers.AnyAsync())
