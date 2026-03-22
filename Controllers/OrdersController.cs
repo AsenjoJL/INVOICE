@@ -1003,31 +1003,40 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     // GET: Orders/UnpaidOrders
     public async Task<IActionResult> UnpaidOrders(DateTime? date)
     {
-        var targetDate = NormalizeOrderDate(date);
-        return await GetOrdersByStatus(targetDate, PaymentStatus.Unpaid);
+        return await GetOrdersByStatus(date, PaymentStatus.Unpaid);
     }
 
     // GET: Orders/PaidOrders
     public async Task<IActionResult> PaidOrders(DateTime? date)
     {
-        var targetDate = NormalizeOrderDate(date);
-        return await GetOrdersByStatus(targetDate, PaymentStatus.Paid);
+        return await GetOrdersByStatus(date, PaymentStatus.Paid);
     }
 
-    private async Task<IActionResult> GetOrdersByStatus(DateTime date, PaymentStatus status)
+    private async Task<IActionResult> GetOrdersByStatus(DateTime? date, PaymentStatus status)
     {
-        var dayStart = date.Date;
-        var dayEnd = dayStart.AddDays(1);
-        var receipts = await _context.Receipts
+        var query = _context.Receipts
             .AsNoTracking()
             .Include(r => r.Lines)
-            .Where(r => r.Date >= dayStart && r.Date < dayEnd && r.Status == status)
-            .OrderBy(r => r.CustomerName)
+            .Where(r => r.Status == status);
+
+        DateTime? targetDate = null;
+        if (date.HasValue)
+        {
+            targetDate = NormalizeOrderDate(date);
+            var dayStart = targetDate.Value.Date;
+            var dayEnd = dayStart.AddDays(1);
+            query = query.Where(r => r.Date >= dayStart && r.Date < dayEnd);
+        }
+
+        var receipts = await query
+            .OrderByDescending(r => r.Date)
+            .ThenBy(r => r.CustomerName)
             .ToListAsync();
 
         var model = new HazelInvoice.ViewModels.ReceiptListViewModel
         {
-            Date = date,
+            Date = targetDate,
+            IsDateFiltered = targetDate.HasValue,
             Status = status,
             Receipts = receipts,
             DateGroups = receipts
@@ -1072,7 +1081,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             _cacheInvalidator.InvalidateProfitReports();
         }
         
-        return RedirectToAction("PaidOrders", new { date = returnDate });
+        return RedirectToAction("PaidOrders", new { date = returnDate.ToString("yyyy-MM-dd") });
     }
     // GET: Orders/SummaryAll
     public async Task<IActionResult> SummaryAll(DateTime? startDate, DateTime? endDate, string status = "All", int? outletId = null)

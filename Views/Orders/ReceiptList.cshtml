@@ -6,8 +6,11 @@
 
     var receiptCount = Model.Receipts?.Count ?? 0;
     var totalItems = Model.Receipts?.Sum(r => r.Lines.Sum(l => l.Quantity)) ?? 0m;
-    var dateValue = Model.Date.ToString("yyyy-MM-dd");
+    var dateValue = Model.Date?.ToString("yyyy-MM-dd") ?? "";
     var dateGroups = Model.DateGroups ?? new List<HazelInvoice.ViewModels.ReceiptDateGroupViewModel>();
+    var filterSummary = Model.IsDateFiltered && Model.Date.HasValue
+        ? Model.Date.Value.ToString("dddd, MMM dd, yyyy")
+        : $"All {(isUnpaid ? "unpaid" : "paid")} orders";
 
     string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
     {
@@ -24,7 +27,7 @@
         <div>
             <span class="admin-section-kicker">Order Monitor</span>
             <h1 class="invoice-title">@ViewData["Title"]</h1>
-            <p class="invoice-sub">@Model.Date.ToString("dddd, MMM dd, yyyy")</p>
+            <p class="invoice-sub">@filterSummary</p>
             <div class="receiptlist-stats">
                 <span>Receipts: <strong>@receiptCount</strong></span>
                 <span>Items: <strong>@totalItems.ToString("0.###")</strong></span>
@@ -40,6 +43,15 @@
                     <option value="Paid" selected="@(isUnpaid ? null : "selected")">Paid</option>
                 </select>
                 <button type="submit" class="invoice-btn invoice-btn-ghost">Go</button>
+                @if (Model.IsDateFiltered)
+                {
+                    <a asp-controller="Orders"
+                       asp-action="ReceiptList"
+                       asp-route-status="@(isUnpaid ? "Unpaid" : "Paid")"
+                       class="invoice-btn invoice-btn-ghost">
+                        Clear Date
+                    </a>
+                }
             </form>
             <a href="/Receipts" class="invoice-btn invoice-btn-ghost">Back</a>
         </div>
@@ -56,7 +68,11 @@
         <div class="invoice-card-body p-0">
             @if (Model.Receipts == null || Model.Receipts.Count == 0)
             {
-                <div class="p-3 fw-bold">No @Model.Status.ToString().ToLower() orders found for this date.</div>
+                <div class="p-3 fw-bold">
+                    @(Model.IsDateFiltered
+                        ? $"No {Model.Status.ToString().ToLower()} orders found for this date."
+                        : $"No {Model.Status.ToString().ToLower()} orders found.")
+                </div>
             }
             else
             {

@@ -4,7 +4,8 @@ namespace HazelInvoice.ViewModels;
 
 public class ReceiptListViewModel
 {
-    public DateTime Date { get; set; }
+    public DateTime? Date { get; set; }
+    public bool IsDateFiltered { get; set; }
     public PaymentStatus Status { get; set; }
     public List<Receipt> Receipts { get; set; } = new();
     public List<ReceiptDateGroupViewModel> DateGroups { get; set; } = new();
