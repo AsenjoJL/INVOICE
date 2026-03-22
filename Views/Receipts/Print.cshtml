@@ -2,6 +2,7 @@
 
 @{
     Layout = null;
+    var returnUrl = ViewBag.ReturnUrl as string ?? "/Receipts";
 
     // Whole short bond paper (Letter): 8.5in x 11in
     var paperSize = ((string?)ViewBag.PaperSize ?? "Letter").Trim();
@@ -282,12 +283,12 @@
         }
 
         .col-qty { width: 8%; text-align: center; }
-        .col-unit { width: 12%; text-align: center; padding-right: 6px; }
-        .col-part { width: 48%; }
+        .col-unit { width: 10%; text-align: center; padding-right: 10px; }
+        .col-part { width: 50%; }
         .col-price { width: 16%; text-align: center; }
         .col-amount { width: 16%; text-align: center; }
-        .items-table th.col-part { text-align: left; }
-        .items-table td.col-part { text-align: left; padding-left: 0; }
+        .items-table th.col-part { text-align: left; padding-left: 18px; }
+        .items-table td.col-part { text-align: left; padding-left: 18px; }
 
         .total-row {
             display: grid;
@@ -491,7 +492,7 @@
         <strong>Delivery Receipt</strong>
         <div>
             <button class="btn btn-primary" onclick="window.print()">Print</button>
-            <a class="btn" href="/Receipts">Back to List</a>
+            <a class="btn" href="@returnUrl">Back to List</a>
         </div>
     </div>
 

@@ -5,7 +5,7 @@
     ViewData["Title"] = "Receipt Details";
     var partners = ViewBag.Partners as List<string> ?? new List<string>();
     var partnersEnabled = Features.Value.PartnersEnabled;
-    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Index", "Receipts") ?? "/Receipts";
 
     string StatusClass(HazelInvoice.Models.PaymentStatus status) => status switch
     {
@@ -24,11 +24,14 @@
             <p class="invoice-sub">Created @Model.Date.ToString("MMM dd, yyyy h:mm tt")</p>
         </div>
         <div class="invoice-actions">
-            <a asp-action="Print" asp-route-id="@Model.Id" class="invoice-btn invoice-btn-primary"><i class="bi bi-printer"></i> Print</a>
+            <a asp-action="Print"
+               asp-route-id="@Model.Id"
+               asp-route-returnUrl="@returnUrl"
+               class="invoice-btn invoice-btn-primary"><i class="bi bi-printer"></i> Print</a>
             <form method="post"
                   asp-action="Delete"
                   asp-route-id="@Model.Id"
-                  asp-route-returnUrl="@Url.Action("Index", "Receipts")"
+                  asp-route-returnUrl="@returnUrl"
                   class="d-inline">
                 <button type="submit"
                         class="invoice-btn invoice-btn-danger"
@@ -36,7 +39,7 @@
                     <i class="bi bi-trash"></i> Delete
                 </button>
             </form>
-            <a asp-action="Index" class="invoice-btn invoice-btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
+            <a href="@returnUrl" class="invoice-btn invoice-btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
         </div>
     </div>
 

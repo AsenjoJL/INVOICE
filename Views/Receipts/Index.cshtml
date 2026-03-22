@@ -26,6 +26,13 @@
     };
 }
 
+<style>
+    .invoice-table tbody tr.receipt-row-highlight td {
+        background: rgba(59, 130, 246, 0.08);
+        transition: background-color 0.2s ease;
+    }
+</style>
+
 <div class="container-fluid p-4 invoice-ui invoice-ui-min admin-page-flow">
     <div class="invoice-hero invoice-hero-plain admin-page-hero">
         <div>
@@ -96,7 +103,7 @@
                     <tbody>
                         @foreach (var item in Model?.Receipts ?? new List<HazelInvoice.ViewModels.ReceiptListItemViewModel>())
                         {
-                            <tr>
+                            <tr class="receipt-row" data-id="@item.Id">
                                 <td class="fw-bold">@item.ReceiptNumber</td>
                                 <td>@item.Date.ToString("MMM dd, yyyy")</td>
                                 <td>@item.CustomerName</td>
@@ -110,13 +117,24 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="btn-group">
-                                        <a asp-action="Print" asp-route-id="@item.Id" class="invoice-icon-btn" title="Print"><i class="bi bi-printer"></i></a>
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="invoice-icon-btn" title="View"><i class="bi bi-eye"></i></a>
+                                        <a asp-action="Print"
+                                           asp-route-id="@item.Id"
+                                           asp-route-returnUrl="@returnUrl"
+                                           class="invoice-icon-btn receipt-return-link"
+                                           data-receipt-id="@item.Id"
+                                           title="Print"><i class="bi bi-printer"></i></a>
+                                        <a asp-action="Details"
+                                           asp-route-id="@item.Id"
+                                           asp-route-returnUrl="@returnUrl"
+                                           class="invoice-icon-btn receipt-return-link"
+                                           data-receipt-id="@item.Id"
+                                           title="View"><i class="bi bi-eye"></i></a>
                                         <form method="post"
                                               asp-action="Delete"
                                               asp-route-id="@item.Id"
                                               asp-route-returnUrl="@returnUrl"
-                                              class="d-inline">
+                                              class="d-inline receipt-return-form"
+                                              data-receipt-id="@item.Id">
                                             <button type="submit"
                                                     class="invoice-icon-btn text-danger"
                                                     title="Delete"
@@ -149,3 +167,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/receipts-index.js" asp-append-version="true"></script>
+}

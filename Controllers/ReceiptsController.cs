@@ -266,7 +266,7 @@ public class ReceiptsController : Controller
     }
 
     // GET: Receipts/Print/5
-    public async Task<IActionResult> Print(int? id)
+    public async Task<IActionResult> Print(int? id, string? returnUrl = null)
     {
         if (id == null) return NotFound();
 
@@ -282,7 +282,7 @@ public class ReceiptsController : Controller
             TempData["ErrorMessage"] = prep.Message ?? "Selected printer not found. Please update printer settings.";
             return RedirectToAction("Index", "PrinterSettings", new
             {
-                returnUrl = Url.Action(nameof(Print), new { id = receipt.Id })
+                returnUrl = Url.Action(nameof(Print), new { id = receipt.Id, returnUrl })
             });
         }
 
@@ -293,12 +293,15 @@ public class ReceiptsController : Controller
 
         var paperSize = (await _appSettings.GetAsync(PrinterSettingKeys.PaperSize, HttpContext.RequestAborted))?.Trim();
         ViewBag.PaperSize = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "A4" : "Letter";
+        ViewBag.ReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : Url.Action(nameof(Index));
 
         return View(receipt);
     }
 
     // GET: Receipts/Details/5
-    public async Task<IActionResult> Details(int? id)
+    public async Task<IActionResult> Details(int? id, string? returnUrl = null)
     {
         if (id == null) return NotFound();
 
@@ -319,6 +322,9 @@ public class ReceiptsController : Controller
             .OrderBy(p => p.PartnerName)
             .Select(p => p.PartnerName)
             .ToListAsync(HttpContext.RequestAborted);
+        ViewBag.ReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : Url.Action(nameof(Index));
 
         return View(receipt);
     }
