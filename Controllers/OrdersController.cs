@@ -39,21 +39,6 @@ public class OrdersController : Controller
         "vegetables", "price", "total", "uom", "unit", "ponumber"
     };
 
-    // Some client Excel files include extra operational columns that are not real HazelInvoice outlets.
-    // Keep them out of unmatched warnings so imports stay clean and maintainable.
-    private static readonly HashSet<string> IgnoredOutletImportHeaderKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "telstra",
-        "wmactan",
-        "y1",
-        "y2",
-        "constore",
-        "bakery",
-        "butchery",
-        "dimsum",
-        "processmeat"
-    };
-
     // Excel header aliases -> canonical outlet key used in Customers.Name
     private static readonly Dictionary<string, string> OutletImportAliasMap = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -509,14 +494,17 @@ public class OrdersController : Controller
         var unmatchedOutletHeaders = new List<string>();
         foreach (var kvp in outletColumns)
         {
-            var normalizedHeader = OrderImportHelpers.NormalizeKey(kvp.Value);
-            if (IgnoredOutletImportHeaderKeys.Contains(normalizedHeader))
-                continue;
-
             if (TryResolveOutletByHeader(kvp.Value, customerMap, out var customer))
+            {
                 matchedOutletCols[kvp.Key] = customer;
+            }
             else
-                unmatchedOutletHeaders.Add(kvp.Value);
+            {
+                if (ColumnHasPositiveQuantities(sheet, headerRow, kvp.Key))
+                {
+                    unmatchedOutletHeaders.Add(kvp.Value);
+                }
+            }
         }
 
         if (matchedOutletCols.Count == 0)
@@ -1254,6 +1242,18 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         {
             customer = containMatches[0];
             return true;
+        }
+
+        return false;
+    }
+
+    private static bool ColumnHasPositiveQuantities(SimpleXlsxSheet sheet, int headerRow, int columnIndex)
+    {
+        for (var row = headerRow + 1; row <= sheet.MaxRow; row++)
+        {
+            var raw = sheet.GetCell(row, columnIndex);
+            if (OrderImportHelpers.TryParseQuantityLoose(raw, out var qty) && qty > 0)
+                return true;
         }
 
         return false;
