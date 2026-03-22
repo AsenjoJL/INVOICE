@@ -30,24 +30,27 @@
         color: var(--price-muted);
     }
     .price-setup-headline {
-        border-bottom: 1px solid var(--price-line);
-        padding-bottom: 1.25rem;
-        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        padding: 0;
     }
-    .price-setup-title {
-        margin: 0;
-        font-size: 22px;
-        font-weight: 600;
-        letter-spacing: -0.03em;
-        color: var(--price-text);
+    .price-setup-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
     }
     .price-setup-sub {
-        margin: 0.25rem 0 0;
+        margin: 0;
         color: var(--price-muted);
+        font-size: 14px;
+        line-height: 1.5;
     }
     .price-week-label {
         color: var(--price-text);
-        font-weight: 500;
+        font-weight: 600;
     }
     .price-btn {
         border-radius: var(--ui-radius-xl);
@@ -70,6 +73,18 @@
         gap: 12px;
         align-items: center;
         flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .price-setup-summary {
+        max-width: 760px;
+    }
+    .price-back-link {
+        min-height: 44px;
+        padding-inline: 1rem 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
     }
     .price-control-row {
         display: grid;
@@ -305,6 +320,14 @@
         .price-control-row {
             align-items: flex-start !important;
         }
+        .price-setup-headline {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .price-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
         .price-control-row {
             grid-template-columns: 1fr;
         }
@@ -329,17 +352,16 @@
 
 <div class="container-fluid p-4 price-setup-page">
     <div class="price-setup-shell">
-    <div class="price-setup-header d-flex justify-content-between align-items-center price-setup-headline">
-        <div>
+    <div class="price-setup-header price-setup-headline">
+        <div class="price-setup-meta">
             <div class="price-setup-kicker">Finance / Weekly Pricing</div>
-            <h2 class="price-setup-title">Price Versus Setup</h2>
             <p class="price-setup-sub">
-                Original Price vs Selling Price for Week: 
+                Viewing weekly price setup for: 
                 <span class="price-week-label">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd, yyyy")</span>
             </p>
         </div>
         <div class="price-actions">
-            <a asp-controller="Orders" asp-action="VegetableMatrix" class="btn price-btn price-btn-neutral">
+            <a asp-controller="Orders" asp-action="VegetableMatrix" class="btn price-btn price-btn-neutral price-back-link">
                 <i class="bi bi-arrow-left"></i> Back to Matrix
             </a>
         </div>
