@@ -10,6 +10,7 @@ using HazelInvoice.ViewModels;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.Services;
 using HazelInvoice.Services.Orders;
+using HazelInvoice.Helpers;
 
 namespace HazelInvoice.Controllers;
 
@@ -100,10 +101,15 @@ public class WeeklyPricesController : Controller
             return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
-        var itemCol = FindColumnByHeader(sheet, headerRow, "items");
-        var sellingPriceCol = FindColumnByHeader(sheet, headerRow, "price");
-        var unitCol = FindColumnByHeader(sheet, headerRow, "uom");
-        var purchasePriceCol = FindNextPriceColumn(sheet, headerRow, sellingPriceCol);
+        var itemCol = FindColumnByHeaders(sheet, headerRow, "items", "item", "product", "productname");
+        var sellingPriceCol = FindColumnByHeaders(sheet, headerRow, "deliveryprice", "sellingprice", "price");
+        var unitCol = FindColumnByHeaders(sheet, headerRow, "uom", "unit");
+        var purchasePriceCol = FindColumnByHeaders(sheet, headerRow, "originalprice", "purchaseprice", "costprice");
+
+        if (purchasePriceCol <= 0)
+        {
+            purchasePriceCol = FindNextPriceColumn(sheet, headerRow, sellingPriceCol);
+        }
 
         var requiresDeliveryPrice = normalizedImportMode is "both" or "delivery-only";
         var requiresPurchasePrice = normalizedImportMode is "both" or "original-only";
@@ -233,6 +239,64 @@ public class WeeklyPricesController : Controller
         TempData["SuccessMessage"] = successMessage;
         TempData["Message"] = successMessage;
         return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadTemplate(DateTime? targetDate, string? importMode = null, string? returnUrl = null)
+    {
+        var normalizedImportMode = NormalizeImportMode(importMode);
+        var day = (targetDate ?? BusinessDate.Today()).Date;
+
+        var products = await _context.Products
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.Name)
+            .ThenBy(p => p.SKU)
+            .ToListAsync();
+
+        var productIds = products.Select(p => p.Id).ToList();
+        var weeklyPrices = await _context.WeeklyPrices
+            .AsNoTracking()
+            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= day && w.EffectiveTo >= day)
+            .ToListAsync();
+
+        var weeklyMap = weeklyPrices
+            .GroupBy(w => w.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
+
+        var rows = new List<IReadOnlyList<string>>(capacity: products.Count + 2)
+        {
+            new[]
+            {
+                "WEEKLY PRICE TEMPLATE",
+                $"Target Date: {day:yyyy-MM-dd}",
+                $"Mode: {GetImportModeLabel(normalizedImportMode)}"
+            },
+            BuildTemplateHeader(normalizedImportMode)
+        };
+
+        foreach (var product in products)
+        {
+            var weekly = weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
+            var currentCost = weekly?.CostOverride ?? product.UnitCost;
+            var currentDelivery = weekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
+
+            rows.Add(BuildTemplateRow(product.Name, product.Unit, currentDelivery, currentCost, normalizedImportMode));
+        }
+
+        var fileName = normalizedImportMode switch
+        {
+            "delivery-only" => $"DeliveryPriceTemplate_{day:yyyy-MM-dd}.xlsx",
+            "original-only" => $"OriginalPriceTemplate_{day:yyyy-MM-dd}.xlsx",
+            _ => $"WeeklyPriceTemplate_{day:yyyy-MM-dd}.xlsx"
+        };
+
+        var bytes = SimpleXlsxWriter.WriteSingleSheet("Price Template", rows);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
     [HttpPost]
@@ -574,9 +638,9 @@ public class WeeklyPricesController : Controller
             for (var col = 1; col <= sheet.MaxCol; col++)
             {
                 var key = OrderImportHelpers.NormalizeKey(sheet.GetCell(row, col));
-                if (key == "items") hasItems = true;
-                if (key == "price") hasPrice = true;
-                if (key == "uom") hasUnit = true;
+                if (key is "items" or "item" or "product" or "productname") hasItems = true;
+                if (key is "price" or "deliveryprice" or "sellingprice" or "originalprice" or "purchaseprice" or "costprice") hasPrice = true;
+                if (key is "uom" or "unit") hasUnit = true;
             }
 
             if (hasItems && hasPrice && hasUnit)
@@ -591,6 +655,18 @@ public class WeeklyPricesController : Controller
         for (var col = 1; col <= sheet.MaxCol; col++)
         {
             if (OrderImportHelpers.NormalizeKey(sheet.GetCell(headerRow, col)) == expectedKey)
+                return col;
+        }
+
+        return 0;
+    }
+
+    private static int FindColumnByHeaders(SimpleXlsxSheet sheet, int headerRow, params string[] expectedKeys)
+    {
+        foreach (var expectedKey in expectedKeys)
+        {
+            var col = FindColumnByHeader(sheet, headerRow, expectedKey);
+            if (col > 0)
                 return col;
         }
 
@@ -623,6 +699,22 @@ public class WeeklyPricesController : Controller
             "delivery-only" => "delivery prices only",
             "original-only" => "original prices only",
             _ => "weekly prices"
+        };
+
+    private static string[] BuildTemplateHeader(string importMode)
+        => importMode switch
+        {
+            "delivery-only" => ["ITEMS", "DELIVERY PRICE", "UOM"],
+            "original-only" => ["ITEMS", "ORIGINAL PRICE", "UOM"],
+            _ => ["ITEMS", "DELIVERY PRICE", "UOM", "ORIGINAL PRICE"]
+        };
+
+    private static string[] BuildTemplateRow(string productName, string unit, decimal deliveryPrice, decimal originalPrice, string importMode)
+        => importMode switch
+        {
+            "delivery-only" => [productName, deliveryPrice.ToString("0.00"), unit],
+            "original-only" => [productName, originalPrice.ToString("0.00"), unit],
+            _ => [productName, deliveryPrice.ToString("0.00"), unit, originalPrice.ToString("0.00")]
         };
 
     private void ValidateWeeklyPriceInput(WeeklyPrice weeklyPrice, Product? product)

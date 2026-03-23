@@ -142,6 +142,36 @@
                     </button>
                 </div>
             </form>
+
+            <div class="row g-2 mt-2">
+                <div class="col-lg-4">
+                    <a asp-controller="WeeklyPrices"
+                       asp-action="DownloadTemplate"
+                       asp-route-targetDate="@targetDate.ToString("yyyy-MM-dd")"
+                       asp-route-importMode="both"
+                       class="btn btn-ghost w-100">
+                        <i class="bi bi-download"></i> Both Delivery + Original
+                    </a>
+                </div>
+                <div class="col-lg-4">
+                    <a asp-controller="WeeklyPrices"
+                       asp-action="DownloadTemplate"
+                       asp-route-targetDate="@targetDate.ToString("yyyy-MM-dd")"
+                       asp-route-importMode="delivery-only"
+                       class="btn btn-ghost w-100">
+                        <i class="bi bi-download"></i> Delivery Template
+                    </a>
+                </div>
+                <div class="col-lg-4">
+                    <a asp-controller="WeeklyPrices"
+                       asp-action="DownloadTemplate"
+                       asp-route-targetDate="@targetDate.ToString("yyyy-MM-dd")"
+                       asp-route-importMode="original-only"
+                       class="btn btn-ghost w-100">
+                        <i class="bi bi-download"></i> Original Template
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 

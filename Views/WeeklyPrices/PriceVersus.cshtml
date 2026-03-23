@@ -423,6 +423,36 @@
         </div>
     </form>
 
+    <div class="price-import-form mb-4">
+        <div>
+            <label class="price-field-label">Download Template</label>
+            <a asp-action="DownloadTemplate"
+               asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
+               asp-route-importMode="both"
+               class="btn price-btn price-btn-neutral w-100">
+                <i class="bi bi-download me-1"></i> Both Delivery + Original
+            </a>
+        </div>
+        <div>
+            <label class="price-field-label">Delivery Only</label>
+            <a asp-action="DownloadTemplate"
+               asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
+               asp-route-importMode="delivery-only"
+               class="btn price-btn price-btn-neutral w-100">
+                <i class="bi bi-download me-1"></i> Delivery Template
+            </a>
+        </div>
+        <div>
+            <label class="price-field-label">Original Only</label>
+            <a asp-action="DownloadTemplate"
+               asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
+               asp-route-importMode="original-only"
+               class="btn price-btn price-btn-neutral w-100">
+                <i class="bi bi-download me-1"></i> Original Template
+            </a>
+        </div>
+    </div>
+
     <div class="card price-card">
         <div class="card-body p-0">
             <form method="post" id="versusForm">
