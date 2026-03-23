@@ -1,0 +1,208 @@
+@page
+@model HazelInvoice.Areas.Identity.Pages.Account.Manage.IndexModel
+@{
+    ViewData["Title"] = "Account Settings";
+}
+
+<style>
+    .account-manage-shell {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+    }
+
+    .account-manage-hero {
+        border: 1px solid #e8e8e8;
+        border-radius: 22px;
+        background: #fff;
+        padding: 28px 30px;
+        margin-bottom: 24px;
+    }
+
+    .account-manage-kicker {
+        display: inline-block;
+        margin-bottom: 10px;
+        font: 500 9px/1.2 "DM Mono", monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #888;
+    }
+
+    .account-manage-hero h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        color: #0a0a0a;
+    }
+
+    .account-manage-hero p {
+        margin: 10px 0 0;
+        color: #5f6672;
+        font-size: 15px;
+    }
+
+    .account-manage-card {
+        border: 1px solid #e8e8e8;
+        border-radius: 22px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .account-manage-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .account-manage-panel {
+        padding: 24px 26px;
+        border-bottom: 1px solid #e8e8e8;
+    }
+
+    .account-manage-panel:nth-child(odd) {
+        border-right: 1px solid #e8e8e8;
+    }
+
+    .account-manage-panel--full {
+        grid-column: 1 / -1;
+        border-right: 0 !important;
+    }
+
+    .account-manage-label {
+        display: block;
+        margin-bottom: 10px;
+        font: 500 9px/1.2 "DM Mono", monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #888;
+    }
+
+    .account-manage-value {
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+        font-size: 17px;
+        font-weight: 600;
+        color: #0a0a0a;
+    }
+
+    .account-manage-card .form-control {
+        min-height: 48px;
+        border: 1px solid #e8e8e8;
+        border-radius: 14px;
+        box-shadow: none;
+        font-size: 16px;
+    }
+
+    .account-manage-card .form-control:focus {
+        border-color: #b9c0ca;
+        box-shadow: none;
+    }
+
+    .account-manage-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        padding: 22px 26px;
+    }
+
+    .account-manage-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 18px;
+        border-radius: 14px;
+        border: 1px solid #e8e8e8;
+        background: #fff;
+        color: #0a0a0a;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .account-manage-save {
+        min-height: 48px;
+        padding: 0 22px;
+        border-radius: 14px;
+        border: 1px solid #0a0a0a;
+        background: #0a0a0a;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .account-manage-status {
+        margin-bottom: 16px;
+        border-radius: 14px;
+    }
+
+    @@media (max-width: 768px) {
+        .account-manage-shell {
+            padding: 20px 16px 32px;
+        }
+
+        .account-manage-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .account-manage-panel:nth-child(odd) {
+            border-right: 0;
+        }
+
+        .account-manage-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
+
+<div class="account-manage-shell">
+    <div class="account-manage-hero">
+        <span class="account-manage-kicker">Account Settings</span>
+        <h1>Change Email Address</h1>
+        <p>Update the sign-in email for this account. Your username will be updated to the same value so login stays consistent.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="alert alert-success account-manage-status">@Model.StatusMessage</div>
+    }
+
+    <form method="post" class="account-manage-card">
+        <div asp-validation-summary="ModelOnly" class="text-danger px-4 pt-4"></div>
+
+        <div class="account-manage-grid">
+            <div class="account-manage-panel">
+                <label class="account-manage-label">Current Email</label>
+                <div class="account-manage-value">@Model.CurrentEmail</div>
+            </div>
+
+            <div class="account-manage-panel">
+                <label asp-for="Input.CurrentPassword" class="account-manage-label"></label>
+                <input asp-for="Input.CurrentPassword" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="Input.CurrentPassword" class="text-danger small"></span>
+            </div>
+
+            <div class="account-manage-panel">
+                <label asp-for="Input.NewEmail" class="account-manage-label"></label>
+                <input asp-for="Input.NewEmail" class="form-control" autocomplete="email" inputmode="email" />
+                <span asp-validation-for="Input.NewEmail" class="text-danger small"></span>
+            </div>
+
+            <div class="account-manage-panel">
+                <label asp-for="Input.ConfirmNewEmail" class="account-manage-label"></label>
+                <input asp-for="Input.ConfirmNewEmail" class="form-control" autocomplete="email" inputmode="email" />
+                <span asp-validation-for="Input.ConfirmNewEmail" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="account-manage-actions">
+            <a href="/" class="account-manage-back"><i class="bi bi-arrow-left"></i> Back</a>
+            <button type="submit" class="account-manage-save">Save Email</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
