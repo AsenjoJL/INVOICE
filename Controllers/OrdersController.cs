@@ -31,11 +31,9 @@ public class OrdersController : Controller
     private readonly HashSet<string> _outletGroups;
     private readonly string[] _outletOrderTokens;
     private readonly Dictionary<string, string> _outletImportAliasMap;
-
-    private static readonly HashSet<string> NonOutletHeaderKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "vegetables", "price", "total", "uom", "unit", "ponumber"
-    };
+    private readonly HashSet<string> _vegetableNonOutletHeaderKeys;
+    private readonly string _vegetableTemplateProductHeader;
+    private readonly string _vegetableTemplatePriceHeader;
 
     public OrdersController(
         ApplicationDbContext context,
@@ -60,6 +58,15 @@ public class OrdersController : Controller
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
         _outletImportAliasMap = operations.Value.OutletImportAliases ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        _vegetableNonOutletHeaderKeys = (operations.Value.VegetableNonOutletHeaderKeys ?? [])
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _vegetableTemplateProductHeader = string.IsNullOrWhiteSpace(operations.Value.VegetableTemplateProductHeader)
+            ? "Vegetables"
+            : operations.Value.VegetableTemplateProductHeader;
+        _vegetableTemplatePriceHeader = string.IsNullOrWhiteSpace(operations.Value.VegetableTemplatePriceHeader)
+            ? "Price"
+            : operations.Value.VegetableTemplatePriceHeader;
     }
 
     // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1&print=false&details=false
@@ -442,15 +449,15 @@ public class OrdersController : Controller
             return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
-        var headerRow = FindHeaderRow(sheet);
+        var headerRow = FindHeaderRow(sheet, _vegetableTemplateProductHeader);
         if (headerRow <= 0)
         {
-            TempData["ErrorMessage"] = "Could not find header row. Expected a row containing 'Vegetables'.";
+            TempData["ErrorMessage"] = $"Could not find header row. Expected a row containing '{_vegetableTemplateProductHeader}'.";
             return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
         }
 
-        var priceCol = FindColumnByHeader(sheet, headerRow, "price");
-        var productCol = FindColumnByHeader(sheet, headerRow, "vegetables");
+        var priceCol = FindColumnByHeader(sheet, headerRow, _vegetableTemplatePriceHeader);
+        var productCol = FindColumnByHeader(sheet, headerRow, _vegetableTemplateProductHeader);
         if (productCol <= 0)
             productCol = 1;
 
@@ -459,7 +466,7 @@ public class OrdersController : Controller
         {
             var raw = sheet.GetCell(headerRow, c);
             var key = OrderImportHelpers.NormalizeKey(raw);
-            if (string.IsNullOrWhiteSpace(key) || NonOutletHeaderKeys.Contains(key))
+            if (string.IsNullOrWhiteSpace(key) || _vegetableNonOutletHeaderKeys.Contains(key))
                 continue;
 
             outletColumns[c] = raw.Trim();
@@ -507,13 +514,20 @@ public class OrdersController : Controller
             .AsNoTracking()
             .ToListAsync();
 
-        // Map by normalized Name and SKU to improve matching coverage
-        var productMap = OrderImportHelpers.BuildProductLookup(products);
+        // Keep import matching aligned with SaveMatrix/receipt creation by using
+        // the same active product set that can actually produce receipt lines.
+        var activeProducts = products.Where(p => p.IsActive).ToList();
+        var inactiveProducts = products.Where(p => !p.IsActive).ToList();
+
+        // Map by normalized Name and SKU to improve matching coverage.
+        var activeProductMap = OrderImportHelpers.BuildProductLookup(activeProducts);
+        var inactiveProductMap = OrderImportHelpers.BuildProductLookup(inactiveProducts);
 
         var matrix = new Dictionary<string, decimal>();
         var prices = new Dictionary<int, decimal>();
         var matchedProductIds = new HashSet<int>();
         var unmatchedProducts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var inactiveMatchedProducts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fractionalQtyCount = 0;
 
         for (var r = headerRow + 1; r <= sheet.MaxRow; r++)
@@ -526,9 +540,17 @@ public class OrdersController : Controller
             if (string.IsNullOrWhiteSpace(nameKey) || nameKey == "grandtotal")
                 continue;
 
-            if (!OrderImportHelpers.TryResolveProductByName(productNameRaw, productMap, out var product))
+            if (!OrderImportHelpers.TryResolveProductByName(productNameRaw, activeProductMap, out var product))
             {
-                unmatchedProducts.Add(productNameRaw.Trim());
+                if (OrderImportHelpers.TryResolveProductByName(productNameRaw, inactiveProductMap, out _))
+                {
+                    inactiveMatchedProducts.Add(productNameRaw.Trim());
+                }
+                else
+                {
+                    unmatchedProducts.Add(productNameRaw.Trim());
+                }
+
                 continue;
             }
 
@@ -589,10 +611,13 @@ public class OrdersController : Controller
         var unmatchedProductsNote = unmatchedProducts.Count > 0
             ? $" Unmatched products: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
             : string.Empty;
+        var inactiveProductsNote = inactiveMatchedProducts.Count > 0
+            ? $" Inactive products skipped: {string.Join(", ", inactiveMatchedProducts.Take(8))}{(inactiveMatchedProducts.Count > 8 ? "..." : "")}."
+            : string.Empty;
         var fractionalNote = fractionalQtyCount > 0
             ? $" Fractional quantities detected: {fractionalQtyCount} cells."
             : string.Empty;
-        TempData["SuccessMessage"] = $"Excel imported, weekly prices updated, and receipts updated for {targetDate:MMM dd, yyyy}: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{fractionalNote}";
+        TempData["SuccessMessage"] = $"Excel imported, weekly prices updated, and receipts updated for {targetDate:MMM dd, yyyy}: {matchedProductCount} products, {matchedOutletCount} outlets.{unmatchedNote}{unmatchedProductsNote}{inactiveProductsNote}{fractionalNote}";
         TempData["AfterImportShowReceipts"] = "true";
 
         return await SaveMatrix(vm, doPrint: false, forceWeeklyPriceRecords: true);
@@ -1173,11 +1198,12 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         return View(vm);
     }
 
-    private static int FindHeaderRow(SimpleXlsxSheet sheet)
+    private static int FindHeaderRow(SimpleXlsxSheet sheet, string productHeader)
     {
+        var normalizedHeader = OrderImportHelpers.NormalizeKey(productHeader);
         for (var r = 1; r <= Math.Min(sheet.MaxRow, 50); r++)
         {
-            if (OrderImportHelpers.NormalizeKey(sheet.GetCell(r, 1)) == "vegetables")
+            if (OrderImportHelpers.NormalizeKey(sheet.GetCell(r, 1)) == normalizedHeader)
                 return r;
         }
 

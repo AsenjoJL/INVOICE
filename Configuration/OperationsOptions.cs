@@ -32,6 +32,26 @@ public sealed class OperationsOptions
 
     public DateTime ProfitReportOpeningDate { get; set; } = new(2026, 3, 19);
 
+    public List<string> VegetableNonOutletHeaderKeys { get; set; } =
+    [
+        "vegetables",
+        "price",
+        "total",
+        "uom",
+        "unit",
+        "ponumber"
+    ];
+
+    public string VegetableTemplateProductHeader { get; set; } = "Vegetables";
+
+    public string VegetableTemplatePriceHeader { get; set; } = "Price";
+
+    public int VegetablePrintTargetSheets { get; set; } = 3;
+
+    public int VegetablePrintMinRowsPerSheet { get; set; } = 41;
+
+    public decimal VegetableDetailPercentFeeDefault { get; set; } = 1.0m;
+
     public string DefaultOutletGroup =>
         OutletGroups.FirstOrDefault(g => !string.IsNullOrWhiteSpace(g)) ?? "EIGHT2EIGHT OUTLETS";
 }

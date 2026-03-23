@@ -10,12 +10,20 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
 {
     private readonly ApplicationDbContext _context;
     private readonly HashSet<string> _outletGroups;
+    private readonly string _productHeader;
+    private readonly string _priceHeader;
 
     public VegetableMatrixTemplateService(ApplicationDbContext context, IOptions<OperationsOptions> operations)
     {
         _context = context;
         _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _productHeader = string.IsNullOrWhiteSpace(operations.Value.VegetableTemplateProductHeader)
+            ? "Vegetables"
+            : operations.Value.VegetableTemplateProductHeader;
+        _priceHeader = string.IsNullOrWhiteSpace(operations.Value.VegetableTemplatePriceHeader)
+            ? "Price"
+            : operations.Value.VegetableTemplatePriceHeader;
     }
 
     public async Task<byte[]> BuildTemplateAsync(DateTime date, CancellationToken cancellationToken = default)
@@ -49,8 +57,8 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
 
         var header = new List<string>(capacity: 2 + outlets.Count)
         {
-            "Vegetables",
-            "Price"
+            _productHeader,
+            _priceHeader
         };
         header.AddRange(outlets);
         rows.Add(header);

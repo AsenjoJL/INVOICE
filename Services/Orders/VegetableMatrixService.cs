@@ -15,15 +15,15 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
 {
     private const int DefaultOutletPageSize = 12;
     private const int DefaultProductPageSize = 25;
-    private const int TargetPrintSheets = 3;
-    private const int MinPrintRowsPerSheet = 41;
-    private const decimal DetailPercentFeeDefault = 1.0m;
 
     private readonly ApplicationDbContext _context;
     private readonly bool _partnersEnabled;
     private readonly HashSet<string> _outletGroups;
     private readonly string[] _outletOrderTokens;
     private readonly string _defaultOutletGroup;
+    private readonly int _targetPrintSheets;
+    private readonly int _minPrintRowsPerSheet;
+    private readonly decimal _detailPercentFeeDefault;
 
     public VegetableMatrixService(
         ApplicationDbContext context,
@@ -36,6 +36,9 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
         _defaultOutletGroup = operations.Value.DefaultOutletGroup;
+        _targetPrintSheets = operations.Value.VegetablePrintTargetSheets > 0 ? operations.Value.VegetablePrintTargetSheets : 3;
+        _minPrintRowsPerSheet = operations.Value.VegetablePrintMinRowsPerSheet > 0 ? operations.Value.VegetablePrintMinRowsPerSheet : 41;
+        _detailPercentFeeDefault = operations.Value.VegetableDetailPercentFeeDefault > 0 ? operations.Value.VegetableDetailPercentFeeDefault : 1.0m;
     }
 
     public async Task<VegetableMatrixViewModel> GetAsync(VegetableMatrixQueryOptions options, CancellationToken cancellationToken = default)
@@ -234,8 +237,8 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             totalProductPages = 1;
 
             productPageSize = Math.Max(
-                MinPrintRowsPerSheet,
-                (int)Math.Ceiling(totalProducts / (double)TargetPrintSheets));
+                _minPrintRowsPerSheet,
+                (int)Math.Ceiling(totalProducts / (double)_targetPrintSheets));
         }
 
         // Final guard: always render products alphabetically in matrix (screen + print).
@@ -749,10 +752,10 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             // Profit subtotal is still gross profit minus deductions/expenses.
             // 1% fee is computed on sales (+ partner purchases), then net profit subtracts that fee.
             DetailSubTotal = detailRows.Sum(r => r.GrossProfit) - totalExpenses - totalDeductions,
-            DetailPercentFee = DetailPercentFeeDefault,
-            DetailPercentFeeAmount = (detailRows.Sum(r => r.Amount) + totalPartnerPurchases) * (DetailPercentFeeDefault / 100m),
+            DetailPercentFee = _detailPercentFeeDefault,
+            DetailPercentFeeAmount = (detailRows.Sum(r => r.Amount) + totalPartnerPurchases) * (_detailPercentFeeDefault / 100m),
             DetailNetProfit = (detailRows.Sum(r => r.GrossProfit) - totalExpenses - totalDeductions) -
-                              ((detailRows.Sum(r => r.Amount) + totalPartnerPurchases) * (DetailPercentFeeDefault / 100m)),
+                              ((detailRows.Sum(r => r.Amount) + totalPartnerPurchases) * (_detailPercentFeeDefault / 100m)),
             DetailDeductionItems = deductionItems,
             DetailExpenseItems = expenseItems
         };
