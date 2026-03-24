@@ -45,34 +45,13 @@ public class DashboardMetricsService : IDashboardMetricsService
             var periods = DashboardPeriods.Create(today.Date);
             var expenseGroupMap = await _expenseCategoryCatalog.GetGroupMapAsync(ct);
 
-            var receiptsTask = GetReceiptMetricsAsync(periods, ct);
-            var expensesTask = GetExpenseMetricsAsync(periods, expenseGroupMap, ct);
-            var paymentsTask = GetPaymentMetricsAsync(periods, ct);
-            var profitTask = GetProfitMetricsAsync(periods, ct);
-            var itemsTask = GetItemMetricsAsync(periods, ct);
-            var dailySalesTask = GetDailySalesAsync(periods, ct);
-            var topItemsTask = GetTopItemsAsync(ct);
-            var recentUnpaidTask = GetRecentOrdersAsync(PaymentStatus.Unpaid, ct);
-            var recentPaidTask = GetRecentOrdersAsync(PaymentStatus.Paid, ct);
-            var topOutletsTask = GetTopOutletsAsync(ct);
-
-            await Task.WhenAll(
-                receiptsTask,
-                expensesTask,
-                paymentsTask,
-                profitTask,
-                itemsTask,
-                dailySalesTask,
-                topItemsTask,
-                recentUnpaidTask,
-                recentPaidTask,
-                topOutletsTask);
-
-            var receiptMetrics = receiptsTask.Result;
-            var expenseMetrics = expensesTask.Result;
-            var paymentMetrics = paymentsTask.Result;
-            var profitMetrics = profitTask.Result;
-            var itemMetrics = itemsTask.Result;
+            // Keep one query in flight at a time because EF Core DbContext does not support
+            // concurrent operations on the same instance.
+            var receiptMetrics = await GetReceiptMetricsAsync(periods, ct);
+            var expenseMetrics = await GetExpenseMetricsAsync(periods, expenseGroupMap, ct);
+            var paymentMetrics = await GetPaymentMetricsAsync(periods, ct);
+            var profitMetrics = await GetProfitMetricsAsync(periods, ct);
+            var itemMetrics = await GetItemMetricsAsync(periods, ct);
 
             var vm = BuildViewModel(
                 periods,
@@ -82,11 +61,11 @@ public class DashboardMetricsService : IDashboardMetricsService
                 profitMetrics,
                 itemMetrics);
 
-            vm.DailySales = dailySalesTask.Result;
-            vm.TopItems = topItemsTask.Result;
-            vm.RecentUnpaidOrders = recentUnpaidTask.Result;
-            vm.RecentPaidOrders = recentPaidTask.Result;
-            vm.TopOutlets = topOutletsTask.Result;
+            vm.DailySales = await GetDailySalesAsync(periods, ct);
+            vm.TopItems = await GetTopItemsAsync(ct);
+            vm.RecentUnpaidOrders = await GetRecentOrdersAsync(PaymentStatus.Unpaid, ct);
+            vm.RecentPaidOrders = await GetRecentOrdersAsync(PaymentStatus.Paid, ct);
+            vm.TopOutlets = await GetTopOutletsAsync(ct);
 
             _cache.Set(cacheKey, vm, TimeSpan.FromSeconds(30));
             return vm;
