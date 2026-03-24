@@ -3740,12 +3740,22 @@ textarea,
 }
 
 .sidebar {
-  width: 220px;
-  min-width: 220px;
-  background: #1E293B !important;
-  border-right: 1px solid #334155 !important;
-  color: #F1F5F9 !important;
-  box-shadow: none !important;
+    width: 220px;
+    min-width: 220px;
+    background: #1E293B !important;
+    border-right: 1px solid #334155 !important;
+    color: #F1F5F9 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin-left: 0 !important;
+}
+
+.sidebar.offcanvas-start,
+.sidebar.offcanvas-lg {
+    border-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    margin-left: 0 !important;
 }
 
 .sidebar-header {
