@@ -1290,7 +1290,12 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     }
 
     private static DateTime NormalizeOrderDate(DateTime? date)
-        => BusinessDate.NormalizeNextDeliveryDate(date);
+    {
+        if (!date.HasValue || date.Value == default)
+            return BusinessDate.Tomorrow();
+
+        return date.Value.Date;
+    }
 
     private async Task UpdateWeeklyPricesFromPricesAsync(DateTime date, Dictionary<int, decimal>? postedPrices, bool forceCreateWeeklyRecords = false)
     {
