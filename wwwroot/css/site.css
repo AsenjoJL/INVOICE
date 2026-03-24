@@ -4118,11 +4118,34 @@ textarea,
 
 @media (max-width: 991.98px) {
   .sidebar.offcanvas-start {
-    width: 280px;
+      width: 280px;
   }
 
   .content-area {
     padding: 24px !important;
+  }
+}
+
+@media (min-width: 992px) {
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar.offcanvas-lg {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 220px;
+    min-width: 220px;
+    height: 100vh !important;
+    overflow-y: auto;
+    z-index: 1030;
+  }
+
+  .content {
+    margin-left: 220px;
+    min-height: 100vh;
   }
 }
 
