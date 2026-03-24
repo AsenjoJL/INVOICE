@@ -1,11 +1,11 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
-using HazelInvoice.ViewModels;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Caching.Memory;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.Services.Expenses;
+using HazelInvoice.ViewModels;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace HazelInvoice.Services.Dashboard;
 
@@ -42,269 +42,51 @@ public class DashboardMetricsService : IDashboardMetricsService
 
         try
         {
-            // Keep everything centralized and reusable so future dashboard widgets don't bloat controllers.
-            var dayStart = today.Date;
-            var dayEnd = dayStart.AddDays(1);
-            var yesterdayStart = dayStart.AddDays(-1);
-            var yesterdayEnd = dayStart;
+            var periods = DashboardPeriods.Create(today.Date);
+            var expenseGroupMap = await _expenseCategoryCatalog.GetGroupMapAsync(ct);
 
-        // Weekly (Mon-Sun)
-        var diff = (7 + (dayStart.DayOfWeek - DayOfWeek.Monday)) % 7;
-        var weekStart = dayStart.AddDays(-1 * diff).Date;
-        var weekEnd = weekStart.AddDays(7);
+            var receiptsTask = GetReceiptMetricsAsync(periods, ct);
+            var expensesTask = GetExpenseMetricsAsync(periods, expenseGroupMap, ct);
+            var paymentsTask = GetPaymentMetricsAsync(periods, ct);
+            var profitTask = GetProfitMetricsAsync(periods, ct);
+            var itemsTask = GetItemMetricsAsync(periods, ct);
+            var dailySalesTask = GetDailySalesAsync(periods, ct);
+            var topItemsTask = GetTopItemsAsync(ct);
+            var recentUnpaidTask = GetRecentOrdersAsync(PaymentStatus.Unpaid, ct);
+            var recentPaidTask = GetRecentOrdersAsync(PaymentStatus.Paid, ct);
+            var topOutletsTask = GetTopOutletsAsync(ct);
 
-        // Monthly
-        var monthStart = new DateTime(dayStart.Year, dayStart.Month, 1);
-        var monthEnd = monthStart.AddMonths(1);
-        var prevMonthStart = monthStart.AddMonths(-1);
-        var prevMonthEnd = monthStart;
+            await Task.WhenAll(
+                receiptsTask,
+                expensesTask,
+                paymentsTask,
+                profitTask,
+                itemsTask,
+                dailySalesTask,
+                topItemsTask,
+                recentUnpaidTask,
+                recentPaidTask,
+                topOutletsTask);
 
-        // Annual
-        var yearStart = new DateTime(dayStart.Year, 1, 1);
-        var yearEnd = yearStart.AddYears(1);
+            var receiptMetrics = receiptsTask.Result;
+            var expenseMetrics = expensesTask.Result;
+            var paymentMetrics = paymentsTask.Result;
+            var profitMetrics = profitTask.Result;
+            var itemMetrics = itemsTask.Result;
 
-        static decimal TrendPercent(decimal current, decimal previous)
-        {
-            if (previous == 0m) return current == 0m ? 0m : 100m;
-            return ((current - previous) / Math.Abs(previous)) * 100m;
-        }
+            var vm = BuildViewModel(
+                periods,
+                receiptMetrics,
+                expenseMetrics,
+                paymentMetrics,
+                profitMetrics,
+                itemMetrics);
 
-        var vm = new DashboardViewModel();
-
-        // ---- Receipts aggregates (single roundtrip, no tracking) ----
-        var receiptsAgg = await _db.Receipts
-            .AsNoTracking()
-            .Where(r => r.Status != PaymentStatus.Void)
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                SalesToday = g.Where(r => r.Date >= dayStart && r.Date < dayEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
-                SalesYesterday = g.Where(r => r.Date >= yesterdayStart && r.Date < yesterdayEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
-                SalesWeekly = g.Where(r => r.Date >= weekStart && r.Date < weekEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
-                SalesMonthly = g.Where(r => r.Date >= monthStart && r.Date < monthEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
-                SalesPrevMonth = g.Where(r => r.Date >= prevMonthStart && r.Date < prevMonthEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
-                SalesYearly = g.Where(r => r.Date >= yearStart && r.Date < yearEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
-                SalesAllTime = g.Sum(r => (decimal?)r.TotalAmount) ?? 0m,
-
-                UnpaidAllTime = g.Sum(r => (decimal?)(r.TotalAmount - r.PaidAmount)) ?? 0m,
-                UnpaidCount = g.Count(r => r.TotalAmount > r.PaidAmount),
-                UnpaidToday = g.Where(r => r.Date >= dayStart && r.Date < dayEnd).Sum(r => (decimal?)(r.TotalAmount - r.PaidAmount)) ?? 0m,
-                UnpaidYesterday = g.Where(r => r.Date >= yesterdayStart && r.Date < yesterdayEnd).Sum(r => (decimal?)(r.TotalAmount - r.PaidAmount)) ?? 0m
-            })
-            .SingleOrDefaultAsync(ct);
-
-        if (receiptsAgg == null)
-        {
-            // Empty database; keep defaults.
-            receiptsAgg = new
-            {
-                SalesToday = 0m,
-                SalesYesterday = 0m,
-                SalesWeekly = 0m,
-                SalesMonthly = 0m,
-                SalesPrevMonth = 0m,
-                SalesYearly = 0m,
-                SalesAllTime = 0m,
-                UnpaidAllTime = 0m,
-                UnpaidCount = 0,
-                UnpaidToday = 0m,
-                UnpaidYesterday = 0m
-            };
-        }
-
-        vm.SalesToday = receiptsAgg.SalesToday;
-        vm.SalesWeekly = receiptsAgg.SalesWeekly;
-        vm.SalesMonthly = receiptsAgg.SalesMonthly;
-        vm.SalesYearly = receiptsAgg.SalesYearly;
-        vm.TotalSalesAllTime = receiptsAgg.SalesAllTime;
-        vm.UnpaidAmount = receiptsAgg.UnpaidAllTime;
-        vm.UnpaidInvoiceCount = receiptsAgg.UnpaidCount;
-
-        vm.SalesTodayTrendPercent = TrendPercent(receiptsAgg.SalesToday, receiptsAgg.SalesYesterday);
-        vm.SalesMonthlyTrendPercent = TrendPercent(receiptsAgg.SalesMonthly, receiptsAgg.SalesPrevMonth);
-        vm.UnpaidTrendPercent = TrendPercent(receiptsAgg.UnpaidToday, receiptsAgg.UnpaidYesterday);
-
-        // ---- Expenses + Payments aggregates ----
-        var expenseGroupMap = await _expenseCategoryCatalog.GetGroupMapAsync(ct);
-        var dailyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Daily).Select(x => x.Key).ToArray();
-        var weeklyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Weekly).Select(x => x.Key).ToArray();
-        var monthlyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Monthly).Select(x => x.Key).ToArray();
-        var categorizedExpenseNames = expenseGroupMap.Keys.ToArray();
-
-        var expenseAgg = await _db.Expenses
-            .AsNoTracking()
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                ExpenseToday = g.Where(e => e.Date >= dayStart && e.Date < dayEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
-                ExpenseYesterday = g.Where(e => e.Date >= yesterdayStart && e.Date < yesterdayEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
-                ExpenseMonthly = g.Where(e => e.Date >= monthStart && e.Date < monthEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
-                ExpensePrevMonth = g.Where(e => e.Date >= prevMonthStart && e.Date < prevMonthEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
-                ExpenseAllTime = g.Sum(e => (decimal?)e.Amount) ?? 0m,
-                ExpenseBeforeToday = g.Where(e => e.Date < dayStart).Sum(e => (decimal?)e.Amount) ?? 0m,
-                DailyExpenseTotal = g.Where(e => dailyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
-                WeeklyExpenseTotal = g.Where(e => weeklyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
-                MonthlyExpenseBucketTotal = g.Where(e => monthlyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
-                OtherExpenseTotal = g.Where(e => !categorizedExpenseNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m
-            })
-            .SingleOrDefaultAsync(ct)
-            ?? new
-            {
-                ExpenseToday = 0m,
-                ExpenseYesterday = 0m,
-                ExpenseMonthly = 0m,
-                ExpensePrevMonth = 0m,
-                ExpenseAllTime = 0m,
-                ExpenseBeforeToday = 0m,
-                DailyExpenseTotal = 0m,
-                WeeklyExpenseTotal = 0m,
-                MonthlyExpenseBucketTotal = 0m,
-                OtherExpenseTotal = 0m
-            };
-
-        var paymentAgg = await _db.Payments
-            .AsNoTracking()
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                PaymentsAllTime = g.Sum(p => (decimal?)p.Amount) ?? 0m,
-                PaymentsBeforeToday = g.Where(p => p.Date < dayStart).Sum(p => (decimal?)p.Amount) ?? 0m
-            })
-            .SingleOrDefaultAsync(ct)
-            ?? new { PaymentsAllTime = 0m, PaymentsBeforeToday = 0m };
-
-        vm.ExpenseToday = expenseAgg.ExpenseToday;
-        vm.ExpenseMonthly = expenseAgg.ExpenseMonthly;
-        vm.DailyExpenseTotal = expenseAgg.DailyExpenseTotal;
-        vm.WeeklyExpenseTotal = expenseAgg.WeeklyExpenseTotal;
-        vm.MonthlyExpenseTotal = expenseAgg.MonthlyExpenseBucketTotal;
-        vm.OtherExpenseTotal = expenseAgg.OtherExpenseTotal;
-        vm.TotalExpenseAllTime = expenseAgg.ExpenseAllTime;
-        vm.ExpenseTodayTrendPercent = TrendPercent(expenseAgg.ExpenseToday, expenseAgg.ExpenseYesterday);
-        vm.ExpenseMonthlyTrendPercent = TrendPercent(expenseAgg.ExpenseMonthly, expenseAgg.ExpensePrevMonth);
-
-        // Cash Balance: Total Payments - Total Expenses (all time)
-        vm.CashBalance = paymentAgg.PaymentsAllTime - expenseAgg.ExpenseAllTime;
-        var previousCashBalance = paymentAgg.PaymentsBeforeToday - expenseAgg.ExpenseBeforeToday;
-        vm.CashBalanceTrendPercent = TrendPercent(vm.CashBalance, previousCashBalance);
-
-        // ---- ReceiptLines aggregates (no in-memory loads) ----
-        var linesBase = _db.ReceiptLines
-            .AsNoTracking()
-            .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void);
-
-        // Items Sold Today/Yesterday
-        var itemsAgg = await linesBase
-            .Where(l => l.Receipt!.Date >= yesterdayStart && l.Receipt.Date < dayEnd)
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                ItemsToday = g.Where(l => l.Receipt!.Date >= dayStart && l.Receipt.Date < dayEnd).Sum(l => (decimal?)l.Quantity) ?? 0m,
-                ItemsYesterday = g.Where(l => l.Receipt!.Date >= yesterdayStart && l.Receipt.Date < yesterdayEnd).Sum(l => (decimal?)l.Quantity) ?? 0m
-            })
-            .SingleOrDefaultAsync(ct)
-            ?? new { ItemsToday = 0m, ItemsYesterday = 0m };
-
-        vm.ItemsSoldToday = itemsAgg.ItemsToday;
-        vm.ItemsSoldTodayTrendPercent = TrendPercent(itemsAgg.ItemsToday, itemsAgg.ItemsYesterday);
-
-        // Unit breakdown (today only)
-        vm.ItemsSoldTodayByUnit = await linesBase
-            .Where(l => l.Receipt!.Date >= dayStart && l.Receipt.Date < dayEnd)
-            .GroupBy(l => string.IsNullOrWhiteSpace(l.Unit) ? "unit" : l.Unit)
-            .Select(g => new CategoryValuePoint
-            {
-                Category = g.Key,
-                Value = g.Sum(l => (decimal)l.Quantity)
-            })
-            .OrderBy(g => g.Category)
-            .ToListAsync(ct);
-
-        // Gross profit (all time) using snapshots (stable & fast)
-        var profitAgg = await linesBase
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                RevenueAllTime = g.Sum(l => (decimal?)l.Amount) ?? 0m,
-                CostAllTime = g.Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
-                RevenueMonth = g.Where(l => l.Receipt!.Date >= monthStart && l.Receipt.Date < monthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
-                CostMonth = g.Where(l => l.Receipt!.Date >= monthStart && l.Receipt.Date < monthEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
-                RevenuePrevMonth = g.Where(l => l.Receipt!.Date >= prevMonthStart && l.Receipt.Date < prevMonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
-                CostPrevMonth = g.Where(l => l.Receipt!.Date >= prevMonthStart && l.Receipt.Date < prevMonthEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m
-            })
-            .SingleOrDefaultAsync(ct)
-            ?? new
-            {
-                RevenueAllTime = 0m,
-                CostAllTime = 0m,
-                RevenueMonth = 0m,
-                CostMonth = 0m,
-                RevenuePrevMonth = 0m,
-                CostPrevMonth = 0m
-            };
-
-        var grossMonth = profitAgg.RevenueMonth - profitAgg.CostMonth;
-        var grossPrev = profitAgg.RevenuePrevMonth - profitAgg.CostPrevMonth;
-        vm.GrossProfit = profitAgg.RevenueAllTime - profitAgg.CostAllTime;
-        vm.NetProfit = vm.GrossProfit - expenseAgg.ExpenseAllTime;
-        vm.GrossProfitMonth = grossMonth;
-        vm.NetProfitMonth = grossMonth - expenseAgg.ExpenseMonthly;
-        vm.GrossProfitTrendPercent = TrendPercent(grossMonth, grossPrev);
-
-        // ---- Charts / Lists ----
-        // Daily Sales (last 7 days)
-        var last7DaysRaw = await _db.Receipts
-            .AsNoTracking()
-            .Where(r => r.Date >= dayStart.AddDays(-6) && r.Status != PaymentStatus.Void)
-            .GroupBy(r => r.Date.Date)
-            .Select(g => new DateValuePoint { Date = g.Key, Value = g.Sum(r => r.TotalAmount) })
-            .ToListAsync(ct);
-
-        var salesByDate = last7DaysRaw.ToDictionary(s => s.Date.Date, s => s.Value);
-        vm.DailySales = Enumerable.Range(0, 7)
-            .Select(offset =>
-            {
-                var date = dayStart.AddDays(-6 + offset).Date;
-                return new DateValuePoint
-                {
-                    Date = date,
-                    Value = salesByDate.TryGetValue(date, out var value) ? value : 0m
-                };
-            })
-            .ToList();
-
-        // Top Items (Top 10) - query-based, no full list
-        vm.TopItems = await linesBase
-            .GroupBy(l => l.ItemName)
-            .Select(g => new CategoryValuePoint { Category = g.Key, Value = g.Sum(l => l.Amount) })
-            .OrderByDescending(g => g.Value)
-            .Take(10)
-            .ToListAsync(ct);
-
-        // Recent Unpaid/Paid (Top 8)
-        vm.RecentUnpaidOrders = await _db.Receipts
-            .AsNoTracking()
-            .Where(r => r.Status == PaymentStatus.Unpaid)
-            .OrderByDescending(r => r.Date)
-            .Take(8)
-            .ToListAsync(ct);
-
-        vm.RecentPaidOrders = await _db.Receipts
-            .AsNoTracking()
-            .Where(r => r.Status == PaymentStatus.Paid)
-            .OrderByDescending(r => r.Date)
-            .Take(8)
-            .ToListAsync(ct);
-
-        // Top Outlets (Top 10)
-        vm.TopOutlets = await _db.Receipts
-            .AsNoTracking()
-            .Where(r => r.Status != PaymentStatus.Void)
-            .GroupBy(r => r.CustomerName)
-            .Select(g => new CategoryValuePoint { Category = g.Key, Value = g.Sum(r => r.TotalAmount) })
-            .OrderByDescending(g => g.Value)
-            .Take(10)
-            .ToListAsync(ct);
+            vm.DailySales = dailySalesTask.Result;
+            vm.TopItems = topItemsTask.Result;
+            vm.RecentUnpaidOrders = recentUnpaidTask.Result;
+            vm.RecentPaidOrders = recentPaidTask.Result;
+            vm.TopOutlets = topOutletsTask.Result;
 
             _cache.Set(cacheKey, vm, TimeSpan.FromSeconds(30));
             return vm;
@@ -314,5 +96,373 @@ public class DashboardMetricsService : IDashboardMetricsService
             _logger.LogError(ex, "DashboardMetricsService.BuildAsync failed.");
             return new DashboardViewModel();
         }
+    }
+
+    private DashboardViewModel BuildViewModel(
+        DashboardPeriods periods,
+        ReceiptMetrics receipts,
+        ExpenseMetrics expenses,
+        PaymentMetrics payments,
+        ProfitMetrics profits,
+        ItemMetrics items)
+    {
+        static decimal TrendPercent(decimal current, decimal previous)
+        {
+            if (previous == 0m) return current == 0m ? 0m : 100m;
+            return ((current - previous) / Math.Abs(previous)) * 100m;
+        }
+
+        var grossProfitMonth = profits.RevenueMonth - profits.CostMonth;
+        var grossProfitPrevMonth = profits.RevenuePrevMonth - profits.CostPrevMonth;
+        var grossProfitAllTime = profits.RevenueAllTime - profits.CostAllTime;
+
+        var cashBalance = ComputeCashBalance(payments.PaymentsAllTime, expenses.ExpenseAllTime);
+        var previousCashBalance = ComputeCashBalance(payments.PaymentsBeforeToday, expenses.ExpenseBeforeToday);
+
+        var outstandingReceivablesAllTime = receipts.SalesAllTime - payments.PaymentsAllTime;
+        var outstandingReceivablesMonth = receipts.SalesMonthly - payments.PaymentsMonthly;
+        var outstandingReceivablesToday = receipts.SalesToday - payments.PaymentsToday;
+        var outstandingReceivablesYesterday = receipts.SalesYesterday - payments.PaymentsYesterday;
+
+        return new DashboardViewModel
+        {
+            SalesToday = receipts.SalesToday,
+            SalesWeekly = receipts.SalesWeekly,
+            SalesMonthly = receipts.SalesMonthly,
+            SalesYearly = receipts.SalesYearly,
+            TotalSalesAllTime = receipts.SalesAllTime,
+
+            CollectedRevenueMonthly = payments.PaymentsMonthly,
+            CollectedRevenueAllTime = payments.PaymentsAllTime,
+            OutstandingReceivablesMonthly = outstandingReceivablesMonth,
+            OutstandingReceivablesAllTime = outstandingReceivablesAllTime,
+
+            UnpaidAmount = receipts.UnpaidAmountAllTime,
+            UnpaidInvoiceCount = receipts.UnpaidInvoiceCount,
+
+            ExpenseToday = expenses.ExpenseToday,
+            ExpenseMonthly = expenses.ExpenseMonthly,
+            DailyExpenseTotal = expenses.DailyExpenseTotal,
+            WeeklyExpenseTotal = expenses.WeeklyExpenseTotal,
+            MonthlyExpenseTotal = expenses.MonthlyExpenseBucketTotal,
+            OtherExpenseTotal = expenses.OtherExpenseTotal,
+            TotalExpenseAllTime = expenses.ExpenseAllTime,
+
+            GrossProfit = grossProfitAllTime,
+            GrossProfitMonth = grossProfitMonth,
+            NetProfit = grossProfitAllTime - expenses.ExpenseAllTime,
+            NetProfitMonth = grossProfitMonth - expenses.ExpenseMonthly,
+
+            CashBalance = cashBalance,
+
+            ItemsSoldToday = items.ItemsToday,
+            ItemsSoldTodayByUnit = items.ItemsTodayByUnit,
+
+            SalesTodayTrendPercent = TrendPercent(receipts.SalesToday, receipts.SalesYesterday),
+            SalesMonthlyTrendPercent = TrendPercent(receipts.SalesMonthly, receipts.SalesPrevMonth),
+            GrossProfitTrendPercent = TrendPercent(grossProfitMonth, grossProfitPrevMonth),
+            UnpaidTrendPercent = TrendPercent(outstandingReceivablesToday, outstandingReceivablesYesterday),
+            ExpenseTodayTrendPercent = TrendPercent(expenses.ExpenseToday, expenses.ExpenseYesterday),
+            ExpenseMonthlyTrendPercent = TrendPercent(expenses.ExpenseMonthly, expenses.ExpensePrevMonth),
+            CashBalanceTrendPercent = TrendPercent(cashBalance, previousCashBalance),
+            ItemsSoldTodayTrendPercent = TrendPercent(items.ItemsToday, items.ItemsYesterday)
+        };
+    }
+
+    private static decimal ComputeCashBalance(decimal totalInflows, decimal totalOutflows)
+    {
+        // Keep this intentionally narrow for now:
+        // only recorded cash inflows (Payments) minus recorded outflows (Expenses).
+        // Future flows like withdrawals/transfers can extend this method cleanly.
+        return totalInflows - totalOutflows;
+    }
+
+    private async Task<ReceiptMetrics> GetReceiptMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    {
+        var metrics = await _db.Receipts
+            .AsNoTracking()
+            .Where(r => r.Status != PaymentStatus.Void)
+            .GroupBy(_ => 1)
+            .Select(g => new ReceiptMetrics
+            {
+                SalesToday = g.Where(r => r.Date >= periods.DayStart && r.Date < periods.DayEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
+                SalesYesterday = g.Where(r => r.Date >= periods.YesterdayStart && r.Date < periods.YesterdayEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
+                SalesWeekly = g.Where(r => r.Date >= periods.WeekStart && r.Date < periods.WeekEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
+                SalesMonthly = g.Where(r => r.Date >= periods.MonthStart && r.Date < periods.MonthEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
+                SalesPrevMonth = g.Where(r => r.Date >= periods.PrevMonthStart && r.Date < periods.PrevMonthEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
+                SalesYearly = g.Where(r => r.Date >= periods.YearStart && r.Date < periods.YearEnd).Sum(r => (decimal?)r.TotalAmount) ?? 0m,
+                SalesAllTime = g.Sum(r => (decimal?)r.TotalAmount) ?? 0m,
+                UnpaidAmountAllTime = g.Sum(r => (decimal?)(r.TotalAmount - r.PaidAmount)) ?? 0m,
+                UnpaidInvoiceCount = g.Count(r => r.TotalAmount > r.PaidAmount)
+            })
+            .SingleOrDefaultAsync(ct);
+
+        return metrics ?? new ReceiptMetrics();
+    }
+
+    private async Task<ExpenseMetrics> GetExpenseMetricsAsync(
+        DashboardPeriods periods,
+        IReadOnlyDictionary<string, ExpenseCategoryGroup> expenseGroupMap,
+        CancellationToken ct)
+    {
+        var dailyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Daily).Select(x => x.Key).ToArray();
+        var weeklyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Weekly).Select(x => x.Key).ToArray();
+        var monthlyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Monthly).Select(x => x.Key).ToArray();
+        var categorizedNames = expenseGroupMap.Keys.ToArray();
+
+        var metrics = await _db.Expenses
+            .AsNoTracking()
+            .GroupBy(_ => 1)
+            .Select(g => new ExpenseMetrics
+            {
+                ExpenseToday = g.Where(e => e.Date >= periods.DayStart && e.Date < periods.DayEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
+                ExpenseYesterday = g.Where(e => e.Date >= periods.YesterdayStart && e.Date < periods.YesterdayEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
+                ExpenseMonthly = g.Where(e => e.Date >= periods.MonthStart && e.Date < periods.MonthEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
+                ExpensePrevMonth = g.Where(e => e.Date >= periods.PrevMonthStart && e.Date < periods.PrevMonthEnd).Sum(e => (decimal?)e.Amount) ?? 0m,
+                ExpenseAllTime = g.Sum(e => (decimal?)e.Amount) ?? 0m,
+                ExpenseBeforeToday = g.Where(e => e.Date < periods.DayStart).Sum(e => (decimal?)e.Amount) ?? 0m,
+                DailyExpenseTotal = g.Where(e => dailyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
+                WeeklyExpenseTotal = g.Where(e => weeklyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
+                MonthlyExpenseBucketTotal = g.Where(e => monthlyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
+                OtherExpenseTotal = g.Where(e => !categorizedNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m
+            })
+            .SingleOrDefaultAsync(ct);
+
+        return metrics ?? new ExpenseMetrics();
+    }
+
+    private async Task<PaymentMetrics> GetPaymentMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    {
+        var metrics = await _db.Payments
+            .AsNoTracking()
+            .GroupBy(_ => 1)
+            .Select(g => new PaymentMetrics
+            {
+                PaymentsToday = g.Where(p => p.Date >= periods.DayStart && p.Date < periods.DayEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
+                PaymentsYesterday = g.Where(p => p.Date >= periods.YesterdayStart && p.Date < periods.YesterdayEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
+                PaymentsMonthly = g.Where(p => p.Date >= periods.MonthStart && p.Date < periods.MonthEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
+                PaymentsPrevMonth = g.Where(p => p.Date >= periods.PrevMonthStart && p.Date < periods.PrevMonthEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
+                PaymentsAllTime = g.Sum(p => (decimal?)p.Amount) ?? 0m,
+                PaymentsBeforeToday = g.Where(p => p.Date < periods.DayStart).Sum(p => (decimal?)p.Amount) ?? 0m
+            })
+            .SingleOrDefaultAsync(ct);
+
+        return metrics ?? new PaymentMetrics();
+    }
+
+    private async Task<ProfitMetrics> GetProfitMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    {
+        var metrics = await _db.ReceiptLines
+            .AsNoTracking()
+            .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void)
+            .GroupBy(_ => 1)
+            .Select(g => new ProfitMetrics
+            {
+                RevenueAllTime = g.Sum(l => (decimal?)l.Amount) ?? 0m,
+                CostAllTime = g.Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
+                RevenueMonth = g.Where(l => l.Receipt!.Date >= periods.MonthStart && l.Receipt.Date < periods.MonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
+                CostMonth = g.Where(l => l.Receipt!.Date >= periods.MonthStart && l.Receipt.Date < periods.MonthEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
+                RevenuePrevMonth = g.Where(l => l.Receipt!.Date >= periods.PrevMonthStart && l.Receipt.Date < periods.PrevMonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
+                CostPrevMonth = g.Where(l => l.Receipt!.Date >= periods.PrevMonthStart && l.Receipt.Date < periods.PrevMonthEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m
+            })
+            .SingleOrDefaultAsync(ct);
+
+        return metrics ?? new ProfitMetrics();
+    }
+
+    private async Task<ItemMetrics> GetItemMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    {
+        var linesBase = _db.ReceiptLines
+            .AsNoTracking()
+            .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void);
+
+        var itemVolume = await linesBase
+            .Where(l => l.Receipt!.Date >= periods.YesterdayStart && l.Receipt.Date < periods.DayEnd)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                ItemsToday = g.Where(l => l.Receipt!.Date >= periods.DayStart && l.Receipt.Date < periods.DayEnd).Sum(l => (decimal?)l.Quantity) ?? 0m,
+                ItemsYesterday = g.Where(l => l.Receipt!.Date >= periods.YesterdayStart && l.Receipt.Date < periods.YesterdayEnd).Sum(l => (decimal?)l.Quantity) ?? 0m
+            })
+            .SingleOrDefaultAsync(ct);
+
+        var byUnit = await linesBase
+            .Where(l => l.Receipt!.Date >= periods.DayStart && l.Receipt.Date < periods.DayEnd)
+            .GroupBy(l => string.IsNullOrWhiteSpace(l.Unit) ? "unit" : l.Unit)
+            .Select(g => new CategoryValuePoint
+            {
+                Category = g.Key,
+                Value = g.Sum(l => (decimal)l.Quantity)
+            })
+            .OrderBy(g => g.Category)
+            .ToListAsync(ct);
+
+        return new ItemMetrics
+        {
+            ItemsToday = itemVolume?.ItemsToday ?? 0m,
+            ItemsYesterday = itemVolume?.ItemsYesterday ?? 0m,
+            ItemsTodayByUnit = byUnit
+        };
+    }
+
+    private async Task<List<DateValuePoint>> GetDailySalesAsync(DashboardPeriods periods, CancellationToken ct)
+    {
+        var last7DaysRaw = await _db.Receipts
+            .AsNoTracking()
+            .Where(r => r.Date >= periods.DayStart.AddDays(-6) && r.Status != PaymentStatus.Void)
+            .GroupBy(r => r.Date.Date)
+            .Select(g => new DateValuePoint { Date = g.Key, Value = g.Sum(r => r.TotalAmount) })
+            .ToListAsync(ct);
+
+        var salesByDate = last7DaysRaw.ToDictionary(s => s.Date.Date, s => s.Value);
+        return Enumerable.Range(0, 7)
+            .Select(offset =>
+            {
+                var date = periods.DayStart.AddDays(-6 + offset).Date;
+                return new DateValuePoint
+                {
+                    Date = date,
+                    Value = salesByDate.TryGetValue(date, out var value) ? value : 0m
+                };
+            })
+            .ToList();
+    }
+
+    private async Task<List<CategoryValuePoint>> GetTopItemsAsync(CancellationToken ct)
+    {
+        return await _db.ReceiptLines
+            .AsNoTracking()
+            .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void)
+            .GroupBy(l => l.ItemName)
+            .Select(g => new CategoryValuePoint
+            {
+                Category = g.Key,
+                Value = g.Sum(l => l.Amount)
+            })
+            .OrderByDescending(g => g.Value)
+            .Take(10)
+            .ToListAsync(ct);
+    }
+
+    private async Task<List<Receipt>> GetRecentOrdersAsync(PaymentStatus status, CancellationToken ct)
+    {
+        return await _db.Receipts
+            .AsNoTracking()
+            .Where(r => r.Status == status)
+            .OrderByDescending(r => r.Date)
+            .Take(8)
+            .ToListAsync(ct);
+    }
+
+    private async Task<List<CategoryValuePoint>> GetTopOutletsAsync(CancellationToken ct)
+    {
+        return await _db.Receipts
+            .AsNoTracking()
+            .Where(r => r.Status != PaymentStatus.Void)
+            .GroupBy(r => r.CustomerName)
+            .Select(g => new CategoryValuePoint
+            {
+                Category = g.Key,
+                Value = g.Sum(r => r.TotalAmount)
+            })
+            .OrderByDescending(g => g.Value)
+            .Take(10)
+            .ToListAsync(ct);
+    }
+
+    private sealed record DashboardPeriods
+    {
+        public required DateTime DayStart { get; init; }
+        public required DateTime DayEnd { get; init; }
+        public required DateTime YesterdayStart { get; init; }
+        public required DateTime YesterdayEnd { get; init; }
+        public required DateTime WeekStart { get; init; }
+        public required DateTime WeekEnd { get; init; }
+        public required DateTime MonthStart { get; init; }
+        public required DateTime MonthEnd { get; init; }
+        public required DateTime PrevMonthStart { get; init; }
+        public required DateTime PrevMonthEnd { get; init; }
+        public required DateTime YearStart { get; init; }
+        public required DateTime YearEnd { get; init; }
+
+        public static DashboardPeriods Create(DateTime dayStart)
+        {
+            var normalizedDay = dayStart.Date;
+            var diff = (7 + (normalizedDay.DayOfWeek - DayOfWeek.Monday)) % 7;
+            var weekStart = normalizedDay.AddDays(-diff).Date;
+            var monthStart = new DateTime(normalizedDay.Year, normalizedDay.Month, 1);
+            var prevMonthStart = monthStart.AddMonths(-1);
+            var yearStart = new DateTime(normalizedDay.Year, 1, 1);
+
+            return new DashboardPeriods
+            {
+                DayStart = normalizedDay,
+                DayEnd = normalizedDay.AddDays(1),
+                YesterdayStart = normalizedDay.AddDays(-1),
+                YesterdayEnd = normalizedDay,
+                WeekStart = weekStart,
+                WeekEnd = weekStart.AddDays(7),
+                MonthStart = monthStart,
+                MonthEnd = monthStart.AddMonths(1),
+                PrevMonthStart = prevMonthStart,
+                PrevMonthEnd = monthStart,
+                YearStart = yearStart,
+                YearEnd = yearStart.AddYears(1)
+            };
+        }
+    }
+
+    private sealed record ReceiptMetrics
+    {
+        public decimal SalesToday { get; init; }
+        public decimal SalesYesterday { get; init; }
+        public decimal SalesWeekly { get; init; }
+        public decimal SalesMonthly { get; init; }
+        public decimal SalesPrevMonth { get; init; }
+        public decimal SalesYearly { get; init; }
+        public decimal SalesAllTime { get; init; }
+        public decimal UnpaidAmountAllTime { get; init; }
+        public int UnpaidInvoiceCount { get; init; }
+    }
+
+    private sealed record ExpenseMetrics
+    {
+        public decimal ExpenseToday { get; init; }
+        public decimal ExpenseYesterday { get; init; }
+        public decimal ExpenseMonthly { get; init; }
+        public decimal ExpensePrevMonth { get; init; }
+        public decimal ExpenseAllTime { get; init; }
+        public decimal ExpenseBeforeToday { get; init; }
+        public decimal DailyExpenseTotal { get; init; }
+        public decimal WeeklyExpenseTotal { get; init; }
+        public decimal MonthlyExpenseBucketTotal { get; init; }
+        public decimal OtherExpenseTotal { get; init; }
+    }
+
+    private sealed record PaymentMetrics
+    {
+        public decimal PaymentsToday { get; init; }
+        public decimal PaymentsYesterday { get; init; }
+        public decimal PaymentsMonthly { get; init; }
+        public decimal PaymentsPrevMonth { get; init; }
+        public decimal PaymentsAllTime { get; init; }
+        public decimal PaymentsBeforeToday { get; init; }
+    }
+
+    private sealed record ProfitMetrics
+    {
+        public decimal RevenueAllTime { get; init; }
+        public decimal CostAllTime { get; init; }
+        public decimal RevenueMonth { get; init; }
+        public decimal CostMonth { get; init; }
+        public decimal RevenuePrevMonth { get; init; }
+        public decimal CostPrevMonth { get; init; }
+    }
+
+    private sealed record ItemMetrics
+    {
+        public decimal ItemsToday { get; init; }
+        public decimal ItemsYesterday { get; init; }
+        public List<CategoryValuePoint> ItemsTodayByUnit { get; init; } = [];
     }
 }

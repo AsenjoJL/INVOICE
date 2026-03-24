@@ -28,9 +28,9 @@
                 <a href="/Orders/VegetableOutletOrder" class="dash-btn dash-btn-light"><i class="bi bi-basket2"></i> New Order</a>
             </div>
             <div class="dashboard-hero-highlight">
-                <span>Cash Position</span>
+                <span>Cash Balance</span>
                 <strong>₱@Model.CashBalance.ToString("N0")</strong>
-                <small>@(Model.CashBalance == 0 ? "Waiting for new collections" : "Updated from sales and expenses")</small>
+                <small>@(Model.CashBalance == 0 ? "Waiting for recorded inflows" : "Recorded payments minus expenses")</small>
             </div>
         </div>
     </section>
@@ -71,7 +71,7 @@
         <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100 is-primary kpi-card-priority">
                 <div class="metric-head">
-                    <div class="metric-label">Sales Month</div>
+                    <div class="metric-label">Total Sales Month</div>
                     <span class="kpi-trend @TrendBadgeClass(Model.SalesMonthlyTrendPercent)"><i class="bi @TrendIcon(Model.SalesMonthlyTrendPercent)"></i> @TrendText(Model.SalesMonthlyTrendPercent)</span>
                 </div>
                 <div class="metric-value">₱@Model.SalesMonthly.ToString("N0")</div>
@@ -91,10 +91,10 @@
         <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100 is-danger">
                 <div class="metric-head">
-                    <div class="metric-label">Unpaid</div>
+                    <div class="metric-label">Receivables</div>
                     <span class="kpi-trend @TrendBadgeClass(Model.UnpaidTrendPercent)"><i class="bi @TrendIcon(Model.UnpaidTrendPercent)"></i> @TrendText(Model.UnpaidTrendPercent)</span>
                 </div>
-                <div class="metric-value">₱@Model.UnpaidAmount.ToString("N0")</div>
+                <div class="metric-value">₱@Model.OutstandingReceivablesAllTime.ToString("N0")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@Model.UnpaidInvoiceCount invoice@(Model.UnpaidInvoiceCount == 1 ? "" : "s")</span>
                     <a class="unpaid-link" href="@Url.Action("UnpaidOrders", "Orders")">View</a>
@@ -159,11 +159,57 @@
         <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100 is-success">
                 <div class="metric-head">
-                    <div class="metric-label">Cash On Hand</div>
+                    <div class="metric-label">Cash Balance</div>
                     <span class="kpi-trend @TrendBadgeClass(Model.CashBalanceTrendPercent)"><i class="bi @TrendIcon(Model.CashBalanceTrendPercent)"></i> @TrendText(Model.CashBalanceTrendPercent)</span>
                 </div>
                 <div class="metric-value">₱@Model.CashBalance.ToString("N0")</div>
-                <div class="metric-state">@(Model.CashBalance == 0 ? "Neutral cash position" : "Payments minus expenses")</div>
+                <div class="metric-state">@(Model.CashBalance == 0 ? "Neutral cash position" : "Recorded inflows minus expenses")</div>
+            </div>
+        </div>
+    </div>
+
+    <section class="dashboard-section-heading">
+        <div>
+            <h2>Sales, Collections, and Receivables</h2>
+            <p>Keep sales, actual collections, and open receivables clearly separated.</p>
+        </div>
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Total Sales All Time</div>
+                </div>
+                <div class="metric-value">₱@Model.TotalSalesAllTime.ToString("N0")</div>
+                <div class="metric-state">All recorded receipt sales</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Collected Revenue Month</div>
+                </div>
+                <div class="metric-value">₱@Model.CollectedRevenueMonthly.ToString("N0")</div>
+                <div class="metric-state">Payments recorded this month</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Collected Revenue All Time</div>
+                </div>
+                <div class="metric-value">₱@Model.CollectedRevenueAllTime.ToString("N0")</div>
+                <div class="metric-state">All recorded payment inflows</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
+                    <div class="metric-label">Receivables Month</div>
+                </div>
+                <div class="metric-value">₱@Model.OutstandingReceivablesMonthly.ToString("N0")</div>
+                <div class="metric-state">Monthly sales minus monthly payments</div>
             </div>
         </div>
     </div>

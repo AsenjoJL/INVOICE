@@ -6,6 +6,10 @@ public class DashboardViewModel
     public decimal SalesWeekly { get; set; }
     public decimal SalesMonthly { get; set; }
     public decimal SalesYearly { get; set; }
+    public decimal CollectedRevenueMonthly { get; set; }
+    public decimal CollectedRevenueAllTime { get; set; }
+    public decimal OutstandingReceivablesMonthly { get; set; }
+    public decimal OutstandingReceivablesAllTime { get; set; }
     public decimal ExpenseMonthly { get; set; }
     public decimal DailyExpenseTotal { get; set; }
     public decimal WeeklyExpenseTotal { get; set; }
