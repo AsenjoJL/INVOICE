@@ -1708,12 +1708,34 @@ h6 {
     background-color: white;
   }
 
+  .app-shell,
+  .content,
+  .content-area {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .content-area > .container,
+  .content-area > .container-fluid {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .card {
     box-shadow: none;
     border: none;
   }
 
   .dashboard-toolbar,
+  .admin-topbar,
+  .footer,
   .sidebar,
   .mobile-topbar {
     display: none;
