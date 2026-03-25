@@ -604,6 +604,7 @@
         const scrollKey = 'priceVersus:windowScroll';
         const tableScrollKey = 'priceVersus:tableScroll';
         const restoreFlagKey = 'priceVersus:restoreAfterSave';
+        const restoreHintKey = 'priceVersus:restoreHint';
 
         const parseNumber = (value) => {
             if (!value) return 0;
@@ -616,10 +617,14 @@
                 sessionStorage.setItem(tableScrollKey, String(tableWrap.scrollTop || 0));
             }
             sessionStorage.setItem(restoreFlagKey, 'true');
+            sessionStorage.setItem(restoreHintKey, window.location.pathname);
         };
 
         const restoreScrollState = () => {
-            if (sessionStorage.getItem(restoreFlagKey) !== 'true') return;
+            const shouldRestore = sessionStorage.getItem(restoreFlagKey) === 'true'
+                || sessionStorage.getItem(restoreHintKey) === window.location.pathname;
+
+            if (!shouldRestore) return;
 
             const windowScroll = parseInt(sessionStorage.getItem(scrollKey) || '', 10);
             const tableScroll = parseInt(sessionStorage.getItem(tableScrollKey) || '', 10);
@@ -637,6 +642,7 @@
                 sessionStorage.removeItem(scrollKey);
                 sessionStorage.removeItem(tableScrollKey);
                 sessionStorage.removeItem(restoreFlagKey);
+                sessionStorage.removeItem(restoreHintKey);
             });
         };
 

@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Edit Laborer";
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Index", "Laborers") ?? "/Laborers";
 }
 
 <partial name="_WorkforceStyles" />
@@ -16,6 +17,8 @@
                 <form asp-action="Edit">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     <input type="hidden" asp-for="Id" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="returnScrollY" id="laborerReturnScrollY" value="0" />
 
                     <div class="row g-2 mb-3">
                         <div class="col-md-8">
@@ -88,7 +91,7 @@
 
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn workforce-btn workforce-btn-primary btn-lg">Save Changes</button>
-                        <a asp-action="Index" class="btn workforce-btn workforce-btn-neutral">Cancel</a>
+                        <a href="@returnUrl" class="btn workforce-btn workforce-btn-neutral">Cancel</a>
                     </div>
                 </form>
             </div>
@@ -98,4 +101,12 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (() => {
+            const input = document.getElementById('laborerReturnScrollY');
+            if (!input) return;
+            const saved = parseInt(sessionStorage.getItem('laborers:index:scrollY') || '0', 10);
+            if (!Number.isNaN(saved) && saved > 0) input.value = saved;
+        })();
+    </script>
 }

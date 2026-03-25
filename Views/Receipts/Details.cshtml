@@ -33,6 +33,7 @@
                   asp-route-id="@Model.Id"
                   asp-route-returnUrl="@returnUrl"
                   class="d-inline">
+                <input type="hidden" name="returnScrollY" id="receiptDetailReturnScrollY" value="0" />
                 <button type="submit"
                         class="invoice-btn invoice-btn-danger"
                         onclick="return confirm('Delete this receipt? Sales, profit, and stock will be updated.');">
@@ -121,3 +122,12 @@
         </div>
     </div>
 </div>
+
+<script>
+    (() => {
+        const input = document.getElementById('receiptDetailReturnScrollY');
+        if (!input) return;
+        const saved = parseInt(sessionStorage.getItem('receipts:index:scrollY') || '0', 10);
+        if (!Number.isNaN(saved) && saved > 0) input.value = saved;
+    })();
+</script>

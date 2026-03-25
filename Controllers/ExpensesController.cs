@@ -70,16 +70,19 @@ public class ExpensesController : Controller
     }
 
     // GET: Expenses/Create
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(string? returnUrl = null)
     {
         await PopulateExpenseOptionsAsync(ExpenseCategoryGroup.Other);
+        ViewBag.ReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : Url.Action(nameof(Index));
         return View();
     }
 
     // POST: Expenses/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Date,Category,Amount,PaymentMethod,ReferenceNo,Description")] Expense expense, ExpenseCategoryGroup categoryGroup)
+    public async Task<IActionResult> Create([Bind("Id,Date,Category,Amount,PaymentMethod,ReferenceNo,Description")] Expense expense, ExpenseCategoryGroup categoryGroup, string? returnUrl = null, int? returnScrollY = null)
     {
         expense.Category = ExpenseCategoryCatalog.NormalizeName(expense.Category);
         expense.Vendor = null;
@@ -97,9 +100,24 @@ public class ExpensesController : Controller
             await _context.SaveChangesAsync();
             _cacheInvalidator.InvalidateDashboard();
             _cacheInvalidator.InvalidateProfitReports();
+
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                var redirectUrl = returnUrl;
+                if (returnScrollY.HasValue && returnScrollY.Value > 0)
+                {
+                    redirectUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+                }
+
+                return LocalRedirect(redirectUrl);
+            }
+
             return RedirectToAction(nameof(Index));
         }
         await PopulateExpenseOptionsAsync(categoryGroup);
+        ViewBag.ReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : Url.Action(nameof(Index));
         return View(expense);
     }
 

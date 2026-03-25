@@ -4,6 +4,7 @@
     ViewData["Title"] = "Suppliers";
     ViewData["NotePurpose"] = "Manage supplier contacts for purchases and payables.";
     ViewData["NoteInstructions"] = "Add suppliers to auto-fill details when recording purchases.";
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <partial name="_SupplierStyles" />
@@ -38,7 +39,7 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            <tr>
+                            <tr class="supplier-row" data-id="@item.Id">
                                 <td>
                                     <div class="supplier-name">@item.Name</div>
                                     <div class="supplier-meta">@(!string.IsNullOrWhiteSpace(item.ContactPerson) ? item.ContactPerson : "No contact person")</div>
@@ -59,10 +60,10 @@
                                 </td>
                                 <td>
                                     <div class="supplier-actions-row d-flex gap-2">
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm btn-outline-primary supplier-return-link" data-supplier-id="@item.Id" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                        <a asp-action="Delete" asp-route-id="@item.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm btn-outline-danger supplier-return-link" data-supplier-id="@item.Id" title="Deactivate">
                                             <i class="bi bi-trash"></i>
                                         </a>
                                     </div>
@@ -75,3 +76,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/suppliers-index.js" asp-append-version="true"></script>
+}

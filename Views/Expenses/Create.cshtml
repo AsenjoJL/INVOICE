@@ -16,6 +16,7 @@
     var dateValue = Model is not null && Model.Date != default
         ? Model.Date.ToString("yyyy-MM-dd")
         : DateTime.Now.ToString("yyyy-MM-dd");
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Index", "Expenses") ?? "/Expenses";
 }
 
 <partial name="_ExpenseStyles" />
@@ -55,6 +56,8 @@
 
                 <form asp-action="Create" method="post" id="expenseForm">
                     @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="returnScrollY" id="expenseReturnScrollY" value="0" />
                     <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
 
                     <div class="expense-form-shell">
@@ -134,7 +137,7 @@
                                     <div>Amounts stay blank until you type them and the form keeps the grouped expense structure you asked for.</div>
                                 </div>
                                 <div class="expense-button-row">
-                                    <a asp-action="Index" class="expense-secondary-btn">Cancel</a>
+                                    <a href="@returnUrl" class="expense-secondary-btn">Cancel</a>
                                     <button type="submit" class="expense-primary-btn">Record Expense</button>
                                 </div>
                             </div>
@@ -216,6 +219,14 @@
             categoryInput.addEventListener('change', syncGroup);
             categoryInput.addEventListener('blur', syncGroup);
             syncGroup();
+        }
+
+        const returnScroll = document.getElementById('expenseReturnScrollY');
+        if (returnScroll) {
+            const saved = parseInt(sessionStorage.getItem('expenses:index:scrollY') || '0', 10);
+            if (!Number.isNaN(saved) && saved > 0) {
+                returnScroll.value = saved;
+            }
         }
     })();
 </script>

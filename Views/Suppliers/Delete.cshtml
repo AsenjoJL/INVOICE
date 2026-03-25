@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Deactivate Supplier";
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Index", "Suppliers") ?? "/Suppliers";
 }
 
 <partial name="_SupplierStyles" />
@@ -29,11 +30,22 @@
 
             <form asp-action="Delete">
                 <input type="hidden" asp-for="Id" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <input type="hidden" name="returnScrollY" id="supplierDeleteReturnScrollY" value="0" />
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn supplier-btn-danger">Deactivate</button>
-                    <a asp-action="Index" class="btn supplier-btn-neutral">Cancel</a>
+                    <a href="@returnUrl" class="btn supplier-btn-neutral">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    (() => {
+        const input = document.getElementById('supplierDeleteReturnScrollY');
+        if (!input) return;
+        const saved = parseInt(sessionStorage.getItem('suppliers:index:scrollY') || '0', 10);
+        if (!Number.isNaN(saved) && saved > 0) input.value = saved;
+    })();
+</script>

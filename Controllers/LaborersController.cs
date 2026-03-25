@@ -3,6 +3,7 @@ using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace HazelInvoice.Controllers;
@@ -51,19 +52,20 @@ public class LaborersController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    public async Task<IActionResult> Edit(int id)
+    public async Task<IActionResult> Edit(int id, string? returnUrl = null)
     {
         var laborer = await _context.Laborers.FindAsync(id);
         if (laborer == null)
         {
             return NotFound();
         }
+        ViewBag.ReturnUrl = returnUrl;
         return View(laborer);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, Laborer laborer)
+    public async Task<IActionResult> Edit(int id, Laborer laborer, string? returnUrl = null, int? returnScrollY = null)
     {
         if (id != laborer.Id)
         {
@@ -78,12 +80,24 @@ public class LaborersController : Controller
         _context.Update(laborer);
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateLaborers();
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            var redirectUrl = QueryHelpers.AddQueryString(returnUrl, "highlightLaborerId", laborer.Id.ToString());
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
+        }
+
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Archive(int id, string? returnUrl)
+    public async Task<IActionResult> Archive(int id, string? returnUrl, int? returnScrollY = null)
     {
         var laborer = await _context.Laborers.FindAsync(id);
         if (laborer == null)
@@ -96,16 +110,22 @@ public class LaborersController : Controller
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateLaborers();
 
-        if (!string.IsNullOrWhiteSpace(returnUrl))
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
-            return Redirect(returnUrl);
+            var redirectUrl = QueryHelpers.AddQueryString(returnUrl, "highlightLaborerId", laborer.Id.ToString());
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
         }
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Reactivate(int id, string? returnUrl)
+    public async Task<IActionResult> Reactivate(int id, string? returnUrl, int? returnScrollY = null)
     {
         var laborer = await _context.Laborers.FindAsync(id);
         if (laborer == null)
@@ -118,9 +138,15 @@ public class LaborersController : Controller
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateLaborers();
 
-        if (!string.IsNullOrWhiteSpace(returnUrl))
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
-            return Redirect(returnUrl);
+            var redirectUrl = QueryHelpers.AddQueryString(returnUrl, "highlightLaborerId", laborer.Id.ToString());
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
         }
         return RedirectToAction(nameof(Index));
     }

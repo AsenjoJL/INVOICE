@@ -3,6 +3,7 @@ using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace HazelInvoice.Controllers;
@@ -49,19 +50,20 @@ public class SuppliersController : Controller
         return View(supplier);
     }
 
-    public async Task<IActionResult> Edit(int? id)
+    public async Task<IActionResult> Edit(int? id, string? returnUrl = null)
     {
         if (id == null) return NotFound();
 
         var supplier = await _context.Suppliers.FindAsync(id);
         if (supplier == null) return NotFound();
 
+        ViewBag.ReturnUrl = returnUrl;
         return View(supplier);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, Supplier supplier)
+    public async Task<IActionResult> Edit(int id, Supplier supplier, string? returnUrl = null, int? returnScrollY = null)
     {
         if (id != supplier.Id) return NotFound();
 
@@ -70,25 +72,39 @@ public class SuppliersController : Controller
             _context.Update(supplier);
             await _context.SaveChangesAsync();
             _cacheInvalidator.InvalidateSuppliers();
+
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                var redirectUrl = QueryHelpers.AddQueryString(returnUrl, "highlightSupplierId", supplier.Id.ToString());
+                if (returnScrollY.HasValue && returnScrollY.Value > 0)
+                {
+                    redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+                }
+
+                return LocalRedirect(redirectUrl);
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
+        ViewBag.ReturnUrl = returnUrl;
         return View(supplier);
     }
 
-    public async Task<IActionResult> Delete(int? id)
+    public async Task<IActionResult> Delete(int? id, string? returnUrl = null)
     {
         if (id == null) return NotFound();
 
         var supplier = await _context.Suppliers.FindAsync(id);
         if (supplier == null) return NotFound();
 
+        ViewBag.ReturnUrl = returnUrl;
         return View(supplier);
     }
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
+    public async Task<IActionResult> DeleteConfirmed(int id, string? returnUrl = null, int? returnScrollY = null)
     {
         var supplier = await _context.Suppliers.FindAsync(id);
         if (supplier == null) return NotFound();
@@ -97,6 +113,17 @@ public class SuppliersController : Controller
         _context.Update(supplier);
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateSuppliers();
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            var redirectUrl = QueryHelpers.AddQueryString(returnUrl, "highlightSupplierId", supplier.Id.ToString());
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
+        }
 
         return RedirectToAction(nameof(Index));
     }

@@ -5,6 +5,7 @@
     ViewData["NotePurpose"] = "Manage laborers and daily wage rates.";
     ViewData["NoteInstructions"] = "Archive laborers instead of deleting to keep payroll history intact.";
     var showArchived = (bool?)ViewData["ShowArchived"] ?? false;
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <partial name="_WorkforceStyles" />
@@ -44,7 +45,7 @@
                     <tbody>
                         @foreach (var laborer in Model)
                         {
-                            <tr>
+                            <tr class="laborer-row" data-id="@laborer.Id">
                                 <td class="fw-bold">@laborer.FullName</td>
                                 <td class="workforce-money">₱@laborer.DailyRate.ToString("N2")</td>
                                 <td>@laborer.Role</td>
@@ -59,15 +60,16 @@
                                     }
                                 </td>
                                 <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@laborer.Id" class="btn btn-sm workforce-btn workforce-btn-neutral">
+                                    <a asp-action="Edit" asp-route-id="@laborer.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm workforce-btn workforce-btn-neutral laborers-return-link" data-laborer-id="@laborer.Id">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     @if (laborer.IsActive)
                                     {
-                                        <form asp-action="Archive" method="post" class="d-inline">
+                                        <form asp-action="Archive" method="post" class="d-inline laborers-return-form" data-laborer-id="@laborer.Id">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@laborer.Id" />
-                                            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                            <input type="hidden" name="returnScrollY" class="laborers-return-scroll" value="0" />
                                             <button type="submit" class="btn btn-sm workforce-btn btn-outline-danger ms-1">
                                                 <i class="bi bi-archive"></i>
                                             </button>
@@ -75,10 +77,11 @@
                                     }
                                     else
                                     {
-                                        <form asp-action="Reactivate" method="post" class="d-inline">
+                                        <form asp-action="Reactivate" method="post" class="d-inline laborers-return-form" data-laborer-id="@laborer.Id">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@laborer.Id" />
-                                            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                            <input type="hidden" name="returnScrollY" class="laborers-return-scroll" value="0" />
                                             <button type="submit" class="btn btn-sm workforce-btn btn-outline-success ms-1">
                                                 <i class="bi bi-arrow-counterclockwise"></i>
                                             </button>
@@ -99,3 +102,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/laborers-index.js" asp-append-version="true"></script>
+}

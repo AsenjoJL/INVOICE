@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Expenses";
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <partial name="_ExpenseStyles" />
@@ -40,7 +41,7 @@
                         <h1 class="expense-title expense-title-compact">Expense Ledger</h1>
                         <div class="expense-sub">Grouped by category schedule with section totals and overall total.</div>
                     </div>
-                    <a asp-action="Create" class="expense-primary-btn">Record Expense</a>
+                    <a asp-action="Create" asp-route-returnUrl="@returnUrl" class="expense-primary-btn expense-return-link">Record Expense</a>
                 </div>
 
                 <div class="expense-ledger-total">
@@ -108,3 +109,7 @@
         </main>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/expenses-index.js" asp-append-version="true"></script>
+}

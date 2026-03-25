@@ -6,6 +6,7 @@
     ViewData["NotePurpose"] = "Track supplier purchases and payment status.";
     ViewData["NoteInstructions"] = "Filter by date/status, then open a purchase to review or mark as paid.";
     var statuses = new[] { "All", "Unpaid", "Partial", "Paid" };
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <partial name="_PurchaseStyles" />
@@ -103,7 +104,7 @@
                                     PaymentStatus.Partial => "badge bg-warning text-dark",
                                     _ => "badge bg-danger"
                                 };
-                                <tr>
+                                <tr class="purchase-row" data-id="@p.Id">
                                     <td>@p.PurchaseNumber</td>
                                     <td>@p.Date.ToString("yyyy-MM-dd")</td>
                                     <td>@p.SupplierName</td>
@@ -112,14 +113,16 @@
                                     <td class="text-end text-danger">@balance.ToString("N2")</td>
                                     <td><span class="@statusClass">@p.Status</span></td>
                                     <td class="text-end">
-                                        <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm purchase-btn purchase-btn-neutral">
+                                        <a asp-action="Details" asp-route-id="@p.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm purchase-btn purchase-btn-neutral purchase-return-link" data-purchase-id="@p.Id">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         @if (p.Status != PaymentStatus.Paid)
                                         {
-                                            <form asp-action="MarkAsPaid" method="post" class="d-inline">
+                                            <form asp-action="MarkAsPaid" method="post" class="d-inline purchase-return-form" data-purchase-id="@p.Id">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@p.Id" />
+                                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                <input type="hidden" name="returnScrollY" class="purchase-return-scroll" value="0" />
                                                 <button type="submit" class="btn btn-sm purchase-btn purchase-btn-primary" onclick="return confirm('Mark this purchase as paid?');">
                                                     <i class="bi bi-check2-circle"></i>
                                                 </button>
@@ -135,3 +138,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/purchases-index.js" asp-append-version="true"></script>
+}

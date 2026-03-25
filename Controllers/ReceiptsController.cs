@@ -331,7 +331,7 @@ public class ReceiptsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(int id, string? returnUrl = null)
+    public async Task<IActionResult> Delete(int id, string? returnUrl = null, int? returnScrollY = null)
     {
         var deleted = await _receiptService.DeleteReceiptAsync(id, User?.Identity?.Name, HttpContext.RequestAborted);
 
@@ -343,7 +343,13 @@ public class ReceiptsController : Controller
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
-            return Redirect(returnUrl);
+            var redirectUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(returnUrl, "highlightReceiptId", id.ToString());
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
         }
 
         return RedirectToAction(nameof(Index));

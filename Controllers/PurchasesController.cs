@@ -4,6 +4,7 @@ using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace HazelInvoice.Controllers;
@@ -239,7 +240,7 @@ public class PurchasesController : Controller
     }
 
     // GET: Purchases/Details/5
-    public async Task<IActionResult> Details(int id)
+    public async Task<IActionResult> Details(int id, string? returnUrl = null)
     {
         var purchase = await _context.Purchases
             .Include(p => p.Lines)
@@ -247,13 +248,16 @@ public class PurchasesController : Controller
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (purchase == null) return NotFound();
+        ViewBag.ReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : Url.Action(nameof(Index));
         return View(purchase);
     }
 
     // POST: Purchases/AddPayment
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddPayment(int id, decimal amount, PaymentMethod paymentMethod, string? referenceNo)
+    public async Task<IActionResult> AddPayment(int id, decimal amount, PaymentMethod paymentMethod, string? referenceNo, string? returnUrl = null, int? returnScrollY = null)
     {
         var purchase = await _context.Purchases
             .Include(p => p.Payments)
@@ -263,7 +267,7 @@ public class PurchasesController : Controller
         if (amount <= 0)
         {
             TempData["Error"] = "Payment amount must be greater than 0.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(Details), new { id, returnUrl });
         }
 
         var payment = new PurchasePayment
@@ -284,13 +288,24 @@ public class PurchasesController : Controller
             purchase.Status = PaymentStatus.Partial;
 
         await _context.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            var redirectUrl = QueryHelpers.AddQueryString(returnUrl, "highlightPurchaseId", purchase.Id.ToString());
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
+        }
+
         return RedirectToAction(nameof(Details), new { id });
     }
 
     // POST: Purchases/MarkAsPaid
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> MarkAsPaid(int id)
+    public async Task<IActionResult> MarkAsPaid(int id, string? returnUrl = null, int? returnScrollY = null)
     {
         var purchase = await _context.Purchases.FindAsync(id);
         if (purchase == null) return NotFound();
@@ -298,6 +313,17 @@ public class PurchasesController : Controller
         purchase.PaidAmount = purchase.TotalAmount;
         purchase.Status = PaymentStatus.Paid;
         await _context.SaveChangesAsync();
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            var redirectUrl = QueryHelpers.AddQueryString(returnUrl, "highlightPurchaseId", purchase.Id.ToString());
+            if (returnScrollY.HasValue && returnScrollY.Value > 0)
+            {
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restoreScrollY", returnScrollY.Value.ToString());
+            }
+
+            return LocalRedirect(redirectUrl);
+        }
 
         return RedirectToAction(nameof(Index));
     }

@@ -99,25 +99,29 @@
         sortDir: SORT.ASC,
         selectedIds: new Set()
     };
-    const shouldRestore = sessionStorage.getItem('products:index:restore') === '1';
+    const hasExplicitRestoreParams =
+        (Number.isFinite(restorePageParam) && restorePageParam > 0) ||
+        (Number.isFinite(restoreScrollParam) && restoreScrollParam > 0) ||
+        !!highlightProductId;
+    const shouldRestore = sessionStorage.getItem('products:index:restore') === '1' || hasExplicitRestoreParams;
 
     function loadViewState() {
-        if (!shouldRestore) return;
+        if (shouldRestore) {
+            try {
+                const saved = JSON.parse(sessionStorage.getItem('products:index:viewState') || 'null');
+                if (saved) {
+                    if (saved.activeStatusFilter) state.activeStatusFilter = saved.activeStatusFilter;
+                    if (Number.isFinite(saved.currentPage) && saved.currentPage > 0) state.currentPage = saved.currentPage;
+                    if (Number.isFinite(saved.pageSize) && saved.pageSize > 0) state.pageSize = saved.pageSize;
+                    if (saved.sortKey) state.sortKey = saved.sortKey;
+                    if (saved.sortDir) state.sortDir = saved.sortDir;
 
-        try {
-            const saved = JSON.parse(sessionStorage.getItem('products:index:viewState') || 'null');
-            if (!saved) return;
-
-            if (saved.activeStatusFilter) state.activeStatusFilter = saved.activeStatusFilter;
-            if (Number.isFinite(saved.currentPage) && saved.currentPage > 0) state.currentPage = saved.currentPage;
-            if (Number.isFinite(saved.pageSize) && saved.pageSize > 0) state.pageSize = saved.pageSize;
-            if (saved.sortKey) state.sortKey = saved.sortKey;
-            if (saved.sortDir) state.sortDir = saved.sortDir;
-
-            if (searchInput && typeof saved.searchTerm === 'string') searchInput.value = saved.searchTerm;
-            if (categoryFilter && typeof saved.categoryValue === 'string') categoryFilter.value = saved.categoryValue;
-            if (pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
-        } catch {
+                    if (searchInput && typeof saved.searchTerm === 'string') searchInput.value = saved.searchTerm;
+                    if (categoryFilter && typeof saved.categoryValue === 'string') categoryFilter.value = saved.categoryValue;
+                    if (pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
+                }
+            } catch {
+            }
         }
 
         if (Number.isFinite(restorePageParam) && restorePageParam > 0) {

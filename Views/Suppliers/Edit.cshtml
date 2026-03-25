@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Edit Supplier";
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Index", "Suppliers") ?? "/Suppliers";
 }
 
 <partial name="_SupplierStyles" />
@@ -16,13 +17,15 @@
                         <h4>Update Supplier</h4>
                         <p class="subtitle">Keep supplier details accurate for purchases and reports.</p>
                     </div>
-                    <a asp-action="Index" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
+                    <a href="@returnUrl" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
                 </div>
             </div>
 
             <div class="supplier-form-body">
                 <form asp-action="Edit">
                     <input type="hidden" asp-for="Id" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="returnScrollY" id="supplierReturnScrollY" value="0" />
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
                     <div class="supplier-form-section">
@@ -74,7 +77,7 @@
                     </div>
 
                     <div class="supplier-form-section supplier-form-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <a href="@returnUrl" class="btn btn-outline-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
                     </div>
                 </form>
@@ -85,4 +88,12 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (() => {
+            const input = document.getElementById('supplierReturnScrollY');
+            if (!input) return;
+            const saved = parseInt(sessionStorage.getItem('suppliers:index:scrollY') || '0', 10);
+            if (!Number.isNaN(saved) && saved > 0) input.value = saved;
+        })();
+    </script>
 }

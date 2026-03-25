@@ -23,14 +23,17 @@
         });
     });
 
-    const shouldRestore = sessionStorage.getItem(RESTORE_KEY) === '1';
+    const url = new URL(window.location.href);
+    const restoreScrollParam = parseInt(url.searchParams.get('restoreScrollY') || '0', 10);
+    const highlightIdFromQuery = url.searchParams.get('highlightCustomerId');
+    const shouldRestore = sessionStorage.getItem(RESTORE_KEY) === '1'
+        || (Number.isFinite(restoreScrollParam) && restoreScrollParam > 0)
+        || !!highlightIdFromQuery;
     if (!shouldRestore) {
         return;
     }
 
-    const url = new URL(window.location.href);
-    const restoreScrollParam = parseInt(url.searchParams.get('restoreScrollY') || '0', 10);
-    const highlightId = url.searchParams.get('highlightCustomerId') || sessionStorage.getItem(HIGHLIGHT_KEY);
+    const highlightId = highlightIdFromQuery || sessionStorage.getItem(HIGHLIGHT_KEY);
     const highlightedRow = highlightId
         ? document.querySelector(`.outlet-row[data-id="${highlightId}"]`)
         : null;

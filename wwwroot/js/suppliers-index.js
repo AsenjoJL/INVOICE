@@ -1,55 +1,48 @@
 (function () {
     'use strict';
 
-    const SCROLL_KEY = 'receipts:index:scrollY';
-    const RESTORE_KEY = 'receipts:index:restore';
-    const HIGHLIGHT_KEY = 'receipts:index:highlightId';
+    const SCROLL_KEY = 'suppliers:index:scrollY';
+    const RESTORE_KEY = 'suppliers:index:restore';
+    const HIGHLIGHT_KEY = 'suppliers:index:highlightId';
 
-    function rememberListPosition(receiptId) {
+    function rememberListPosition(supplierId) {
         sessionStorage.setItem(SCROLL_KEY, String(window.scrollY || 0));
         sessionStorage.setItem(RESTORE_KEY, '1');
 
-        if (receiptId) {
-            sessionStorage.setItem(HIGHLIGHT_KEY, String(receiptId));
+        if (supplierId) {
+            sessionStorage.setItem(HIGHLIGHT_KEY, String(supplierId));
         } else {
             sessionStorage.removeItem(HIGHLIGHT_KEY);
         }
     }
 
-    document.querySelectorAll('.receipt-return-link').forEach(link => {
+    document.querySelectorAll('.supplier-return-link').forEach(link => {
         link.addEventListener('click', () => {
-            const receiptId = link.getAttribute('data-receipt-id');
-            rememberListPosition(receiptId);
-        });
-    });
-
-    document.querySelectorAll('.receipt-return-form').forEach(form => {
-        form.addEventListener('submit', () => {
-            const receiptId = form.getAttribute('data-receipt-id');
-            rememberListPosition(receiptId);
+            rememberListPosition(link.getAttribute('data-supplier-id'));
         });
     });
 
     const url = new URL(window.location.href);
     const restoreScrollParam = parseInt(url.searchParams.get('restoreScrollY') || '0', 10);
-    const highlightReceiptId = url.searchParams.get('highlightReceiptId');
+    const highlightSupplierId = url.searchParams.get('highlightSupplierId');
     const shouldRestore = sessionStorage.getItem(RESTORE_KEY) === '1'
         || (Number.isFinite(restoreScrollParam) && restoreScrollParam > 0)
-        || !!highlightReceiptId;
+        || !!highlightSupplierId;
+
     if (!shouldRestore) {
         return;
     }
 
-    const highlightId = highlightReceiptId || sessionStorage.getItem(HIGHLIGHT_KEY);
+    const highlightId = highlightSupplierId || sessionStorage.getItem(HIGHLIGHT_KEY);
     const highlightedRow = highlightId
-        ? document.querySelector(`.receipt-row[data-id="${highlightId}"]`)
+        ? document.querySelector(`.supplier-row[data-id="${highlightId}"]`)
         : null;
 
     if (highlightedRow instanceof HTMLElement) {
         window.requestAnimationFrame(() => {
             highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            highlightedRow.classList.add('receipt-row-highlight');
-            window.setTimeout(() => highlightedRow.classList.remove('receipt-row-highlight'), 2200);
+            highlightedRow.classList.add('table-primary');
+            window.setTimeout(() => highlightedRow.classList.remove('table-primary'), 2200);
         });
     } else {
         const y = parseInt(String(restoreScrollParam > 0 ? restoreScrollParam : (sessionStorage.getItem(SCROLL_KEY) || '0')), 10);
@@ -62,9 +55,9 @@
     sessionStorage.removeItem(SCROLL_KEY);
     sessionStorage.removeItem(HIGHLIGHT_KEY);
 
-    if ((Number.isFinite(restoreScrollParam) && restoreScrollParam > 0) || highlightReceiptId) {
+    if ((Number.isFinite(restoreScrollParam) && restoreScrollParam > 0) || highlightSupplierId) {
         url.searchParams.delete('restoreScrollY');
-        url.searchParams.delete('highlightReceiptId');
+        url.searchParams.delete('highlightSupplierId');
         window.history.replaceState({}, document.title, `${url.pathname}${url.search}`);
     }
 })();
