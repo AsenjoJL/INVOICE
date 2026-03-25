@@ -82,13 +82,14 @@
                                 <div class="expense-field-head">
                                     <label asp-for="Category" class="expense-page-label">Category</label>
                                 </div>
-                                <input asp-for="Category" id="expenseCategory" class="expense-field-input" list="expenseCategoryList" placeholder="Type or choose a category" autocomplete="off" />
-                                <datalist id="expenseCategoryList">
+                                <select id="expenseCategorySelect" class="expense-field-select mb-2">
+                                    <option value="">Choose existing category</option>
                                     @foreach (var category in categoryOptions)
                                     {
-                                        <option value="@category"></option>
+                                        <option value="@category" selected="@(string.Equals(Model?.Category, category, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@category</option>
                                     }
-                                </datalist>
+                                </select>
+                                <input asp-for="Category" id="expenseCategory" class="expense-field-input" placeholder="Type or choose a category" autocomplete="off" />
                                 <div class="expense-help">You can type a new category or choose from the daily, weekly, and monthly list.</div>
                                 <span asp-validation-for="Category" class="field-validation-error"></span>
                             </div>
@@ -149,6 +150,7 @@
     (function () {
         const amountInput = document.getElementById('expenseAmount');
         const categoryInput = document.getElementById('expenseCategory');
+        const categorySelect = document.getElementById('expenseCategorySelect');
         const categoryGroup = document.getElementById('categoryGroup');
         if (!amountInput) return;
 
@@ -176,6 +178,9 @@
                 const normalized = categoryInput.value.trim().toUpperCase();
                 if (!normalized) {
                     categoryGroup.value = 'Other';
+                    if (categorySelect) {
+                        categorySelect.value = '';
+                    }
                     return;
                 }
 
@@ -184,6 +189,29 @@
                     categoryGroup.value = existing;
                 }
             };
+
+            if (categorySelect) {
+                categorySelect.addEventListener('change', () => {
+                    if (!categorySelect.value) {
+                        return;
+                    }
+
+                    categoryInput.value = categorySelect.value;
+                    syncGroup();
+                });
+            }
+
+            categoryInput.addEventListener('input', () => {
+                if (!categorySelect) {
+                    return;
+                }
+
+                const exactMatch = Array.from(categorySelect.options).find(option =>
+                    option.value &&
+                    option.value.localeCompare(categoryInput.value.trim(), undefined, { sensitivity: 'accent' }) === 0);
+
+                categorySelect.value = exactMatch ? exactMatch.value : '';
+            });
 
             categoryInput.addEventListener('change', syncGroup);
             categoryInput.addEventListener('blur', syncGroup);
