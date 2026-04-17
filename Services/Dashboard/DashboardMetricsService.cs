@@ -98,10 +98,7 @@ public class DashboardMetricsService : IDashboardMetricsService
         var cashBalance = ComputeCashBalance(payments.PaymentsAllTime, expenses.ExpenseAllTime);
         var previousCashBalance = ComputeCashBalance(payments.PaymentsBeforeToday, expenses.ExpenseBeforeToday);
 
-        var outstandingReceivablesAllTime = receipts.SalesAllTime - payments.PaymentsAllTime;
-        var outstandingReceivablesMonth = receipts.SalesMonthly - payments.PaymentsMonthly;
-        var outstandingReceivablesToday = receipts.SalesToday - payments.PaymentsToday;
-        var outstandingReceivablesYesterday = receipts.SalesYesterday - payments.PaymentsYesterday;
+        var receivables = ComputeReceivableMetrics(receipts, payments);
 
         return new DashboardViewModel
         {
@@ -113,8 +110,9 @@ public class DashboardMetricsService : IDashboardMetricsService
 
             CollectedRevenueMonthly = payments.PaymentsMonthly,
             CollectedRevenueAllTime = payments.PaymentsAllTime,
-            OutstandingReceivablesMonthly = outstandingReceivablesMonth,
-            OutstandingReceivablesAllTime = outstandingReceivablesAllTime,
+            OutstandingReceivablesWeekly = receivables.Week,
+            OutstandingReceivablesMonthly = receivables.Month,
+            OutstandingReceivablesAllTime = receivables.AllTime,
 
             UnpaidAmount = receipts.UnpaidAmountAllTime,
             UnpaidInvoiceCount = receipts.UnpaidInvoiceCount,
@@ -140,7 +138,7 @@ public class DashboardMetricsService : IDashboardMetricsService
             SalesTodayTrendPercent = TrendPercent(receipts.SalesToday, receipts.SalesYesterday),
             SalesMonthlyTrendPercent = TrendPercent(receipts.SalesMonthly, receipts.SalesPrevMonth),
             GrossProfitTrendPercent = TrendPercent(grossProfitMonth, grossProfitPrevMonth),
-            UnpaidTrendPercent = TrendPercent(outstandingReceivablesToday, outstandingReceivablesYesterday),
+            UnpaidTrendPercent = TrendPercent(receivables.Today, receivables.Yesterday),
             ExpenseTodayTrendPercent = TrendPercent(expenses.ExpenseToday, expenses.ExpenseYesterday),
             ExpenseMonthlyTrendPercent = TrendPercent(expenses.ExpenseMonthly, expenses.ExpensePrevMonth),
             CashBalanceTrendPercent = TrendPercent(cashBalance, previousCashBalance),
@@ -155,6 +153,16 @@ public class DashboardMetricsService : IDashboardMetricsService
         // Future flows like withdrawals/transfers can extend this method cleanly.
         return totalInflows - totalOutflows;
     }
+
+    private static ReceivableMetrics ComputeReceivableMetrics(ReceiptMetrics receipts, PaymentMetrics payments)
+        => new()
+        {
+            Today = receipts.SalesToday - payments.PaymentsToday,
+            Yesterday = receipts.SalesYesterday - payments.PaymentsYesterday,
+            Week = receipts.SalesWeekly - payments.PaymentsWeekly,
+            Month = receipts.SalesMonthly - payments.PaymentsMonthly,
+            AllTime = receipts.SalesAllTime - payments.PaymentsAllTime
+        };
 
     private async Task<ReceiptMetrics> GetReceiptMetricsAsync(DashboardPeriods periods, CancellationToken ct)
     {
@@ -219,6 +227,7 @@ public class DashboardMetricsService : IDashboardMetricsService
             {
                 PaymentsToday = g.Where(p => p.Date >= periods.DayStart && p.Date < periods.DayEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
                 PaymentsYesterday = g.Where(p => p.Date >= periods.YesterdayStart && p.Date < periods.YesterdayEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
+                PaymentsWeekly = g.Where(p => p.Date >= periods.WeekStart && p.Date < periods.WeekEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
                 PaymentsMonthly = g.Where(p => p.Date >= periods.MonthStart && p.Date < periods.MonthEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
                 PaymentsPrevMonth = g.Where(p => p.Date >= periods.PrevMonthStart && p.Date < periods.PrevMonthEnd).Sum(p => (decimal?)p.Amount) ?? 0m,
                 PaymentsAllTime = g.Sum(p => (decimal?)p.Amount) ?? 0m,
@@ -422,6 +431,7 @@ public class DashboardMetricsService : IDashboardMetricsService
     {
         public decimal PaymentsToday { get; init; }
         public decimal PaymentsYesterday { get; init; }
+        public decimal PaymentsWeekly { get; init; }
         public decimal PaymentsMonthly { get; init; }
         public decimal PaymentsPrevMonth { get; init; }
         public decimal PaymentsAllTime { get; init; }
@@ -443,5 +453,14 @@ public class DashboardMetricsService : IDashboardMetricsService
         public decimal ItemsToday { get; init; }
         public decimal ItemsYesterday { get; init; }
         public List<CategoryValuePoint> ItemsTodayByUnit { get; init; } = [];
+    }
+
+    private sealed record ReceivableMetrics
+    {
+        public decimal Today { get; init; }
+        public decimal Yesterday { get; init; }
+        public decimal Week { get; init; }
+        public decimal Month { get; init; }
+        public decimal AllTime { get; init; }
     }
 }

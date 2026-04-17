@@ -8,6 +8,7 @@ public class DashboardViewModel
     public decimal SalesYearly { get; set; }
     public decimal CollectedRevenueMonthly { get; set; }
     public decimal CollectedRevenueAllTime { get; set; }
+    public decimal OutstandingReceivablesWeekly { get; set; }
     public decimal OutstandingReceivablesMonthly { get; set; }
     public decimal OutstandingReceivablesAllTime { get; set; }
     public decimal ExpenseMonthly { get; set; }

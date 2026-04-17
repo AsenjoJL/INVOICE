@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-HazelInvoice-f2f2e446-247f-4d2a-bd77-4a8e4ed7b58d</UserSecretsId>
+    <NuGetAudit>false</NuGetAudit>
     <!-- Printer enumeration + test printing uses System.Drawing.Printing (Windows). -->
     <UseSystemDrawing>true</UseSystemDrawing>
   </PropertyGroup>

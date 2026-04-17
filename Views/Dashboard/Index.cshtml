@@ -91,7 +91,7 @@
         <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100 is-danger">
                 <div class="metric-head">
-                    <div class="metric-label">Receivables</div>
+                    <div class="metric-label">Collectibles Overall</div>
                     <span class="kpi-trend @TrendBadgeClass(Model.UnpaidTrendPercent)"><i class="bi @TrendIcon(Model.UnpaidTrendPercent)"></i> @TrendText(Model.UnpaidTrendPercent)</span>
                 </div>
                 <div class="metric-value">₱@Model.OutstandingReceivablesAllTime.ToString("N0")</div>
@@ -188,6 +188,15 @@
         <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100">
                 <div class="metric-head">
+                    <div class="metric-label">Collectibles Week</div>
+                </div>
+                <div class="metric-value">₱@Model.OutstandingReceivablesWeekly.ToString("N0")</div>
+                <div class="metric-state">Weekly sales minus weekly payments</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100">
+                <div class="metric-head">
                     <div class="metric-label">Collected Revenue Month</div>
                 </div>
                 <div class="metric-value">₱@Model.CollectedRevenueMonthly.ToString("N0")</div>
@@ -206,7 +215,7 @@
         <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100">
                 <div class="metric-head">
-                    <div class="metric-label">Receivables Month</div>
+                    <div class="metric-label">Collectibles Month</div>
                 </div>
                 <div class="metric-value">₱@Model.OutstandingReceivablesMonthly.ToString("N0")</div>
                 <div class="metric-state">Monthly sales minus monthly payments</div>
