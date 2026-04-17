@@ -39,12 +39,35 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
             .Select(c => c.Name)
             .ToListAsync(cancellationToken);
 
+        var day = date.Date;
+
         var products = await _context.Products
             .AsNoTracking()
             .Where(p => p.IsActive)
             .OrderBy(p => p.Name)
-            .Select(p => p.Name)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.UnitCost,
+                p.Markup,
+                p.DeliveryFee
+            })
             .ToListAsync(cancellationToken);
+
+        var productIds = products.Select(p => p.Id).ToList();
+        var weeklyPrices = await _context.WeeklyPrices
+            .AsNoTracking()
+            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= day && w.EffectiveTo >= day)
+            .ToListAsync(cancellationToken);
+
+        var weeklyPriceMap = weeklyPrices
+            .GroupBy(w => w.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
 
         // Rows: title row, header row, product rows.
         var rows = new List<IReadOnlyList<string>>(capacity: 2 + products.Count);
@@ -63,10 +86,18 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
         header.AddRange(outlets);
         rows.Add(header);
 
-        foreach (var name in products)
+        foreach (var product in products)
         {
+            var effectivePrice = weeklyPriceMap.TryGetValue(product.Id, out var weeklyPrice) && weeklyPrice.DeliveryPrice > 0
+                ? weeklyPrice.DeliveryPrice
+                : product.UnitCost + product.Markup + product.DeliveryFee;
+
             // Keep columns A/B only; outlet qty cells intentionally blank.
-            rows.Add(new[] { name ?? string.Empty, string.Empty });
+            rows.Add(new[]
+            {
+                product.Name ?? string.Empty,
+                effectivePrice.ToString("0.00")
+            });
         }
 
         return SimpleXlsxWriter.WriteSingleSheet("Template", rows);

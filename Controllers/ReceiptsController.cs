@@ -223,7 +223,6 @@ public class ReceiptsController : Controller
 
             // Recalculate totals to be safe
             receipt.TotalAmount = receipt.Lines.Sum(l => l.Amount);
-
             // Handle Payment Status
             if (receipt.PaidAmount >= receipt.TotalAmount) receipt.Status = PaymentStatus.Paid;
             else if (receipt.PaidAmount > 0) receipt.Status = PaymentStatus.Partial;
