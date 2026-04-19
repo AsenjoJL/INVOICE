@@ -217,7 +217,6 @@ body.receipt-body {
 .items-table th,
 .items-table td {
     border: none;
-    border-bottom: 1px solid rgba(17, 24, 39, 0.18);
     padding: 8px 10px;
     height: 30px;
     font-size: 14px;
@@ -229,7 +228,6 @@ body.receipt-body {
     letter-spacing: 0.5px;
     text-align: center;
     background: transparent;
-    border-bottom: 1.5px solid var(--line);
 }
 
 .col-qty { width: 9%; text-align: center; }
@@ -452,13 +450,11 @@ body.receipt-borderless .received-input {
         font-size: var(--dr-items-print-font-size);
         line-height: 1;
         border: none !important;
-        border-bottom: 0.8px solid rgba(17, 24, 39, 0.3) !important;
     }
 
     .items-table th {
         font-size: var(--dr-items-print-font-size);
         background: transparent !important;
-        border-bottom: 1.4px solid var(--line) !important;
         -webkit-print-color-adjust: exact;
     }
 
