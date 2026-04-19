@@ -262,6 +262,7 @@ body.receipt-body {
     padding-right: 14px;
     font-weight: 800;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .total-row .amount {
@@ -269,6 +270,7 @@ body.receipt-body {
     text-align: center;
     font-weight: 800;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .page-footer {
@@ -470,9 +472,7 @@ body.receipt-borderless .received-input {
     .total-row .amount {
         font-size: 14pt;
         line-height: 1;
-        text-decoration: underline;
-        text-underline-offset: 2px;
-        text-decoration-thickness: 2px;
+        white-space: nowrap;
     }
 
     .ack-block { margin-top: 14px; max-width: 3.9in; }
