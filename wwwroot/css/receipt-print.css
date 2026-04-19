@@ -233,7 +233,7 @@ body.receipt-body {
 .col-qty { width: 9%; text-align: center; }
 .col-unit { width: 10%; text-align: center; padding-right: 6px; }
 .col-part { width: 41%; }
-.col-price { width: 20%; text-align: center; }
+.col-price { width: 20%; text-align: center; padding-left: 18px; }
 .col-amount { width: 20%; text-align: center; }
 
 .items-table th.col-part { text-align: left; padding-left: 16px; }
@@ -466,6 +466,11 @@ body.receipt-borderless .received-input {
         padding-left: 10px;
     }
 
+    .items-table th.col-price,
+    .items-table td.col-price {
+        padding-left: 14px;
+    }
+
     .total-row { margin-top: 4px; }
 
     .total-row .label,
@@ -473,6 +478,12 @@ body.receipt-borderless .received-input {
         font-size: 14pt;
         line-height: 1;
         white-space: nowrap;
+    }
+
+    .total-row .amount {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        text-decoration-thickness: 2px;
     }
 
     .ack-block { margin-top: 14px; max-width: 3.9in; }
