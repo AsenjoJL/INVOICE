@@ -3,6 +3,12 @@
 @{
     Layout = null;
     var returnUrl = ViewBag.ReturnUrl as string ?? "/Receipts";
+    var env = Context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+    var newLogoPath = "images/vegetables.png";
+    var legacyLogoPath = "images/logo.png";
+    var selectedLogo = env.WebRootFileProvider.GetFileInfo(newLogoPath).Exists
+        ? $"~/{newLogoPath}"
+        : $"~/{legacyLogoPath}";
 
     // Whole short bond paper (Letter): 8.5in x 11in
     var paperSize = ((string?)ViewBag.PaperSize ?? "Letter").Trim();
@@ -69,7 +75,9 @@
         <div class="receipt-page">
             <div class="header-top">
                 <div class="logo-box">
-                    <img src="~/images/logo.png" alt="Logo" asp-append-version="true" />
+                    <img src="@selectedLogo"
+                         alt="Healthy Harvest Vegetable Trading logo"
+                         asp-append-version="true" />
                 </div>
                 <div class="company">
                     <div class="company-name">Healthy Harvest Vegetable Trading</div>
