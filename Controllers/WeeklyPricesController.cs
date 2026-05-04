@@ -754,11 +754,8 @@ public class WeeklyPricesController : Controller
         if (!ModelState.IsValid)
             return;
 
-        var markup = weeklyPrice.BasePrice - product.UnitCost;
         var deliveryFee = weeklyPrice.DeliveryPrice - weeklyPrice.BasePrice;
 
-        if (markup < 0)
-            ModelState.AddModelError("BasePrice", "Base price cannot be lower than cost.");
         if (deliveryFee < 0)
             ModelState.AddModelError("DeliveryPrice", "Delivery price cannot be lower than base price.");
     }
@@ -782,8 +779,12 @@ public class WeeklyPricesController : Controller
         Product product)
     {
         var cost = Math.Max(item.Cost, 0m);
-        var basePriceFromPost = Math.Max(item.BasePrice, cost);
-        var markup = Math.Max(item.Markup, basePriceFromPost - cost);
+        var basePriceFromPost = Math.Max(item.BasePrice, 0m);
+        var markup = item.Markup;
+        if (basePriceFromPost > 0m)
+        {
+            markup = basePriceFromPost - cost;
+        }
         var basePrice = cost + markup;
         var deliveryPrice = Math.Max(item.DeliveryPrice, basePrice);
         var deliveryFee = deliveryPrice - basePrice;
