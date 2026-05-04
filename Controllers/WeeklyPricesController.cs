@@ -187,6 +187,7 @@ public class WeeklyPricesController : Controller
 
             var currentWeekly = weeklyPriceMap.TryGetValue(product.Id, out var wp) ? wp : null;
             var currentCost = currentWeekly?.CostOverride ?? product.UnitCost;
+            var currentDeliveryFee = currentWeekly?.DeliveryFee ?? product.DeliveryFee;
             var currentDeliveryPrice = currentWeekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
 
             var cost = normalizedImportMode switch
@@ -203,7 +204,7 @@ public class WeeklyPricesController : Controller
                 _ => importedDeliveryPrice ?? Math.Max(currentDeliveryPrice, cost)
             };
 
-            var markup = Math.Max(deliveryPrice - cost, 0m);
+            var (markup, basePrice, deliveryFee) = DeriveImportedPricing(cost, deliveryPrice, currentDeliveryFee);
             importedItems.Add(new PriceVersusItem
             {
                 ProductId = product.Id,
@@ -211,9 +212,9 @@ public class WeeklyPricesController : Controller
                 Unit = string.IsNullOrWhiteSpace(unit) ? product.Unit : unit,
                 Cost = cost,
                 Markup = markup,
-                BasePrice = deliveryPrice,
+                BasePrice = basePrice,
                 DeliveryPrice = deliveryPrice,
-                DeliveryFee = 0m,
+                DeliveryFee = deliveryFee,
                 MasterCost = product.UnitCost,
                 MasterMarkup = product.Markup,
                 MasterDeliveryFee = product.DeliveryFee
@@ -716,6 +717,26 @@ public class WeeklyPricesController : Controller
             "original-only" => [productName, originalPrice.ToString("0.00"), unit],
             _ => [productName, deliveryPrice.ToString("0.00"), unit, originalPrice.ToString("0.00")]
         };
+
+    private static (decimal Markup, decimal BasePrice, decimal DeliveryFee) DeriveImportedPricing(
+        decimal cost,
+        decimal deliveryPrice,
+        decimal preferredDeliveryFee)
+    {
+        var normalizedCost = Math.Max(cost, 0m);
+        var normalizedDeliveryPrice = Math.Max(deliveryPrice, normalizedCost);
+        var normalizedPreferredFee = Math.Max(preferredDeliveryFee, 0m);
+
+        var basePrice = normalizedDeliveryPrice - normalizedPreferredFee;
+        if (basePrice < normalizedCost)
+        {
+            basePrice = normalizedCost;
+        }
+
+        var markup = basePrice - normalizedCost;
+        var deliveryFee = normalizedDeliveryPrice - basePrice;
+        return (markup, basePrice, deliveryFee);
+    }
 
     private void ValidateWeeklyPriceInput(WeeklyPrice weeklyPrice, Product? product)
     {
