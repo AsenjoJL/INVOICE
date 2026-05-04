@@ -724,13 +724,13 @@ public class WeeklyPricesController : Controller
         decimal preferredDeliveryFee)
     {
         var normalizedCost = Math.Max(cost, 0m);
-        var normalizedDeliveryPrice = Math.Max(deliveryPrice, normalizedCost);
+        var normalizedDeliveryPrice = Math.Max(deliveryPrice, 0m);
         var normalizedPreferredFee = Math.Max(preferredDeliveryFee, 0m);
 
         var basePrice = normalizedDeliveryPrice - normalizedPreferredFee;
-        if (basePrice < normalizedCost)
+        if (basePrice < 0m)
         {
-            basePrice = normalizedCost;
+            basePrice = 0m;
         }
 
         var markup = basePrice - normalizedCost;

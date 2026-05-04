@@ -266,7 +266,7 @@
                                         ₱@item.EffectiveDeliveryPrice.ToString("N2")
                                     </div>
                                     <div class="product-meta">
-                                        Cost ₱@item.UnitCost.ToString("N2")
+                                        Cost ₱@item.EffectiveCost.ToString("N2") · Base ₱@item.EffectiveBasePrice.ToString("N2")
                                         @if (item.HasWeeklyPrice)
                                         {
                                             <span class="product-weekly-flag">Weekly</span>

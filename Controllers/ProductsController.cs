@@ -64,7 +64,24 @@ public class ProductsController : Controller
         var viewModel = products.Select(product =>
         {
             var weeklyPrice = weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
-            var effectiveDeliveryPrice = weeklyPrice?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
+            var effectiveCost = weeklyPrice?.CostOverride ?? product.UnitCost;
+            var effectiveDeliveryFee = weeklyPrice?.DeliveryFee ?? product.DeliveryFee;
+
+            decimal effectiveMarkup = product.Markup;
+            if (weeklyPrice != null)
+            {
+                if (weeklyPrice.Markup != 0)
+                {
+                    effectiveMarkup = weeklyPrice.Markup;
+                }
+                else if (weeklyPrice.BasePrice > 0)
+                {
+                    effectiveMarkup = weeklyPrice.BasePrice - effectiveCost;
+                }
+            }
+
+            var effectiveBasePrice = effectiveCost + effectiveMarkup;
+            var effectiveDeliveryPrice = weeklyPrice?.DeliveryPrice ?? (effectiveBasePrice + effectiveDeliveryFee);
 
             return new ProductListItemViewModel
             {
@@ -74,6 +91,9 @@ public class ProductsController : Controller
                 Category = product.Category,
                 Unit = product.Unit,
                 UnitCost = product.UnitCost,
+                EffectiveCost = effectiveCost,
+                EffectiveBasePrice = effectiveBasePrice,
+                EffectiveDeliveryFee = effectiveDeliveryFee,
                 EffectiveDeliveryPrice = effectiveDeliveryPrice,
                 HasWeeklyPrice = weeklyPrice != null,
                 IsActive = product.IsActive
