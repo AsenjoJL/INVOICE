@@ -6,15 +6,22 @@
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var targetDate = (ViewBag.TargetDate as DateTime?) ?? BusinessDate.Today();
     var searchTerm = (ViewBag.SearchTerm as string) ?? string.Empty;
+    var scope = (ViewBag.Scope as string) ?? "active";
     var zeroPriceCount = Model.Count(p => p.EffectiveDeliveryPrice == 0m);
-    var totalCount = Model.Count();
-    var activeCount = Model.Count(p => p.IsActive);
-    var inactiveCount = totalCount - activeCount;
+    var totalCount = (ViewBag.TotalProducts as int?) ?? Model.Count();
+    var activeCount = (ViewBag.ActiveProducts as int?) ?? Model.Count(p => p.IsActive);
+    var inactiveCount = (ViewBag.InactiveProducts as int?) ?? (totalCount - activeCount);
     var categoryOptions = Model
         .Select(p => string.IsNullOrWhiteSpace(p.Category) ? "Uncategorized" : p.Category.Trim())
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .OrderBy(c => c)
         .ToList();
+    var scopeLabel = scope switch
+    {
+        "inactive" => "Archived products",
+        "all" => "All products",
+        _ => "Active products"
+    };
 }
 
 <link rel="stylesheet" href="~/css/products-index.css" asp-append-version="true" />
@@ -27,8 +34,11 @@
                 <h1>Products</h1>
                 <div class="sub">Minimal dashboard view to keep pricing and availability tidy.</div>
                 <div class="product-date-chip">Viewing prices for @targetDate.ToString("MMM dd, yyyy")</div>
+                <div class="product-date-chip">@scopeLabel</div>
                 <div class="product-tools">
                     <form method="get" asp-action="Index" class="product-search-bar">
+                        <input type="hidden" name="date" value="@targetDate.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" name="scope" value="@scope" />
                         <i class="bi bi-search search-icon"></i>
                         <input type="text"
                                id="searchInput"
@@ -51,7 +61,10 @@
 
                         @if (!string.IsNullOrWhiteSpace(searchTerm))
                         {
-                            <a asp-action="Index" class="btn btn-clear">Clear</a>
+                            <a asp-action="Index"
+                               asp-route-date="@targetDate.ToString("yyyy-MM-dd")"
+                               asp-route-scope="@scope"
+                               class="btn btn-clear">Clear</a>
                         }
                     </form>
 
@@ -173,10 +186,34 @@
                 </div>
             </div>
         </div>
+
+        <div class="filter-bar">
+            <a asp-action="Index"
+               asp-route-q="@searchTerm"
+               asp-route-date="@targetDate.ToString("yyyy-MM-dd")"
+               asp-route-scope="active"
+               class="filter-pill @(scope == "active" ? "active" : "")">
+                Active Catalog
+            </a>
+            <a asp-action="Index"
+               asp-route-q="@searchTerm"
+               asp-route-date="@targetDate.ToString("yyyy-MM-dd")"
+               asp-route-scope="inactive"
+               class="filter-pill @(scope == "inactive" ? "active" : "")">
+                Archived
+            </a>
+            <a asp-action="Index"
+               asp-route-q="@searchTerm"
+               asp-route-date="@targetDate.ToString("yyyy-MM-dd")"
+               asp-route-scope="all"
+               class="filter-pill @(scope == "all" ? "active" : "")">
+                All
+            </a>
+        </div>
     </div>
 
     <div class="filter-bar">
-        <button type="button" class="filter-pill active" data-status-filter="all">All</button>
+        <button type="button" class="filter-pill active" data-status-filter="all">Shown</button>
         <button type="button" class="filter-pill" data-status-filter="active">Active</button>
         <button type="button" class="filter-pill" data-status-filter="inactive">Inactive</button>
         <button type="button" class="filter-pill filter-pill-warning" data-status-filter="zero">
@@ -196,7 +233,7 @@
 
         <div class="table-top-meta">
             <div id="rowSummary" class="row-summary">Showing 0 of 0 products</div>
-            <div class="row-summary">Tip: Use filters and sorting to focus the list.</div>
+            <div class="row-summary">Tip: Active is the safe default. Archived products remain in the database for order history.</div>
         </div>
 
         <div class="card-body p-0">

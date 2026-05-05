@@ -13,6 +13,10 @@ namespace HazelInvoice.Controllers;
 [Authorize]
 public class ProductsController : Controller
 {
+    private const string ScopeActive = "active";
+    private const string ScopeInactive = "inactive";
+    private const string ScopeAll = "all";
+
     private readonly ApplicationDbContext _context;
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
@@ -25,14 +29,32 @@ public class ProductsController : Controller
     }
 
     // GET: Products
-    public async Task<IActionResult> Index(string? q = null, DateTime? date = null)
+    public async Task<IActionResult> Index(string? q = null, DateTime? date = null, string? scope = null)
     {
         var businessDate = (date ?? BusinessDate.Today()).Date;
         var applicableBusinessDate = WeeklyPriceCalendar.GetApplicablePriceDate(businessDate);
         var isResetDay = WeeklyPriceCalendar.IsResetDay(businessDate);
+        var normalizedScope = NormalizeScope(scope);
+        var summary = await _context.Products
+            .AsNoTracking()
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Active = g.Count(p => p.IsActive)
+            })
+            .FirstOrDefaultAsync();
+
         var query = _context.Products
             .AsNoTracking()
             .AsQueryable();
+
+        query = normalizedScope switch
+        {
+            ScopeInactive => query.Where(p => !p.IsActive),
+            ScopeAll => query,
+            _ => query.Where(p => p.IsActive)
+        };
 
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -106,6 +128,10 @@ public class ProductsController : Controller
 
         ViewBag.SearchTerm = q ?? string.Empty;
         ViewBag.TargetDate = businessDate;
+        ViewBag.Scope = normalizedScope;
+        ViewBag.TotalProducts = summary?.Total ?? 0;
+        ViewBag.ActiveProducts = summary?.Active ?? 0;
+        ViewBag.InactiveProducts = (summary?.Total ?? 0) - (summary?.Active ?? 0);
         return View(viewModel);
     }
 
@@ -334,5 +360,16 @@ public class ProductsController : Controller
     private async Task<List<Supplier>> GetSupplierOptionsAsync()
     {
         return (await _lookupCache.GetActiveSuppliersAsync(HttpContext.RequestAborted)).ToList();
+    }
+
+    private static string NormalizeScope(string? scope)
+    {
+        var value = scope?.Trim().ToLowerInvariant();
+        return value switch
+        {
+            ScopeInactive => ScopeInactive,
+            ScopeAll => ScopeAll,
+            _ => ScopeActive
+        };
     }
 }
