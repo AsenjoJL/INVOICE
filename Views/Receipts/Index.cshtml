@@ -9,6 +9,8 @@
     var pageSize = Model?.PageSize ?? 50;
     var query = Model?.Query ?? string.Empty;
     var selectedDate = Model?.Date?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var selectedDateFrom = Model?.DateFrom?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var selectedDateTo = Model?.DateTo?.ToString("yyyy-MM-dd") ?? string.Empty;
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var totalPages = pageSize <= 0 ? 1 : (int)Math.Ceiling(receiptCount / (double)pageSize);
     if (totalPages < 1) totalPages = 1;
@@ -43,6 +45,15 @@
             {
                 <div class="small fw-bold mt-2">Viewing date: @Model.Date.Value.ToString("MMM dd, yyyy")</div>
             }
+            else if (Model?.DateFrom != null || Model?.DateTo != null)
+            {
+                <div class="small fw-bold mt-2">
+                    Viewing range:
+                    @(Model?.DateFrom?.ToString("MMM dd, yyyy") ?? "Start")
+                    -
+                    @(Model?.DateTo?.ToString("MMM dd, yyyy") ?? "End")
+                </div>
+            }
             <div class="small fw-bold mt-2">
                 Showing @startRow-@endRow of @receiptCount
                 @if (isUnpaid)
@@ -68,6 +79,8 @@
             <form method="get" class="admin-inline-filter">
                 <input class="form-control form-control-sm" name="q" id="q" value="@query" placeholder="Search receipt # or outlet" style="min-width: 240px;" />
                 <input class="form-control form-control-sm" type="date" name="date" value="@selectedDate" style="width: 170px;" />
+                <input class="form-control form-control-sm" type="date" name="dateFrom" value="@selectedDateFrom" style="width: 170px;" />
+                <input class="form-control form-control-sm" type="date" name="dateTo" value="@selectedDateTo" style="width: 170px;" />
                 <select class="form-select form-select-sm" name="pageSize" id="pageSize" style="width: 110px;">
                     <option value="25" selected="@(pageSize == 25 ? "selected" : null)">25</option>
                     <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50</option>
@@ -77,11 +90,11 @@
                 <button type="submit" class="invoice-btn invoice-btn-ghost">Search</button>
                 @if (isUnpaid)
                 {
-                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Index", "Receipts", new { q = query, date = selectedDate, pageSize = pageSize })">All</a>
+                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Index", "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, pageSize = pageSize })">All</a>
                 }
                 else
                 {
-                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Unpaid", "Receipts", new { q = query, date = selectedDate, pageSize = pageSize })">Unpaid</a>
+                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Unpaid", "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, pageSize = pageSize })">Unpaid</a>
                 }
             </form>
         </div>
@@ -157,13 +170,13 @@
         <div class="d-flex gap-2">
             @{
                 var prevPage = Math.Max(1, currentPage - 1);
-                var nextPage = Math.Min(totalPages, currentPage + 1);
+               var nextPage = Math.Min(totalPages, currentPage + 1);
                 var action = isUnpaid ? "Unpaid" : "Index";
             }
             <a class="invoice-btn invoice-btn-ghost @(currentPage <= 1 ? "disabled" : "")"
-               href="@Url.Action(action, "Receipts", new { q = query, date = selectedDate, page = prevPage, pageSize = pageSize })">Prev</a>
+               href="@Url.Action(action, "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, page = prevPage, pageSize = pageSize })">Prev</a>
             <a class="invoice-btn invoice-btn-ghost @(currentPage >= totalPages ? "disabled" : "")"
-               href="@Url.Action(action, "Receipts", new { q = query, date = selectedDate, page = nextPage, pageSize = pageSize })">Next</a>
+               href="@Url.Action(action, "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, page = nextPage, pageSize = pageSize })">Next</a>
         </div>
     </div>
 </div>

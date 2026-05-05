@@ -4,8 +4,14 @@
 @{
     ViewData["Title"] = "Dashboard";
     var businessNow = BusinessDate.Now();
+    var businessDate = businessNow.Date;
     var nextDeliveryDate = BusinessDate.Tomorrow().ToString("yyyy-MM-dd");
     var allowDangerousDatabaseReset = Features.Value.AllowDangerousDatabaseReset;
+    var weekOffset = (7 + (businessDate.DayOfWeek - DayOfWeek.Monday)) % 7;
+    var weekStart = businessDate.AddDays(-weekOffset);
+    var weekEnd = weekStart.AddDays(6);
+    var monthStart = new DateTime(businessDate.Year, businessDate.Month, 1);
+    var monthEnd = monthStart.AddMonths(1).AddDays(-1);
     string TrendBadgeClass(decimal value) => value > 0 ? "is-up" : (value < 0 ? "is-down" : "is-flat");
     string TrendIcon(decimal value) => value > 0 ? "bi-arrow-up-right" : (value < 0 ? "bi-arrow-down-right" : "bi-dash");
     string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";
@@ -66,6 +72,23 @@
                 </div>
                 <div class="metric-value">₱@Model.SalesToday.ToString("N0")</div>
                 <div class="metric-state">@(Model.SalesToday == 0 ? "No activity yet" : "Updated today")</div>
+                <div class="unpaid-cta">
+                    <span class="unpaid-count">@businessDate.ToString("MMM dd, yyyy")</span>
+                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { date = businessDate.ToString("yyyy-MM-dd") })">View</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-primary">
+                <div class="metric-head">
+                    <div class="metric-label">Total Sales Week</div>
+                </div>
+                <div class="metric-value">₱@Model.SalesWeekly.ToString("N0")</div>
+                <div class="metric-state">@(Model.SalesWeekly == 0 ? "No activity this week" : "Current week revenue")</div>
+                <div class="unpaid-cta">
+                    <span class="unpaid-count">@weekStart.ToString("MMM dd") - @weekEnd.ToString("MMM dd")</span>
+                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = weekStart.ToString("yyyy-MM-dd"), dateTo = weekEnd.ToString("yyyy-MM-dd") })">View</a>
+                </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
@@ -76,6 +99,10 @@
                 </div>
                 <div class="metric-value">₱@Model.SalesMonthly.ToString("N0")</div>
                 <div class="metric-state">@(Model.SalesMonthly == 0 ? "No activity this month" : "Current month revenue")</div>
+                <div class="unpaid-cta">
+                    <span class="unpaid-count">@monthStart.ToString("MMM dd") - @monthEnd.ToString("MMM dd")</span>
+                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = monthStart.ToString("yyyy-MM-dd"), dateTo = monthEnd.ToString("yyyy-MM-dd") })">View</a>
+                </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">

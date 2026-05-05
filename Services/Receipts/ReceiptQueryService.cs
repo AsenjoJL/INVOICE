@@ -38,6 +38,27 @@ public sealed class ReceiptQueryService : IReceiptQueryService
             var dayEnd = dayStart.AddDays(1);
             baseQuery = baseQuery.Where(r => r.Date >= dayStart && r.Date < dayEnd);
         }
+        else
+        {
+            var dateFrom = options.DateFrom?.Date;
+            var dateTo = options.DateTo?.Date;
+
+            if (dateFrom.HasValue && dateTo.HasValue && dateFrom > dateTo)
+            {
+                (dateFrom, dateTo) = (dateTo, dateFrom);
+            }
+
+            if (dateFrom.HasValue)
+            {
+                baseQuery = baseQuery.Where(r => r.Date >= dateFrom.Value);
+            }
+
+            if (dateTo.HasValue)
+            {
+                var endExclusive = dateTo.Value.AddDays(1);
+                baseQuery = baseQuery.Where(r => r.Date < endExclusive);
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -80,6 +101,8 @@ public sealed class ReceiptQueryService : IReceiptQueryService
             Receipts = receipts,
             Query = q,
             Date = options.Date?.Date,
+            DateFrom = options.Date.HasValue ? options.Date.Value.Date : options.DateFrom?.Date,
+            DateTo = options.Date.HasValue ? options.Date.Value.Date : options.DateTo?.Date,
             Page = page,
             PageSize = pageSize,
             UnpaidOnly = options.UnpaidOnly
