@@ -183,15 +183,16 @@ public class OrdersController : Controller
             return productMap.TryGetValue(pid, out var prod) ? prod.UnitCost : 0m;
         }
 
-        int diff = (7 + (model.Date.DayOfWeek - DayOfWeek.Monday)) % 7;
-        var weekStart = model.Date.AddDays(-1 * diff).Date;
-        var weekEnd = weekStart.AddDays(6).Date;
+        var (weekStart, weekEnd) = WeeklyPriceCalendar.GetWeekRange(model.Date);
 
-        var weeklyPriceSnapshot = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => affectedProductIds.Contains(w.ProductId) &&
-                        w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart)
-            .ToListAsync();
+        var applicableDayStart = WeeklyPriceCalendar.GetApplicablePriceDate(dayStart);
+        var weeklyPriceSnapshot = applicableDayStart.HasValue
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => affectedProductIds.Contains(w.ProductId) &&
+                            w.EffectiveFrom <= applicableDayStart.Value && w.EffectiveTo >= applicableDayStart.Value)
+                .ToListAsync()
+            : new List<WeeklyPrice>();
 
         var weeklyPriceSnapshotMap = weeklyPriceSnapshot
             .GroupBy(w => w.ProductId)
@@ -1301,9 +1302,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     {
         if (postedPrices == null || postedPrices.Count == 0) return;
 
-        int diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
-        var weekStart = date.AddDays(-1 * diff).Date;
-        var weekEnd = weekStart.AddDays(6).Date;
+        var (weekStart, weekEnd) = WeeklyPriceCalendar.GetWeekRange(date);
+        var applicableDate = WeeklyPriceCalendar.GetApplicablePriceDate(date) ?? weekStart;
 
         var pricePids = postedPrices.Keys.ToList();
 
@@ -1317,7 +1317,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
 
         var wps = await _context.WeeklyPrices
             .Where(w => pricePids.Contains(w.ProductId) &&
-                        w.EffectiveFrom <= date && w.EffectiveTo >= date)
+                        w.EffectiveFrom <= applicableDate && w.EffectiveTo >= applicableDate)
             .ToListAsync();
 
         var wpGroups = wps.GroupBy(w => w.ProductId).ToList();

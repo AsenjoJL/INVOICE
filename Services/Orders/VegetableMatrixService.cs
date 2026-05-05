@@ -3,6 +3,7 @@ using HazelInvoice.Models;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using HazelInvoice.Configuration;
+using HazelInvoice.Helpers;
 using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Services.Orders;
@@ -46,6 +47,8 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         var targetDate = options.Date.Date;
         var dayStart = targetDate;
         var dayEnd = targetDate.AddDays(1);
+        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate);
+        var isResetDay = WeeklyPriceCalendar.IsResetDay(targetDate);
 
         var print = options.Print;
         var showDetails = options.Details && !print;
@@ -262,11 +265,13 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             .Select(p => new { p.Id, p.UnitCost, p.Markup, p.DeliveryFee })
             .ToDictionaryAsync(x => x.Id, x => x, cancellationToken);
 
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart)
-            .Where(w => priceProductIds.Contains(w.ProductId))
-            .ToListAsync(cancellationToken);
+        var weeklyPrices = applicableDay.HasValue
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => w.EffectiveFrom <= applicableDay.Value && w.EffectiveTo >= applicableDay.Value)
+                .Where(w => priceProductIds.Contains(w.ProductId))
+                .ToListAsync(cancellationToken)
+            : new List<WeeklyPrice>();
 
         var weeklyPriceMap = weeklyPrices
             .GroupBy(x => x.ProductId)
@@ -286,14 +291,14 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             decimal markup = 0m;
             decimal deliveryFee = 0m;
 
-            if (productsData.TryGetValue(pid, out var pData))
+            if (!isResetDay && productsData.TryGetValue(pid, out var pData))
             {
                 cost = pData.UnitCost;
                 markup = pData.Markup;
                 deliveryFee = pData.DeliveryFee;
             }
 
-            if (weeklyPriceMap.TryGetValue(pid, out var wp))
+            if (!isResetDay && weeklyPriceMap.TryGetValue(pid, out var wp))
             {
                 if (wp.CostOverride.HasValue)
                     cost = wp.CostOverride.Value;
@@ -320,7 +325,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             }
             else
             {
-                productPrices[pid] = cost + markup + deliveryFee;
+                productPrices[pid] = isResetDay ? 0m : cost + markup + deliveryFee;
             }
 
             productCosts[pid] = cost;

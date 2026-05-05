@@ -1,4 +1,5 @@
 using HazelInvoice.Data;
+using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -105,6 +106,9 @@ public sealed class LookupCacheService : ILookupCacheService
 
     public Task<IReadOnlyList<WeeklyPrice>> GetWeeklyPricesForDayAsync(DateTime day, CancellationToken ct = default)
     {
+        if (WeeklyPriceCalendar.IsResetDay(day))
+            return Task.FromResult((IReadOnlyList<WeeklyPrice>)Array.Empty<WeeklyPrice>());
+
         var cacheKey = AppCacheKeys.WeeklyPricesForDay(day.Date);
         if (_cacheInvalidator is AppCacheInvalidator invalidator)
             invalidator.TrackWeeklyPriceKey(cacheKey);

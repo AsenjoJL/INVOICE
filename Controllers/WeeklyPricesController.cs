@@ -31,7 +31,7 @@ public class WeeklyPricesController : Controller
     // GET: WeeklyPrices/PriceVersus
     public async Task<IActionResult> PriceVersus(DateTime? date, string? q = null, int page = 1, int pageSize = 40)
     {
-        var targetDate = date ?? DateTime.Today;
+        var targetDate = (date ?? DateTime.Today).Date;
         var vm = await BuildPriceVersusModelAsync(targetDate, q, page, pageSize);
         return View(vm);
     }
@@ -124,9 +124,12 @@ public class WeeklyPricesController : Controller
         var productMap = OrderImportHelpers.BuildProductLookup(products);
 
         var productIds = products.Select(p => p.Id).ToList();
-        var existingWeeklyPrices = await _context.WeeklyPrices
-            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= targetDate.Date && w.EffectiveTo >= targetDate.Date)
-            .ToListAsync();
+        var applicableTargetDate = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate);
+        var existingWeeklyPrices = applicableTargetDate.HasValue
+            ? await _context.WeeklyPrices
+                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableTargetDate.Value && w.EffectiveTo >= applicableTargetDate.Value)
+                .ToListAsync()
+            : new List<WeeklyPrice>();
 
         var weeklyPriceMap = existingWeeklyPrices
             .GroupBy(w => w.ProductId)
@@ -247,6 +250,7 @@ public class WeeklyPricesController : Controller
     {
         var normalizedImportMode = NormalizeImportMode(importMode);
         var day = (targetDate ?? BusinessDate.Today()).Date;
+        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(day);
 
         var products = await _context.Products
             .AsNoTracking()
@@ -256,10 +260,12 @@ public class WeeklyPricesController : Controller
             .ToListAsync();
 
         var productIds = products.Select(p => p.Id).ToList();
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= day && w.EffectiveTo >= day)
-            .ToListAsync();
+        var weeklyPrices = applicableDay.HasValue
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableDay.Value && w.EffectiveTo >= applicableDay.Value)
+                .ToListAsync()
+            : new List<WeeklyPrice>();
 
         var weeklyMap = weeklyPrices
             .GroupBy(w => w.ProductId)
@@ -283,8 +289,8 @@ public class WeeklyPricesController : Controller
         foreach (var product in products)
         {
             var weekly = weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
-            var currentCost = weekly?.CostOverride ?? product.UnitCost;
-            var currentDelivery = weekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
+            var currentCost = applicableDay.HasValue ? weekly?.CostOverride ?? product.UnitCost : 0m;
+            var currentDelivery = applicableDay.HasValue ? weekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee) : 0m;
 
             rows.Add(BuildTemplateRow(product.Name, product.Unit, currentDelivery, currentCost, normalizedImportMode));
         }
@@ -355,9 +361,7 @@ public class WeeklyPricesController : Controller
     {
         ViewData["ProductId"] = new SelectList(await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted), "Id", "Name");
         // Default to this week
-        var now = DateTime.Now;
-        var startOfWeek = now.AddDays(-(int)now.DayOfWeek + 1); // Monday
-        var endOfWeek = startOfWeek.AddDays(6); // Sunday
+        var (startOfWeek, endOfWeek) = WeeklyPriceCalendar.GetWeekRange(DateTime.Now);
 
         return View(new WeeklyPrice { EffectiveFrom = startOfWeek, EffectiveTo = endOfWeek });
     }
@@ -438,20 +442,18 @@ public class WeeklyPricesController : Controller
     // Clone last week's prices to this week
     public async Task<IActionResult> CloneLastWeek()
     {
-        var lastWeekStart = DateTime.Now.AddDays(-(int)DateTime.Now.DayOfWeek + 1 - 7).Date;
-        var thisWeekStart = DateTime.Now.AddDays(-(int)DateTime.Now.DayOfWeek + 1).Date;
-        var thisWeekEnd = thisWeekStart.AddDays(6);
-        var lastWeekEnd = lastWeekStart.AddDays(1);
-        var thisWeekEndExclusive = thisWeekStart.AddDays(1);
+        var (thisWeekStart, thisWeekEnd) = WeeklyPriceCalendar.GetWeekRange(DateTime.Now);
+        var lastWeekStart = thisWeekStart.AddDays(-7).Date;
+        var lastWeekEnd = lastWeekStart.AddDays(5).Date;
 
         var lastWeekPrices = await _context.WeeklyPrices
-            .Where(w => w.EffectiveFrom >= lastWeekStart && w.EffectiveFrom < lastWeekEnd)
+            .Where(w => w.EffectiveFrom == lastWeekStart && w.EffectiveTo == lastWeekEnd)
             .ToListAsync();
 
         foreach (var price in lastWeekPrices)
         {
             // Check if exists for this week
-            var exists = await _context.WeeklyPrices.AnyAsync(w => w.ProductId == price.ProductId && w.EffectiveFrom >= thisWeekStart && w.EffectiveFrom < thisWeekEndExclusive);
+            var exists = await _context.WeeklyPrices.AnyAsync(w => w.ProductId == price.ProductId && w.EffectiveFrom == thisWeekStart && w.EffectiveTo == thisWeekEnd);
             if (!exists)
             {
                 var newPrice = new WeeklyPrice
@@ -481,7 +483,9 @@ public class WeeklyPricesController : Controller
         IEnumerable<PriceVersusItem>? postedItems = null)
     {
         var day = targetDate.Date;
-        var (weekStart, weekEnd) = GetWeekRange(targetDate);
+        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(day);
+        var isResetDay = WeeklyPriceCalendar.IsResetDay(day);
+        var (weekStart, weekEnd) = WeeklyPriceCalendar.GetWeekRange(targetDate);
         var normalizedSearch = searchTerm?.Trim() ?? string.Empty;
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 20, 200);
@@ -508,10 +512,12 @@ public class WeeklyPricesController : Controller
             .ToListAsync();
 
         var productIds = products.Select(p => p.Id).ToList();
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= day && w.EffectiveTo >= day)
-            .ToListAsync();
+        var weeklyPrices = applicableDay.HasValue
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableDay.Value && w.EffectiveTo >= applicableDay.Value)
+                .ToListAsync()
+            : new List<WeeklyPrice>();
 
         var weeklyMap = weeklyPrices
             .GroupBy(w => w.ProductId)
@@ -533,12 +539,12 @@ public class WeeklyPricesController : Controller
             decimal masterCost = p.UnitCost;
             decimal masterMarkup = p.Markup;
             decimal masterDeliveryFee = p.DeliveryFee;
-            decimal cost = masterCost;
-            decimal markup = masterMarkup;
-            decimal deliveryFee = masterDeliveryFee;
+            decimal cost = isResetDay ? 0m : masterCost;
+            decimal markup = isResetDay ? 0m : masterMarkup;
+            decimal deliveryFee = isResetDay ? 0m : masterDeliveryFee;
             bool hasRec = false;
 
-            if (weeklyMap.TryGetValue(p.Id, out var wp))
+            if (!isResetDay && weeklyMap.TryGetValue(p.Id, out var wp))
             {
                 hasRec = true;
                 if (wp.CostOverride.HasValue)
@@ -620,13 +626,6 @@ public class WeeklyPricesController : Controller
     private static string AttachTargetDate(string returnUrl, DateTime targetDate)
     {
         return QueryHelpers.AddQueryString(returnUrl, "date", targetDate.ToString("yyyy-MM-dd"));
-    }
-
-    private static (DateTime WeekStart, DateTime WeekEnd) GetWeekRange(DateTime targetDate)
-    {
-        int diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
-        var weekStart = targetDate.AddDays(-1 * diff).Date;
-        return (weekStart, weekStart.AddDays(6).Date);
     }
 
     private static int FindPriceTemplateHeaderRow(SimpleXlsxSheet sheet)
@@ -803,9 +802,11 @@ public class WeeklyPricesController : Controller
         bool applyToMasterCost,
         List<PriceVersusItem> itemsToSave)
     {
-        var (weekStart, weekEnd) = GetWeekRange(targetDate);
+        var (weekStart, weekEnd) = WeeklyPriceCalendar.GetWeekRange(targetDate);
 
         var pids = itemsToSave.Select(i => i.ProductId).Distinct().ToList();
+
+        var applicableTargetDate = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate) ?? weekStart;
 
         var productMap = await _context.Products
             .Where(p => pids.Contains(p.Id))
@@ -813,7 +814,7 @@ public class WeeklyPricesController : Controller
 
         var existing = await _context.WeeklyPrices
             .Where(w => pids.Contains(w.ProductId) &&
-                        w.EffectiveFrom <= targetDate && w.EffectiveTo >= targetDate)
+                        w.EffectiveFrom <= applicableTargetDate && w.EffectiveTo >= applicableTargetDate)
             .ToListAsync();
 
         var existingGroups = existing

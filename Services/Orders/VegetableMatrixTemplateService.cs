@@ -1,5 +1,7 @@
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
+using HazelInvoice.Helpers;
+using HazelInvoice.Models;
 using HazelInvoice.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -40,6 +42,7 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
             .ToListAsync(cancellationToken);
 
         var day = date.Date;
+        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(day);
 
         var products = await _context.Products
             .AsNoTracking()
@@ -56,10 +59,12 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
             .ToListAsync(cancellationToken);
 
         var productIds = products.Select(p => p.Id).ToList();
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= day && w.EffectiveTo >= day)
-            .ToListAsync(cancellationToken);
+        var weeklyPrices = applicableDay.HasValue
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableDay.Value && w.EffectiveTo >= applicableDay.Value)
+                .ToListAsync(cancellationToken)
+            : new List<WeeklyPrice>();
 
         var weeklyPriceMap = weeklyPrices
             .GroupBy(w => w.ProductId)
@@ -88,9 +93,11 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
 
         foreach (var product in products)
         {
-            var effectivePrice = weeklyPriceMap.TryGetValue(product.Id, out var weeklyPrice) && weeklyPrice.DeliveryPrice > 0
-                ? weeklyPrice.DeliveryPrice
-                : product.UnitCost + product.Markup + product.DeliveryFee;
+            var effectivePrice = WeeklyPriceCalendar.IsResetDay(day)
+                ? 0m
+                : weeklyPriceMap.TryGetValue(product.Id, out var weeklyPrice) && weeklyPrice.DeliveryPrice > 0
+                    ? weeklyPrice.DeliveryPrice
+                    : product.UnitCost + product.Markup + product.DeliveryFee;
 
             // Keep columns A/B only; outlet qty cells intentionally blank.
             rows.Add(new[]

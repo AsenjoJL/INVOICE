@@ -28,6 +28,8 @@ public class ProductsController : Controller
     public async Task<IActionResult> Index(string? q = null, DateTime? date = null)
     {
         var businessDate = (date ?? BusinessDate.Today()).Date;
+        var applicableBusinessDate = WeeklyPriceCalendar.GetApplicablePriceDate(businessDate);
+        var isResetDay = WeeklyPriceCalendar.IsResetDay(businessDate);
         var query = _context.Products
             .AsNoTracking()
             .AsQueryable();
@@ -48,10 +50,12 @@ public class ProductsController : Controller
             .ToListAsync();
 
         var productIds = products.Select(p => p.Id).ToList();
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= businessDate && w.EffectiveTo >= businessDate)
-            .ToListAsync();
+        var weeklyPrices = applicableBusinessDate.HasValue
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableBusinessDate.Value && w.EffectiveTo >= applicableBusinessDate.Value)
+                .ToListAsync()
+            : new List<WeeklyPrice>();
 
         var weeklyMap = weeklyPrices
             .GroupBy(w => w.ProductId)
@@ -63,12 +67,12 @@ public class ProductsController : Controller
 
         var viewModel = products.Select(product =>
         {
-            var weeklyPrice = weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
-            var effectiveCost = weeklyPrice?.CostOverride ?? product.UnitCost;
-            var effectiveDeliveryFee = weeklyPrice?.DeliveryFee ?? product.DeliveryFee;
+            var weeklyPrice = !isResetDay && weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
+            var effectiveCost = isResetDay ? 0m : weeklyPrice?.CostOverride ?? product.UnitCost;
+            var effectiveDeliveryFee = isResetDay ? 0m : weeklyPrice?.DeliveryFee ?? product.DeliveryFee;
 
-            decimal effectiveMarkup = product.Markup;
-            if (weeklyPrice != null)
+            decimal effectiveMarkup = isResetDay ? 0m : product.Markup;
+            if (!isResetDay && weeklyPrice != null)
             {
                 if (weeklyPrice.Markup != 0)
                 {
@@ -81,7 +85,7 @@ public class ProductsController : Controller
             }
 
             var effectiveBasePrice = effectiveCost + effectiveMarkup;
-            var effectiveDeliveryPrice = weeklyPrice?.DeliveryPrice ?? (effectiveBasePrice + effectiveDeliveryFee);
+            var effectiveDeliveryPrice = isResetDay ? 0m : weeklyPrice?.DeliveryPrice ?? (effectiveBasePrice + effectiveDeliveryFee);
 
             return new ProductListItemViewModel
             {
