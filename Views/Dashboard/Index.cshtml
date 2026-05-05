@@ -74,7 +74,7 @@
                 <div class="metric-state">@(Model.SalesToday == 0 ? "No activity yet" : "Updated today")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@businessDate.ToString("MMM dd, yyyy")</span>
-                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { date = businessDate.ToString("yyyy-MM-dd"), viewMode = "sales" })">View</a>
+                    <a class="unpaid-link" href="@Url.Action("SummaryAll", "Orders", new { startDate = businessDate.ToString("yyyy-MM-dd"), endDate = businessDate.ToString("yyyy-MM-dd"), status = "All" })">View</a>
                 </div>
             </div>
         </div>
@@ -87,7 +87,7 @@
                 <div class="metric-state">@(Model.SalesWeekly == 0 ? "No activity this week" : "Current week revenue")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@weekStart.ToString("MMM dd") - @weekEnd.ToString("MMM dd")</span>
-                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = weekStart.ToString("yyyy-MM-dd"), dateTo = weekEnd.ToString("yyyy-MM-dd"), viewMode = "sales" })">View</a>
+                    <a class="unpaid-link" href="@Url.Action("SummaryAll", "Orders", new { startDate = weekStart.ToString("yyyy-MM-dd"), endDate = weekEnd.ToString("yyyy-MM-dd"), status = "All" })">View</a>
                 </div>
             </div>
         </div>
@@ -101,7 +101,7 @@
                 <div class="metric-state">@(Model.SalesMonthly == 0 ? "No activity this month" : "Current month revenue")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@monthStart.ToString("MMM dd") - @monthEnd.ToString("MMM dd")</span>
-                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = monthStart.ToString("yyyy-MM-dd"), dateTo = monthEnd.ToString("yyyy-MM-dd"), viewMode = "sales" })">View</a>
+                    <a class="unpaid-link" href="@Url.Action("SummaryAll", "Orders", new { startDate = monthStart.ToString("yyyy-MM-dd"), endDate = monthEnd.ToString("yyyy-MM-dd"), status = "All" })">View</a>
                 </div>
             </div>
         </div>
@@ -210,6 +210,10 @@
                 </div>
                 <div class="metric-value">₱@Model.TotalSalesAllTime.ToString("N0")</div>
                 <div class="metric-state">All recorded receipt sales</div>
+                <div class="unpaid-cta">
+                    <span class="unpaid-count">All records</span>
+                    <a class="unpaid-link" href="@Url.Action("SummaryAll", "Orders", new { status = "All" })">View</a>
+                </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
