@@ -43,7 +43,7 @@ public class ReceiptsController : Controller
     }
 
     // GET: Receipts
-    public async Task<IActionResult> Index(string? q, DateTime? date = null, DateTime? dateFrom = null, DateTime? dateTo = null, int page = 1, int pageSize = 50)
+    public async Task<IActionResult> Index(string? q, DateTime? date = null, DateTime? dateFrom = null, DateTime? dateTo = null, string? viewMode = null, int page = 1, int pageSize = 50)
     {
         var vm = await _receiptQuery.QueryAsync(new ReceiptQueryOptions
         {
@@ -55,12 +55,15 @@ public class ReceiptsController : Controller
             PageSize = pageSize,
             UnpaidOnly = false
         }, HttpContext.RequestAborted);
-        ViewData["TitleHeader"] = "Receipts & Deliveries";
+        ViewData["TitleHeader"] = string.Equals(viewMode, "sales", StringComparison.OrdinalIgnoreCase)
+            ? "Sales"
+            : "Receipts & Deliveries";
+        ViewData["ViewMode"] = viewMode;
         return View(vm);
     }
 
     // GET: Receipts/Unpaid
-    public async Task<IActionResult> Unpaid(string? q, DateTime? date = null, DateTime? dateFrom = null, DateTime? dateTo = null, int page = 1, int pageSize = 50)
+    public async Task<IActionResult> Unpaid(string? q, DateTime? date = null, DateTime? dateFrom = null, DateTime? dateTo = null, string? viewMode = null, int page = 1, int pageSize = 50)
     {
         var vm = await _receiptQuery.QueryAsync(new ReceiptQueryOptions
         {
@@ -73,7 +76,10 @@ public class ReceiptsController : Controller
             UnpaidOnly = true
         }, HttpContext.RequestAborted);
 
-        ViewData["TitleHeader"] = "Unpaid Receipts";
+        ViewData["TitleHeader"] = string.Equals(viewMode, "sales", StringComparison.OrdinalIgnoreCase)
+            ? "Unpaid Sales"
+            : "Unpaid Receipts";
+        ViewData["ViewMode"] = viewMode;
         return View("Index", vm);
     }
 

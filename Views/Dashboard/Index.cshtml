@@ -74,7 +74,7 @@
                 <div class="metric-state">@(Model.SalesToday == 0 ? "No activity yet" : "Updated today")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@businessDate.ToString("MMM dd, yyyy")</span>
-                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { date = businessDate.ToString("yyyy-MM-dd") })">View</a>
+                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { date = businessDate.ToString("yyyy-MM-dd"), viewMode = "sales" })">View</a>
                 </div>
             </div>
         </div>
@@ -87,7 +87,7 @@
                 <div class="metric-state">@(Model.SalesWeekly == 0 ? "No activity this week" : "Current week revenue")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@weekStart.ToString("MMM dd") - @weekEnd.ToString("MMM dd")</span>
-                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = weekStart.ToString("yyyy-MM-dd"), dateTo = weekEnd.ToString("yyyy-MM-dd") })">View</a>
+                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = weekStart.ToString("yyyy-MM-dd"), dateTo = weekEnd.ToString("yyyy-MM-dd"), viewMode = "sales" })">View</a>
                 </div>
             </div>
         </div>
@@ -101,7 +101,7 @@
                 <div class="metric-state">@(Model.SalesMonthly == 0 ? "No activity this month" : "Current month revenue")</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@monthStart.ToString("MMM dd") - @monthEnd.ToString("MMM dd")</span>
-                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = monthStart.ToString("yyyy-MM-dd"), dateTo = monthEnd.ToString("yyyy-MM-dd") })">View</a>
+                    <a class="unpaid-link" href="@Url.Action("Index", "Receipts", new { dateFrom = monthStart.ToString("yyyy-MM-dd"), dateTo = monthEnd.ToString("yyyy-MM-dd"), viewMode = "sales" })">View</a>
                 </div>
             </div>
         </div>
