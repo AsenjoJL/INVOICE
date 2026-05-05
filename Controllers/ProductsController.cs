@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Primitives;
 
 namespace HazelInvoice.Controllers;
 
@@ -216,6 +217,12 @@ public class ProductsController : Controller
                 if (!ProductExists(product.Id)) return NotFound();
                 else throw;
             }
+
+            if (!product.IsActive)
+            {
+                returnUrl = BuildActiveCatalogReturnUrl(returnUrl);
+            }
+
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
                 var redirectUrl = returnUrl;
@@ -264,6 +271,7 @@ public class ProductsController : Controller
         _cacheInvalidator.InvalidateWeeklyPrices();
 
         TempData["Message"] = $"Deactivated {product.Name}.";
+        returnUrl = BuildActiveCatalogReturnUrl(returnUrl);
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             return LocalRedirect(BuildReturnUrl(returnUrl, returnClientPage, returnScrollY));
 
@@ -344,6 +352,41 @@ public class ProductsController : Controller
         }
 
         return redirectUrl;
+    }
+
+    private static string? BuildActiveCatalogReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return null;
+        }
+
+        var path = returnUrl;
+        var queryString = string.Empty;
+
+        var queryIndex = returnUrl.IndexOf('?', StringComparison.Ordinal);
+        if (queryIndex >= 0)
+        {
+            path = returnUrl[..queryIndex];
+            queryString = returnUrl[(queryIndex + 1)..];
+        }
+
+        var query = QueryHelpers.ParseQuery(queryString);
+        var normalized = new Dictionary<string, StringValues>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in query)
+        {
+            if (string.Equals(pair.Key, "scope", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pair.Key, "restorePage", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pair.Key, "highlightProductId", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            normalized[pair.Key] = pair.Value;
+        }
+
+        normalized["scope"] = ScopeActive;
+        return QueryHelpers.AddQueryString(path, normalized);
     }
 
     private async Task<List<string>> GetCategoryOptionsAsync()
