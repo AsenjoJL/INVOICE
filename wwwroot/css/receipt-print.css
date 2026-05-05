@@ -155,7 +155,7 @@ body.receipt-body {
 }
 
 .receipt-meta .date-value {
-    font-family: "Brush Script MT", "Segoe Script", cursive;
+    font-family: Calibri, "Arial Narrow", Arial, sans-serif;
     font-size: 22px;
     font-weight: 700;
 }
@@ -246,6 +246,12 @@ body.receipt-body {
 
 .items-table tbody td {
     font-weight: 700;
+}
+
+.items-table tbody::before {
+    content: "";
+    display: table-row;
+    height: 10px;
 }
 
 .total-row {
@@ -458,6 +464,12 @@ body.receipt-borderless .received-input {
         font-size: var(--dr-items-print-font-size);
         background: transparent !important;
         -webkit-print-color-adjust: exact;
+    }
+
+    .items-table tbody::before {
+        content: "";
+        display: table-row;
+        height: 8px;
     }
 
     .items-table th.col-part,
