@@ -13,6 +13,8 @@
     color: var(--product-text);
     background: transparent;
     font-size: 14px;
+    --product-shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.04);
+    --product-shadow-press: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .product-header {
@@ -85,9 +87,10 @@
 
 .product-search-bar {
     min-height: 44px;
-    padding: 0 10px;
+    padding: 4px 10px;
     border: 1px solid var(--product-line);
     background: #ffffff;
+    border-radius: 20px !important;
 }
 
 .product-tools .form-control,
@@ -154,6 +157,8 @@
     color: #ffffff;
     border-color: #000000;
     text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: var(--product-shadow-press);
 }
 
 .btn-primary-ghost:visited,
@@ -172,6 +177,17 @@
     background: #ffffff;
     color: #0a0a0a;
     border: 1px solid var(--product-line);
+}
+
+.btn-ghost:hover,
+.btn-clear:hover,
+.info-btn:hover,
+.action-menu-btn:hover,
+.product-form-banner .btn:hover,
+.product-form-actions .btn-outline-secondary:hover {
+    background: #fafafa;
+    color: #0a0a0a;
+    border-color: #d9d9d9;
 }
 
 .info-btn,
@@ -197,12 +213,16 @@
 .product-form-section {
     background: #ffffff;
     border: 1px solid var(--product-line);
-    box-shadow: none;
+    box-shadow: var(--product-shadow-soft);
     border-radius: var(--ui-radius-xl);
 }
 
 .metric-card {
-    padding: 14px 16px;
+    min-height: 136px;
+    padding: 18px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .metric-value {
@@ -231,6 +251,7 @@
     gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 16px;
+    align-items: center;
 }
 
 .filter-pill {
@@ -242,6 +263,8 @@
     padding: 0 12px;
     background: #ffffff;
     border: 1px solid var(--product-line);
+    border-radius: 999px !important;
+    text-decoration: none;
 }
 
 .filter-pill.active {
@@ -267,7 +290,7 @@
 .table-top-meta,
 .product-pager {
     justify-content: space-between;
-    padding: 14px 16px;
+    padding: 16px 18px;
     border-bottom: 1px solid var(--product-line);
 }
 
@@ -288,12 +311,13 @@
 .product-table th {
     background: #ffffff;
     border-bottom: 1px solid var(--product-line);
-    padding: 14px 16px;
+    padding: 16px 18px;
     white-space: nowrap;
+    vertical-align: middle;
 }
 
 .product-table td {
-    padding: 14px 16px;
+    padding: 16px 18px;
     border-bottom: 1px solid var(--product-line);
     vertical-align: middle;
     color: var(--product-text);
@@ -302,6 +326,26 @@
 
 .product-table tbody tr:hover td {
     background: #fafafa;
+}
+
+.product-table .col-check,
+.product-table td.col-check {
+    width: 52px;
+    text-align: center;
+}
+
+.product-table .col-sku {
+    width: 124px;
+}
+
+.product-table .col-cost {
+    min-width: 220px;
+}
+
+.product-table .col-actions,
+.product-table td.col-actions {
+    width: 92px;
+    text-align: center;
 }
 
 .product-table tbody tr.product-row-highlight td {
@@ -323,11 +367,13 @@
 
 .product-name {
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
 .product-meta {
     margin-top: 4px;
+    line-height: 1.45;
 }
 
 .product-weekly-flag {
@@ -370,6 +416,38 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    white-space: nowrap;
+}
+
+.sort-trigger:hover,
+.sort-trigger.active {
+    color: var(--product-text);
+}
+
+.action-menu-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px !important;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.product-card .dropdown-menu {
+    min-width: 210px;
+    padding: 8px;
+    border-radius: 18px;
+    border: 1px solid var(--product-line);
+    box-shadow: var(--product-shadow-soft);
+}
+
+.product-card .dropdown-item {
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.product-card .dropdown-item:hover,
+.product-card .dropdown-item:focus {
+    background: #f8f8f8;
 }
 
 .bulk-toolbar {
@@ -456,12 +534,17 @@
     border-radius: var(--ui-radius-md);
     border-color: var(--product-line);
     box-shadow: none;
+    min-height: 56px;
 }
 
 .product-form-card .form-control:focus,
 .product-form-card .form-select:focus {
     border-color: #d4d4d4;
     box-shadow: none;
+}
+
+.product-form-card .form-floating > label {
+    padding-left: 16px;
 }
 
 .sku-pill,
@@ -484,6 +567,11 @@
     background: #0a0a0a;
     border: 1px solid #0a0a0a;
     color: #ffffff;
+}
+
+.product-form-actions .btn {
+    min-height: 48px;
+    padding-inline: 18px;
 }
 
 .form-check-input:checked {

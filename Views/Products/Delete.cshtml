@@ -5,45 +5,71 @@
     var returnUrl = ViewBag.ReturnUrl as string;
 }
 
-<div class="container p-4">
-    <div class="card shadow border-0" style="max-width: 700px; margin: 0 auto;">
-        <div class="card-header bg-danger text-white">
-            <h4 class="mb-0">Deactivate Product</h4>
-        </div>
-        <div class="card-body">
-            <p class="mb-3">
-                This will <strong>deactivate</strong> the product so it no longer appears in orders.
-                Existing receipts will remain intact.
-            </p>
+<partial name="_ProductFormStyles" />
 
-            <dl class="row">
-                <dt class="col-sm-4">Name</dt>
-                <dd class="col-sm-8">@Model.Name</dd>
-
-                <dt class="col-sm-4">SKU</dt>
-                <dd class="col-sm-8">@Model.SKU</dd>
-
-                <dt class="col-sm-4">Unit</dt>
-                <dd class="col-sm-8">@Model.Unit</dd>
-            </dl>
-
-            <form asp-action="Delete" method="post">
-                <input type="hidden" asp-for="Id" />
-                <input type="hidden" name="returnUrl" value="@returnUrl" />
-                <input type="hidden" name="returnClientPage" id="returnClientPage" value="1" />
-                <input type="hidden" name="returnScrollY" id="returnScrollY" value="0" />
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-danger">Deactivate</button>
+<div class="container product-form-page py-4">
+    <div class="product-form-shell" style="max-width: 760px;">
+        <div class="product-form-card">
+            <div class="product-form-banner">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="product-form-kicker">Catalog Safety</div>
+                        <h4>Deactivate Product</h4>
+                        <p class="subtitle">Archive the item from active operations while preserving order and stock history.</p>
+                    </div>
                     @if (!string.IsNullOrWhiteSpace(returnUrl))
                     {
-                        <a href="@returnUrl" class="btn btn-light">Cancel</a>
+                        <a href="@returnUrl" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
                     }
                     else
                     {
-                        <a asp-action="Index" class="btn btn-light">Cancel</a>
+                        <a asp-action="Index" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
                     }
                 </div>
-            </form>
+            </div>
+
+            <div class="product-form-body">
+                <div class="product-form-section">
+                    <div class="section-title">What happens next</div>
+                    <p class="mb-0" style="color:#7a8699;">
+                        This will <strong>deactivate</strong> the product so it no longer appears in active ordering flows.
+                        Existing receipts, purchases, and stock history remain intact.
+                    </p>
+                </div>
+
+                <div class="product-form-section">
+                    <div class="section-title">Product details</div>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Name</dt>
+                        <dd class="col-sm-8 fw-semibold">@Model.Name</dd>
+
+                        <dt class="col-sm-4">SKU</dt>
+                        <dd class="col-sm-8">@Model.SKU</dd>
+
+                        <dt class="col-sm-4">Unit</dt>
+                        <dd class="col-sm-8">@Model.Unit</dd>
+                    </dl>
+                </div>
+
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="returnClientPage" id="returnClientPage" value="1" />
+                    <input type="hidden" name="returnScrollY" id="returnScrollY" value="0" />
+
+                    <div class="product-form-section product-form-actions">
+                        @if (!string.IsNullOrWhiteSpace(returnUrl))
+                        {
+                            <a href="@returnUrl" class="btn btn-outline-secondary">Cancel</a>
+                        }
+                        else
+                        {
+                            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        }
+                        <button type="submit" class="btn btn-primary btn-lg">Deactivate Product</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
