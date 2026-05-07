@@ -17,7 +17,11 @@
     string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";
 }
 
-<div class="container-fluid pb-5 dashboard-shell dashboard-admin">
+@section Styles {
+    <link rel="stylesheet" href="~/css/dashboard-refresh.css" asp-append-version="true" />
+}
+
+<div class="container-fluid pb-5 dashboard-shell dashboard-admin dashboard-refresh">
     <section class="dashboard-hero-panel">
         <div class="dashboard-hero-main">
             <span class="dashboard-hero-kicker"><i class="bi bi-activity"></i> Live Operations</span>
@@ -41,6 +45,52 @@
         </div>
     </section>
 
+    <section class="dashboard-kpi-strip">
+        <article class="dashboard-kpi-tile tile-cash">
+            <div class="dashboard-kpi-icon"><i class="bi bi-wallet2"></i></div>
+            <div class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Cash Balance</span>
+                <strong>₱@Model.CashBalance.ToString("N0")</strong>
+                <small>Recorded payments minus expenses</small>
+            </div>
+        </article>
+        <article class="dashboard-kpi-tile tile-sales">
+            <div class="dashboard-kpi-icon"><i class="bi bi-cart3"></i></div>
+            <div class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Sales Today</span>
+                <strong>₱@Model.SalesToday.ToString("N0")</strong>
+                <small>@businessDate.ToString("MMM dd, yyyy")</small>
+            </div>
+            <span class="dashboard-kpi-trend @TrendBadgeClass(Model.SalesTodayTrendPercent)"><i class="bi @TrendIcon(Model.SalesTodayTrendPercent)"></i> @TrendText(Model.SalesTodayTrendPercent)</span>
+        </article>
+        <article class="dashboard-kpi-tile tile-week">
+            <div class="dashboard-kpi-icon"><i class="bi bi-bar-chart-line"></i></div>
+            <div class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Total Sales Week</span>
+                <strong>₱@Model.SalesWeekly.ToString("N0")</strong>
+                <small>@weekStart.ToString("MMM dd") - @weekEnd.ToString("MMM dd")</small>
+            </div>
+        </article>
+        <article class="dashboard-kpi-tile tile-month">
+            <div class="dashboard-kpi-icon"><i class="bi bi-bag-check"></i></div>
+            <div class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Total Sales Month</span>
+                <strong>₱@Model.SalesMonthly.ToString("N0")</strong>
+                <small>@monthStart.ToString("MMM dd") - @monthEnd.ToString("MMM dd")</small>
+            </div>
+            <span class="dashboard-kpi-trend @TrendBadgeClass(Model.SalesMonthlyTrendPercent)"><i class="bi @TrendIcon(Model.SalesMonthlyTrendPercent)"></i> @TrendText(Model.SalesMonthlyTrendPercent)</span>
+        </article>
+        <article class="dashboard-kpi-tile tile-profit">
+            <div class="dashboard-kpi-icon"><i class="bi bi-pie-chart"></i></div>
+            <div class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Gross Profit Month</span>
+                <strong>₱@Model.GrossProfitMonth.ToString("N0")</strong>
+                <small>Revenue minus item cost</small>
+            </div>
+            <span class="dashboard-kpi-trend @TrendBadgeClass(Model.GrossProfitTrendPercent)"><i class="bi @TrendIcon(Model.GrossProfitTrendPercent)"></i> @TrendText(Model.GrossProfitTrendPercent)</span>
+        </article>
+    </section>
+
     <section class="dashboard-module-bar">
         <a href="/Dashboard" class="dashboard-module-pill active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
         <a href="/Receipts" class="dashboard-module-pill"><i class="bi bi-receipt-cutoff"></i> Receipts</a>
@@ -54,7 +104,7 @@
 
     <section class="dashboard-section-heading">
         <div>
-            <h2>Dashboard Overview</h2>
+            <h2>Operational Signals</h2>
             <p>Real-time insights into selling performance, collections, expenses, and outlet activity.</p>
         </div>
         <div class="dashboard-section-actions">
