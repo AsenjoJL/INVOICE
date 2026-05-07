@@ -30,6 +30,10 @@
     };
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/receipts-refresh.css" asp-append-version="true" />
+}
+
 <style>
     .invoice-table tbody tr.receipt-row-highlight td {
         background: rgba(59, 130, 246, 0.08);
@@ -37,7 +41,7 @@
     }
 </style>
 
-<div class="container-fluid p-4 invoice-ui invoice-ui-min admin-page-flow">
+<div class="container-fluid p-4 invoice-ui invoice-ui-min admin-page-flow receipts-refresh">
     <div class="invoice-hero invoice-hero-plain admin-page-hero">
         <div>
             <span class="admin-section-kicker">Sales Ledger</span>
@@ -71,6 +75,29 @@
             <a asp-controller="Orders" asp-action="ReceiptList" class="invoice-btn invoice-btn-ghost"><i class="bi bi-list-check"></i> Receipt List</a>
         </div>
     </div>
+
+    <section class="receipts-summary-strip">
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Visible Rows</span>
+            <strong>@receiptCount.ToString("N0")</strong>
+            <small>@(isSalesView ? "Sales records in this result" : "Receipts in this result")</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Current Page</span>
+            <strong>@currentPage</strong>
+            <small>Page @currentPage of @totalPages</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Page Size</span>
+            <strong>@pageSize</strong>
+            <small>Rows per page</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Scope</span>
+            <strong>@(isUnpaid ? "Unpaid" : "All")</strong>
+            <small>@(isSalesView ? "Sales mode" : "Receipt mode")</small>
+        </article>
+    </section>
 
     @if (TempData["Message"] is string message && !string.IsNullOrWhiteSpace(message))
     {

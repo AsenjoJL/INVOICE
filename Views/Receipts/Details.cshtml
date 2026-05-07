@@ -17,9 +17,14 @@
     };
 }
 
-<div class="container-fluid p-4 invoice-ui invoice-ui-min">
+@section Styles {
+    <link rel="stylesheet" href="~/css/receipts-refresh.css" asp-append-version="true" />
+}
+
+<div class="container-fluid p-4 invoice-ui invoice-ui-min receipts-refresh">
     <div class="invoice-hero invoice-hero-plain">
         <div>
+            <span class="admin-section-kicker">Receipt Snapshot</span>
             <h1 class="invoice-title">Receipt @Model.ReceiptNumber</h1>
             <p class="invoice-sub">Created @Model.Date.ToString("MMM dd, yyyy h:mm tt")</p>
         </div>
@@ -43,6 +48,29 @@
             <a href="@returnUrl" class="invoice-btn invoice-btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
         </div>
     </div>
+
+    <section class="receipts-summary-strip">
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Total Amount</span>
+            <strong>₱@Model.TotalAmount.ToString("N2")</strong>
+            <small>Recorded sale amount</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Paid Amount</span>
+            <strong>₱@Model.PaidAmount.ToString("N2")</strong>
+            <small>Collected on this receipt</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Balance</span>
+            <strong>₱@((Model.TotalAmount - Model.PaidAmount).ToString("N2"))</strong>
+            <small>Open amount remaining</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Items</span>
+            <strong>@Model.Lines.Count</strong>
+            <small>Saved line items</small>
+        </article>
+    </section>
 
     <div class="invoice-card mb-3">
         <div class="invoice-card-header">

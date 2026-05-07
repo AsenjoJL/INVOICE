@@ -20,7 +20,11 @@
     }).ToList();
 }
 
-<div class="container-fluid p-4 invoice-ui invoice-ui-min admin-page-flow">
+@section Styles {
+    <link rel="stylesheet" href="~/css/receipts-refresh.css" asp-append-version="true" />
+}
+
+<div class="container-fluid p-4 invoice-ui invoice-ui-min admin-page-flow receipts-refresh">
     <div class="invoice-hero invoice-hero-plain admin-page-hero">
         <div>
             <span class="admin-section-kicker">New Transaction</span>
@@ -31,6 +35,29 @@
             <a asp-action="Index" class="invoice-btn invoice-btn-ghost"><i class="bi bi-arrow-left"></i> Back to List</a>
         </div>
     </div>
+
+    <section class="receipts-summary-strip">
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Delivery Date</span>
+            <strong>@Model.Date.ToString("MMM dd, yyyy")</strong>
+            <small>Used for pricing and duplicate checks</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Price Source</span>
+            <strong>@priceList.Count.ToString("N0")</strong>
+            <small>Weekly price rows loaded</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Products</span>
+            <strong>@products.Count.ToString("N0")</strong>
+            <small>Available active products</small>
+        </article>
+        <article class="receipts-summary-card">
+            <span class="receipts-summary-label">Customers</span>
+            <strong>@((ViewBag.Customers as List<HazelInvoice.Models.Customer> ?? new List<HazelInvoice.Models.Customer>()).Count.ToString("N0"))</strong>
+            <small>Selectable outlets</small>
+        </article>
+    </section>
 
     <form method="get" asp-action="Create" id="deliveryDateReloadForm" class="d-none">
         <input type="hidden" name="date" id="deliveryDateReloadValue" value="@Model.Date.ToString("yyyy-MM-dd")" />
