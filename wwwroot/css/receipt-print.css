@@ -220,6 +220,7 @@ body.receipt-body {
     padding: 8px 10px;
     height: 30px;
     font-size: 14px;
+    vertical-align: top;
 }
 
 .items-table th {
@@ -228,6 +229,7 @@ body.receipt-body {
     letter-spacing: 0.5px;
     text-align: center;
     background: transparent;
+    padding-bottom: 12px;
 }
 
 .col-qty { width: 9%; text-align: center; }
@@ -242,16 +244,15 @@ body.receipt-body {
     padding-left: 16px;
     padding-right: 12px;
     letter-spacing: 0.2px;
+    white-space: nowrap;
 }
 
 .items-table tbody td {
     font-weight: 700;
 }
 
-.items-table tbody::before {
-    content: "";
-    display: table-row;
-    height: 10px;
+.items-table tbody tr:first-child td {
+    padding-top: 12px;
 }
 
 .total-row {
@@ -458,24 +459,25 @@ body.receipt-borderless .received-input {
         font-size: var(--dr-items-print-font-size);
         line-height: 1;
         border: none !important;
+        vertical-align: top;
     }
 
     .items-table th {
         font-size: var(--dr-items-print-font-size);
         background: transparent !important;
         -webkit-print-color-adjust: exact;
+        padding-bottom: 10px;
     }
 
-    .items-table tbody::before {
-        content: "";
-        display: table-row;
-        height: 8px;
+    .items-table tbody tr:first-child td {
+        padding-top: 10px;
     }
 
     .items-table th.col-part,
     .items-table td.col-part {
         text-align: left;
         padding-left: 10px;
+        white-space: nowrap;
     }
 
     .items-table th.col-price,
