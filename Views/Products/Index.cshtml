@@ -24,9 +24,13 @@
     };
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/products-refresh.css" asp-append-version="true" />
+}
+
 <link rel="stylesheet" href="~/css/products-index.css" asp-append-version="true" />
 
-<div class="container-fluid p-4 product-page">
+<div class="container-fluid p-4 product-page product-refresh">
     <div class="product-header admin-page-flow">
         <div class="product-header-top">
             <div class="product-header-main admin-page-hero admin-page-hero-soft">
@@ -210,6 +214,29 @@
                 All
             </a>
         </div>
+
+        <div class="product-summary-strip">
+            <article class="product-summary-card">
+                <span class="product-summary-label">Catalog Scope</span>
+                <strong>@scopeLabel</strong>
+                <small>Current product visibility view</small>
+            </article>
+            <article class="product-summary-card">
+                <span class="product-summary-label">Price Date</span>
+                <strong>@targetDate.ToString("MMM dd, yyyy")</strong>
+                <small>Effective delivery price snapshot</small>
+            </article>
+            <article class="product-summary-card">
+                <span class="product-summary-label">Active Products</span>
+                <strong>@activeCount.ToString("N0")</strong>
+                <small>Visible in ordering flows</small>
+            </article>
+            <article class="product-summary-card">
+                <span class="product-summary-label">Needs Price</span>
+                <strong>@zeroPriceCount.ToString("N0")</strong>
+                <small>Products with zero delivery price</small>
+            </article>
+        </div>
     </div>
 
     <div class="filter-bar">
@@ -327,7 +354,8 @@
                                                 data-bs-toggle="dropdown"
                                                 aria-expanded="false"
                                                 title="More actions">
-                                            <i class="bi bi-three-dots"></i>
+                                            <i class="bi bi-sliders2"></i>
+                                            <span>Manage</span>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
                                             <li>

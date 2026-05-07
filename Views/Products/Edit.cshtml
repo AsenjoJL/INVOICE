@@ -5,9 +5,13 @@
     var returnUrl = ViewBag.ReturnUrl as string;
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/products-refresh.css" asp-append-version="true" />
+}
+
 <partial name="_ProductFormStyles" />
 
-<div class="container product-form-page py-4">
+<div class="container product-form-page product-refresh py-4">
     <div class="product-form-shell">
         <div class="product-form-card">
             <div class="product-form-banner">
@@ -29,6 +33,24 @@
             </div>
 
             <div class="product-form-body">
+                <section class="product-summary-strip product-form-strip">
+                    <article class="product-summary-card">
+                        <span class="product-summary-label">Editing</span>
+                        <strong>@Model.Name</strong>
+                        <small>Update this catalog record safely</small>
+                    </article>
+                    <article class="product-summary-card">
+                        <span class="product-summary-label">SKU</span>
+                        <strong>@Model.SKU</strong>
+                        <small>Current product code</small>
+                    </article>
+                    <article class="product-summary-card">
+                        <span class="product-summary-label">Status</span>
+                        <strong>@(Model.IsActive ? "Active" : "Inactive")</strong>
+                        <small>Controls ordering visibility</small>
+                    </article>
+                </section>
+
                 <form asp-action="Edit" method="post" id="productEditForm">
                     <input type="hidden" asp-for="Id" />
                     <input type="hidden" name="returnUrl" value="@returnUrl" />
