@@ -32,9 +32,10 @@ public class ProductsController : Controller
     // GET: Products
     public async Task<IActionResult> Index(string? q = null, DateTime? date = null, string? scope = null)
     {
-        var businessDate = (date ?? BusinessDate.Today()).Date;
-        var applicableBusinessDate = WeeklyPriceCalendar.GetApplicablePriceDate(businessDate);
-        var isResetDay = WeeklyPriceCalendar.IsResetDay(businessDate);
+        var businessMoment = date ?? BusinessDate.Now();
+        var businessDate = businessMoment.Date;
+        var applicableBusinessDate = WeeklyPriceCalendar.GetApplicablePriceDate(businessMoment);
+        var isResetDay = WeeklyPriceCalendar.IsResetDay(businessMoment);
         var normalizedScope = NormalizeScope(scope);
         var summary = await _context.Products
             .AsNoTracking()

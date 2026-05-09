@@ -31,7 +31,7 @@ public class WeeklyPricesController : Controller
     // GET: WeeklyPrices/PriceVersus
     public async Task<IActionResult> PriceVersus(DateTime? date, string? q = null, int page = 1, int pageSize = 40)
     {
-        var targetDate = (date ?? DateTime.Today).Date;
+        var targetDate = date ?? BusinessDate.Now();
         var vm = await BuildPriceVersusModelAsync(targetDate, q, page, pageSize);
         return View(vm);
     }
@@ -249,8 +249,9 @@ public class WeeklyPricesController : Controller
     public async Task<IActionResult> DownloadTemplate(DateTime? targetDate, string? importMode = null, string? returnUrl = null)
     {
         var normalizedImportMode = NormalizeImportMode(importMode);
-        var day = (targetDate ?? BusinessDate.Today()).Date;
-        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(day);
+        var targetMoment = targetDate ?? BusinessDate.Now();
+        var day = targetMoment.Date;
+        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(targetMoment);
 
         var products = await _context.Products
             .AsNoTracking()
@@ -361,7 +362,7 @@ public class WeeklyPricesController : Controller
     {
         ViewData["ProductId"] = new SelectList(await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted), "Id", "Name");
         // Default to this week
-        var (startOfWeek, endOfWeek) = WeeklyPriceCalendar.GetWeekRange(DateTime.Now);
+        var (startOfWeek, endOfWeek) = WeeklyPriceCalendar.GetWeekRange(BusinessDate.Now());
 
         return View(new WeeklyPrice { EffectiveFrom = startOfWeek, EffectiveTo = endOfWeek });
     }
@@ -442,7 +443,7 @@ public class WeeklyPricesController : Controller
     // Clone last week's prices to this week
     public async Task<IActionResult> CloneLastWeek()
     {
-        var (thisWeekStart, thisWeekEnd) = WeeklyPriceCalendar.GetWeekRange(DateTime.Now);
+        var (thisWeekStart, thisWeekEnd) = WeeklyPriceCalendar.GetWeekRange(BusinessDate.Now());
         var lastWeekStart = thisWeekStart.AddDays(-7).Date;
         var lastWeekEnd = lastWeekStart.AddDays(5).Date;
 
@@ -483,8 +484,8 @@ public class WeeklyPricesController : Controller
         IEnumerable<PriceVersusItem>? postedItems = null)
     {
         var day = targetDate.Date;
-        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(day);
-        var isResetDay = WeeklyPriceCalendar.IsResetDay(day);
+        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate);
+        var isResetDay = WeeklyPriceCalendar.IsResetDay(targetDate);
         var (weekStart, weekEnd) = WeeklyPriceCalendar.GetWeekRange(targetDate);
         var normalizedSearch = searchTerm?.Trim() ?? string.Empty;
         page = Math.Max(1, page);

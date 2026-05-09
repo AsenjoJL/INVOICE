@@ -106,10 +106,11 @@ public sealed class LookupCacheService : ILookupCacheService
 
     public Task<IReadOnlyList<WeeklyPrice>> GetWeeklyPricesForDayAsync(DateTime day, CancellationToken ct = default)
     {
-        if (WeeklyPriceCalendar.IsResetDay(day))
+        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(day);
+        if (!applicableDay.HasValue)
             return Task.FromResult((IReadOnlyList<WeeklyPrice>)Array.Empty<WeeklyPrice>());
 
-        var cacheKey = AppCacheKeys.WeeklyPricesForDay(day.Date);
+        var cacheKey = AppCacheKeys.WeeklyPricesForDay(applicableDay.Value);
         if (_cacheInvalidator is AppCacheInvalidator invalidator)
             invalidator.TrackWeeklyPriceKey(cacheKey);
 
@@ -119,7 +120,7 @@ public sealed class LookupCacheService : ILookupCacheService
             return (IReadOnlyList<WeeklyPrice>)await _context.WeeklyPrices
                 .AsNoTracking()
                 .Include(w => w.Product)
-                .Where(w => w.EffectiveFrom <= day.Date && w.EffectiveTo >= day.Date)
+                .Where(w => w.EffectiveFrom <= applicableDay.Value && w.EffectiveTo >= applicableDay.Value)
                 .OrderBy(w => w.Product!.Name)
                 .ToListAsync(ct);
         })!;
