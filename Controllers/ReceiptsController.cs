@@ -366,6 +366,42 @@ public class ReceiptsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkAsPaid(int id, string? returnUrl = null)
+    {
+        var receipt = await _context.Receipts.FindAsync(id);
+        if (receipt == null)
+            return NotFound();
+
+        if (receipt.Status == PaymentStatus.Unpaid)
+        {
+            receipt.Status = PaymentStatus.Paid;
+            receipt.PaidAmount = receipt.TotalAmount;
+
+            var payment = new Payment
+            {
+                ReceiptId = receipt.Id,
+                Date = DateTime.Now,
+                Amount = receipt.TotalAmount,
+                Method = PaymentMethod.Cash,
+                RecordedById = User.Identity?.Name ?? "System"
+            };
+
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+            _cacheInvalidator.InvalidateDashboard();
+            _cacheInvalidator.InvalidateProfitReports();
+
+            TempData["Message"] = $"Marked receipt {receipt.ReceiptNumber} as paid.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateLinePartner(int receiptId, int lineId, string? partnerName, string? returnUrl = null)
     {
         var receipt = await _context.Receipts

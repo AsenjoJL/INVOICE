@@ -164,33 +164,21 @@
                                     <span class="@StatusClass(item.Status)">@item.Status</span>
                                 </td>
                                 <td class="text-end">
-                                    <div class="btn-group">
-                                        <a asp-action="Print"
-                                           asp-route-id="@item.Id"
-                                           asp-route-returnUrl="@returnUrl"
-                                           class="invoice-icon-btn receipt-return-link"
-                                           data-receipt-id="@item.Id"
-                                           title="Print"><i class="bi bi-printer"></i></a>
-                                        <a asp-action="Details"
-                                           asp-route-id="@item.Id"
-                                           asp-route-returnUrl="@returnUrl"
-                                           class="invoice-icon-btn receipt-return-link"
-                                           data-receipt-id="@item.Id"
-                                           title="View"><i class="bi bi-eye"></i></a>
+                                    @if (item.Status == HazelInvoice.Models.PaymentStatus.Unpaid)
+                                    {
                                         <form method="post"
-                                              asp-action="Delete"
+                                              asp-action="MarkAsPaid"
                                               asp-route-id="@item.Id"
                                               asp-route-returnUrl="@returnUrl"
-                                              class="d-inline receipt-return-form"
-                                              data-receipt-id="@item.Id">
+                                              class="d-inline">
+                                            @Html.AntiForgeryToken()
                                             <button type="submit"
-                                                    class="invoice-icon-btn text-danger"
-                                                    title="Delete"
-                                                    onclick="return confirm('Delete this receipt? This will update sales, profit, and stock totals.');">
-                                                <i class="bi bi-trash"></i>
+                                                    class="invoice-btn invoice-btn-ghost"
+                                                    onclick="return confirm('Mark this receipt as PAID?');">
+                                                Mark Paid
                                             </button>
                                         </form>
-                                    </div>
+                                    }
                                 </td>
                             </tr>
                         }

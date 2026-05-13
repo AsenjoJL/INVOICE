@@ -148,14 +148,9 @@
                                                     </details>
                                                 </td>
                                                 <td class="text-end">
-                                                    <div class="btn-group">
-                                                        <a asp-controller="Receipts" asp-action="Print" asp-route-id="@r.Id" class="invoice-icon-btn" title="Print"><i class="bi bi-printer"></i></a>
-                                                        <a asp-controller="Receipts" asp-action="Details" asp-route-id="@r.Id" class="invoice-icon-btn" title="View"><i class="bi bi-eye"></i></a>
-                                                    </div>
-
                                                     @if (isUnpaid)
                                                     {
-                                                        <form asp-action="MarkAsPaid" method="post" class="d-inline-block ms-2">
+                                                        <form asp-action="MarkAsPaid" method="post" class="d-inline-block">
                                                             @Html.AntiForgeryToken()
                                                             <input type="hidden" name="id" value="@r.Id" />
                                                             <input type="hidden" name="returnDate" value="@r.Date.ToString("yyyy-MM-dd")" />
