@@ -1021,7 +1021,14 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         var query = _context.Receipts
             .AsNoTracking()
             .Include(r => r.Lines)
-            .Where(r => r.Status == status);
+            .Where(r => r.Status != PaymentStatus.Void);
+
+        query = status switch
+        {
+            PaymentStatus.Paid => query.Where(r => r.TotalAmount > 0m && r.PaidAmount >= r.TotalAmount),
+            PaymentStatus.Partial => query.Where(r => r.PaidAmount > 0m && r.PaidAmount < r.TotalAmount),
+            _ => query.Where(r => r.PaidAmount <= 0m)
+        };
 
         DateTime? targetDate = null;
         if (date.HasValue)
@@ -1036,6 +1043,9 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             .OrderByDescending(r => r.Date)
             .ThenBy(r => r.CustomerName)
             .ToListAsync();
+
+        foreach (var receipt in receipts)
+            receipt.Status = ReceiptPaymentStatus.Resolve(receipt.TotalAmount, receipt.PaidAmount);
 
         var model = new HazelInvoice.ViewModels.ReceiptListViewModel
         {
@@ -1112,16 +1122,16 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                 (!r.CustomerId.HasValue && r.CustomerName == targetOutletName));
         }
 
-        if (status == "Paid") query = query.Where(r => r.Status == PaymentStatus.Paid);
-        else if (status == "Unpaid") query = query.Where(r => r.Status == PaymentStatus.Unpaid);
+        if (status == "Paid") query = query.Where(r => r.TotalAmount > 0m && r.PaidAmount >= r.TotalAmount);
+        else if (status == "Unpaid") query = query.Where(r => r.PaidAmount <= 0m);
         
         var receipts = await query.ToListAsync();
 
         // 1. KPIs
         var totalSales = receipts.Sum(r => r.TotalAmount);
         
-        var totalPaid = receipts.Where(r => r.Status == PaymentStatus.Paid).Sum(r => r.TotalAmount);
-        var totalUnpaid = receipts.Where(r => r.Status == PaymentStatus.Unpaid).Sum(r => r.TotalAmount);
+        var totalPaid = receipts.Where(r => r.TotalAmount > 0m && r.PaidAmount >= r.TotalAmount).Sum(r => r.TotalAmount);
+        var totalUnpaid = receipts.Where(r => r.PaidAmount <= 0m).Sum(r => r.TotalAmount);
         var count = receipts.Count;
 
         // 2. Daily Trend
@@ -1130,8 +1140,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             .Select(g => new DailyTrendDto {
                 Date = g.Key,
                 TotalAmount = g.Sum(r => r.TotalAmount),
-                PaidAmount = g.Where(r => r.Status == PaymentStatus.Paid).Sum(r => r.TotalAmount),
-                UnpaidAmount = g.Where(r => r.Status == PaymentStatus.Unpaid).Sum(r => r.TotalAmount)
+                PaidAmount = g.Where(r => r.TotalAmount > 0m && r.PaidAmount >= r.TotalAmount).Sum(r => r.TotalAmount),
+                UnpaidAmount = g.Where(r => r.PaidAmount <= 0m).Sum(r => r.TotalAmount)
             })
             .OrderBy(d => d.Date)
             .ToList();
@@ -1142,8 +1152,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             .Select(g => new OutletSummaryDto {
                 OutletName = g.Key,
                 TotalAmount = g.Sum(r => r.TotalAmount),
-                PaidAmount = g.Where(r => r.Status == PaymentStatus.Paid).Sum(r => r.TotalAmount),
-                UnpaidAmount = g.Where(r => r.Status == PaymentStatus.Unpaid).Sum(r => r.TotalAmount)
+                PaidAmount = g.Where(r => r.TotalAmount > 0m && r.PaidAmount >= r.TotalAmount).Sum(r => r.TotalAmount),
+                UnpaidAmount = g.Where(r => r.PaidAmount <= 0m).Sum(r => r.TotalAmount)
             })
             .OrderByDescending(o => o.TotalAmount)
             .ToList();
@@ -1160,8 +1170,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                 (!l.Receipt.CustomerId.HasValue && l.Receipt.CustomerName == targetOutletName));
         }
 
-        if (status == "Paid") lineQuery = lineQuery.Where(l => l.Receipt!.Status == PaymentStatus.Paid);
-        else if (status == "Unpaid") lineQuery = lineQuery.Where(l => l.Receipt!.Status == PaymentStatus.Unpaid);
+        if (status == "Paid") lineQuery = lineQuery.Where(l => l.Receipt!.TotalAmount > 0m && l.Receipt.PaidAmount >= l.Receipt.TotalAmount);
+        else if (status == "Unpaid") lineQuery = lineQuery.Where(l => l.Receipt!.PaidAmount <= 0m);
 
         var totalItemsCount = await lineQuery.SumAsync(l => l.Quantity);
 

@@ -1,4 +1,5 @@
 using HazelInvoice.Data;
+using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,7 @@ public sealed class ReceiptQueryService : IReceiptQueryService
 
         if (options.UnpaidOnly)
         {
-            baseQuery = baseQuery.Where(r => r.Status == PaymentStatus.Unpaid);
+            baseQuery = baseQuery.Where(r => r.PaidAmount <= 0m);
         }
 
         if (options.Date.HasValue)
@@ -94,6 +95,9 @@ public sealed class ReceiptQueryService : IReceiptQueryService
                 Status = r.Status
             })
             .ToListAsync(ct);
+
+        foreach (var receipt in receipts)
+            receipt.Status = ReceiptPaymentStatus.Resolve(receipt.TotalAmount, receipt.PaidAmount);
 
         return new ReceiptsIndexViewModel
         {
