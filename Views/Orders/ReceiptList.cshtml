@@ -86,9 +86,23 @@
                                     <h6 class="mb-1 fw-bold">@group.Date.ToString("dddd, MMM dd, yyyy")</h6>
                                     <div class="text-muted small">@group.Receipts.Count receipt@(group.Receipts.Count == 1 ? "" : "s")</div>
                                 </div>
-                                <div class="receiptlist-stats">
-                                    <span>Items: <strong>@group.TotalItems.ToString("0.###")</strong></span>
-                                    <span>Total: <strong>₱@group.TotalAmount.ToString("N2")</strong></span>
+                                <div class="d-flex flex-wrap align-items-center gap-3">
+                                    <div class="receiptlist-stats">
+                                        <span>Items: <strong>@group.TotalItems.ToString("0.###")</strong></span>
+                                        <span>Total: <strong>₱@group.TotalAmount.ToString("N2")</strong></span>
+                                    </div>
+                                    @if (isUnpaid && group.Receipts.Any())
+                                    {
+                                        <form asp-action="MarkDateGroupAsPaid" method="post" class="d-inline-block">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="deliveryDate" value="@group.Date.ToString("yyyy-MM-dd")" />
+                                            <button type="submit"
+                                                    class="invoice-btn invoice-btn-primary"
+                                                    onclick="return confirm('Mark all unpaid receipts for @group.Date.ToString("MMM dd, yyyy") as PAID?');">
+                                                Mark All Paid
+                                            </button>
+                                        </form>
+                                    }
                                 </div>
                             </div>
 

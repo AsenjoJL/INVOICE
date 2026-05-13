@@ -1064,28 +1064,26 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkAsPaid(int id, DateTime returnDate)
     {
-        var receipt = await _context.Receipts.FindAsync(id);
-        if (receipt != null && receipt.Status == PaymentStatus.Unpaid)
-        {
-            receipt.Status = PaymentStatus.Paid;
-            receipt.PaidAmount = receipt.TotalAmount;
-            
-            var payment = new Payment
-            {
-                ReceiptId = receipt.Id,
-                Date = BusinessDate.Now(),
-                Amount = receipt.TotalAmount,
-                Method = PaymentMethod.Cash,
-                RecordedById = User.Identity?.Name ?? "System"
-            };
-            _context.Payments.Add(payment);
-            
-            await _context.SaveChangesAsync();
-            _cacheInvalidator.InvalidateDashboard();
-            _cacheInvalidator.InvalidateProfitReports();
-        }
+        await _receiptService.MarkReceiptPaidAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
         
         return RedirectToAction("PaidOrders", new { date = returnDate.ToString("yyyy-MM-dd") });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkDateGroupAsPaid(DateTime deliveryDate)
+    {
+        var dayStart = deliveryDate.Date;
+        var dayEnd = dayStart.AddDays(1);
+
+        var receiptIds = await _context.Receipts
+            .Where(r => r.Date >= dayStart && r.Date < dayEnd && r.Status == PaymentStatus.Unpaid)
+            .Select(r => r.Id)
+            .ToListAsync();
+
+        await _receiptService.MarkReceiptsPaidAsync(receiptIds, User.Identity?.Name, HttpContext.RequestAborted);
+
+        return RedirectToAction("PaidOrders", new { date = dayStart.ToString("yyyy-MM-dd") });
     }
     // GET: Orders/SummaryAll
     public async Task<IActionResult> SummaryAll(DateTime? startDate, DateTime? endDate, string status = "All", int? outletId = null)

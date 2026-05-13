@@ -259,20 +259,19 @@ public class ReceiptsController : Controller
                 }
             }
 
+            var initialPaidAmount = receipt.PaidAmount;
+            receipt.PaidAmount = 0m;
+            receipt.Status = PaymentStatus.Unpaid;
+
             await _context.SaveChangesAsync();
 
-            if (receipt.PaidAmount > 0m)
+            if (initialPaidAmount > 0m)
             {
-                _context.Payments.Add(new Payment
-                {
-                    ReceiptId = receipt.Id,
-                    Date = BusinessDate.Now(),
-                    Amount = receipt.PaidAmount,
-                    Method = PaymentMethod.Cash,
-                    RecordedById = User.Identity?.Name ?? "System"
-                });
-
-                await _context.SaveChangesAsync();
+                await _receiptService.RecordReceiptPaymentAsync(
+                    receipt.Id,
+                    initialPaidAmount,
+                    User.Identity?.Name,
+                    HttpContext.RequestAborted);
             }
 
             _cacheInvalidator.InvalidateDashboard();
@@ -384,31 +383,11 @@ public class ReceiptsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkAsPaid(int id, string? returnUrl = null)
     {
-        var receipt = await _context.Receipts.FindAsync(id);
-        if (receipt == null)
+        var markedPaid = await _receiptService.MarkReceiptPaidAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
+        if (!markedPaid)
             return NotFound();
 
-        if (receipt.Status == PaymentStatus.Unpaid)
-        {
-            receipt.Status = PaymentStatus.Paid;
-            receipt.PaidAmount = receipt.TotalAmount;
-
-            var payment = new Payment
-            {
-                ReceiptId = receipt.Id,
-                Date = BusinessDate.Now(),
-                Amount = receipt.TotalAmount,
-                Method = PaymentMethod.Cash,
-                RecordedById = User.Identity?.Name ?? "System"
-            };
-
-            _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
-            _cacheInvalidator.InvalidateDashboard();
-            _cacheInvalidator.InvalidateProfitReports();
-
-            TempData["Message"] = $"Marked receipt {receipt.ReceiptNumber} as paid.";
-        }
+        TempData["Message"] = "Receipt marked as paid.";
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             return LocalRedirect(returnUrl);
