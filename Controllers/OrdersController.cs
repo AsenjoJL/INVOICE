@@ -1095,6 +1095,15 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
 
         return RedirectToAction("PaidOrders", new { date = dayStart.ToString("yyyy-MM-dd") });
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UndoPaid(int id, DateTime returnDate)
+    {
+        await _receiptService.RevertReceiptToUnpaidAsync(id, HttpContext.RequestAborted);
+
+        return RedirectToAction("UnpaidOrders", new { date = returnDate.ToString("yyyy-MM-dd") });
+    }
     // GET: Orders/SummaryAll
     public async Task<IActionResult> SummaryAll(DateTime? startDate, DateTime? endDate, string status = "All", int? outletId = null)
     {

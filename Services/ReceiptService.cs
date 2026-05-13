@@ -14,6 +14,8 @@ public interface IReceiptService
     Task<bool> RecordReceiptPaymentAsync(int id, decimal amount, string? recordedBy = null, CancellationToken ct = default);
     Task<bool> MarkReceiptPaidAsync(int id, string? recordedBy = null, CancellationToken ct = default);
     Task<int> MarkReceiptsPaidAsync(IEnumerable<int> ids, string? recordedBy = null, CancellationToken ct = default);
+    Task<bool> RevertReceiptToUnpaidAsync(int id, CancellationToken ct = default);
+    Task<int> RevertReceiptsToUnpaidAsync(IEnumerable<int> ids, CancellationToken ct = default);
 }
 
 public class ReceiptService : IReceiptService
@@ -222,6 +224,73 @@ public class ReceiptService : IReceiptService
             await transaction.CommitAsync(ct);
             InvalidateMetrics();
             return payments.Count;
+        });
+    }
+
+    public async Task<bool> RevertReceiptToUnpaidAsync(int id, CancellationToken ct = default)
+    {
+        var updated = await RevertReceiptsToUnpaidAsync([id], ct);
+        if (updated > 0)
+            return true;
+
+        return await _context.Receipts
+            .AsNoTracking()
+            .AnyAsync(r => r.Id == id, ct);
+    }
+
+    public async Task<int> RevertReceiptsToUnpaidAsync(IEnumerable<int> ids, CancellationToken ct = default)
+    {
+        var receiptIds = ids
+            .Distinct()
+            .ToList();
+
+        if (receiptIds.Count == 0)
+            return 0;
+
+        var strategy = _context.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync(ct);
+
+            var receipts = await _context.Receipts
+                .Include(r => r.Payments)
+                .Where(r => receiptIds.Contains(r.Id) && r.Status != PaymentStatus.Void)
+                .ToListAsync(ct);
+
+            if (receipts.Count == 0)
+            {
+                await transaction.RollbackAsync(ct);
+                return 0;
+            }
+
+            var changedReceipts = receipts
+                .Where(r => r.PaidAmount > 0m || r.Payments.Count > 0 || r.Status != PaymentStatus.Unpaid)
+                .ToList();
+
+            if (changedReceipts.Count == 0)
+            {
+                await transaction.RollbackAsync(ct);
+                return 0;
+            }
+
+            var paymentsToRemove = changedReceipts
+                .SelectMany(r => r.Payments)
+                .ToList();
+
+            if (paymentsToRemove.Count > 0)
+                _context.Payments.RemoveRange(paymentsToRemove);
+
+            foreach (var receipt in changedReceipts)
+            {
+                receipt.PaidAmount = 0m;
+                receipt.Status = PaymentStatus.Unpaid;
+            }
+
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            InvalidateMetrics();
+            return changedReceipts.Count;
         });
     }
 

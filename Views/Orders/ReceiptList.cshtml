@@ -170,8 +170,21 @@
                                                             <input type="hidden" name="returnDate" value="@r.Date.ToString("yyyy-MM-dd")" />
                                                             <button type="submit"
                                                                     class="invoice-btn invoice-btn-ghost"
-                                                                    onclick="return confirm('Mark this receipt as PAID?');">
+                                                                onclick="return confirm('Mark this receipt as PAID?');">
                                                                 Mark Paid
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                    else
+                                                    {
+                                                        <form asp-action="UndoPaid" method="post" class="d-inline-block">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="id" value="@r.Id" />
+                                                            <input type="hidden" name="returnDate" value="@r.Date.ToString("yyyy-MM-dd")" />
+                                                            <button type="submit"
+                                                                    class="invoice-btn invoice-btn-ghost"
+                                                                    onclick="return confirm('Return this receipt to UNPAID? This removes its recorded payments.');">
+                                                                Undo
                                                             </button>
                                                         </form>
                                                     }

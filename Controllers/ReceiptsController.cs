@@ -397,6 +397,22 @@ public class ReceiptsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UndoPaid(int id, string? returnUrl = null)
+    {
+        var reverted = await _receiptService.RevertReceiptToUnpaidAsync(id, HttpContext.RequestAborted);
+        if (!reverted)
+            return NotFound();
+
+        TempData["Message"] = "Receipt returned to unpaid.";
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateLinePartner(int receiptId, int lineId, string? partnerName, string? returnUrl = null)
     {
         var receipt = await _context.Receipts

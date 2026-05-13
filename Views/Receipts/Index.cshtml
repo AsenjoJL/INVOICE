@@ -179,6 +179,21 @@
                                             </button>
                                         </form>
                                     }
+                                    else if (item.Status == HazelInvoice.Models.PaymentStatus.Paid)
+                                    {
+                                        <form method="post"
+                                              asp-action="UndoPaid"
+                                              asp-route-id="@item.Id"
+                                              asp-route-returnUrl="@returnUrl"
+                                              class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="invoice-btn invoice-btn-ghost"
+                                                    onclick="return confirm('Return this receipt to UNPAID? This removes its recorded payments.');">
+                                                Undo
+                                            </button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
