@@ -233,6 +233,7 @@ public class ReceiptsController : Controller
 
             // Recalculate totals to be safe
             receipt.TotalAmount = receipt.Lines.Sum(l => l.Amount);
+            receipt.PaidAmount = NormalizePaidAmount(receipt.PaidAmount, receipt.TotalAmount);
             // Handle Payment Status
             if (receipt.PaidAmount >= receipt.TotalAmount) receipt.Status = PaymentStatus.Paid;
             else if (receipt.PaidAmount > 0) receipt.Status = PaymentStatus.Partial;
@@ -259,6 +260,21 @@ public class ReceiptsController : Controller
             }
 
             await _context.SaveChangesAsync();
+
+            if (receipt.PaidAmount > 0m)
+            {
+                _context.Payments.Add(new Payment
+                {
+                    ReceiptId = receipt.Id,
+                    Date = BusinessDate.Now(),
+                    Amount = receipt.PaidAmount,
+                    Method = PaymentMethod.Cash,
+                    RecordedById = User.Identity?.Name ?? "System"
+                });
+
+                await _context.SaveChangesAsync();
+            }
+
             _cacheInvalidator.InvalidateDashboard();
             _cacheInvalidator.InvalidateProfitReports();
 
@@ -380,7 +396,7 @@ public class ReceiptsController : Controller
             var payment = new Payment
             {
                 ReceiptId = receipt.Id,
-                Date = DateTime.Now,
+                Date = BusinessDate.Now(),
                 Amount = receipt.TotalAmount,
                 Method = PaymentMethod.Cash,
                 RecordedById = User.Identity?.Name ?? "System"
@@ -423,6 +439,17 @@ public class ReceiptsController : Controller
             return Redirect(returnUrl);
 
         return RedirectToAction(nameof(Details), new { id = receiptId });
+    }
+
+    private static decimal NormalizePaidAmount(decimal paidAmount, decimal totalAmount)
+    {
+        if (totalAmount <= 0m)
+            return 0m;
+
+        if (paidAmount <= 0m)
+            return 0m;
+
+        return Math.Min(paidAmount, totalAmount);
     }
 
     private static List<string> FindDuplicateLineNamesInRequest(Receipt receipt)

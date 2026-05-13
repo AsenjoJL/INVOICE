@@ -1073,7 +1073,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
             var payment = new Payment
             {
                 ReceiptId = receipt.Id,
-                Date = DateTime.Now,
+                Date = BusinessDate.Now(),
                 Amount = receipt.TotalAmount,
                 Method = PaymentMethod.Cash,
                 RecordedById = User.Identity?.Name ?? "System"
