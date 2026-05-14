@@ -8,7 +8,7 @@ RUN dotnet restore
 
 # Copy everything else and build
 COPY . ./
-RUN dotnet publish -c Release -o out
+RUN dotnet publish -c Release -o out --no-restore -m:1 /p:UseSharedCompilation=false
 
 # Runtime Stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
