@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Daily Attendance";
     ViewData["NotePurpose"] = "Record attendance and auto-compute daily wages.";
-    ViewData["NoteInstructions"] = "Statuses update wages on save. Late = 75%, Half-day = 50%, Absent = 0%.";
+    ViewData["NoteInstructions"] = "Daily rate is fully counted by default. Only absent laborers are deducted.";
 }
 
 <partial name="_WorkforceStyles" />
@@ -14,7 +14,7 @@
         <div>
             <div class="admin-section-kicker">Daily Workforce</div>
             <h1 class="workforce-title">Daily Attendance</h1>
-            <div class="workforce-sub">Record attendance and auto-compute daily wages.</div>
+            <div class="workforce-sub">Present is full rate. Mark absent only when the laborer should have zero wage for the day.</div>
         </div>
         <a asp-controller="Laborers" asp-action="Index" class="btn workforce-btn workforce-btn-neutral admin-action-btn"><i class="bi bi-people"></i> Manage Laborers</a>
     </div>
@@ -25,15 +25,9 @@
     {
         <div class="alert alert-danger">@attendanceError</div>
     }
-
-    @if (Model.IsDateLocked)
+    @if (TempData["AttendanceSuccess"] is string attendanceSuccess && !string.IsNullOrWhiteSpace(attendanceSuccess))
     {
-        <div class="alert alert-warning d-flex justify-content-between align-items-center gap-2">
-            <div>
-                <strong>Attendance Locked:</strong> @Model.DateLockReason
-            </div>
-            <span class="badge bg-dark">Read Only</span>
-        </div>
+        <div class="alert alert-success">@attendanceSuccess</div>
     }
 
     <form method="get" class="workforce-filter admin-filter-strip">
@@ -57,55 +51,66 @@
                             <tr>
                                 <th>Laborer</th>
                                 <th>Daily Rate</th>
-                                <th>Status</th>
+                                <th>Absent</th>
                                 <th>Wage</th>
                                 <th>Notes</th>
                                 <th>Payroll</th>
+                                <th class="text-end">Delete</th>
                             </tr>
                         </thead>
                         <tbody>
                             @for (var i = 0; i < Model.Entries.Count; i++)
                             {
-                                var isLocked = Model.Entries[i].IsLocked;
+                                var isAbsent = Model.Entries[i].Status == AttendanceStatus.Absent;
                                 <tr>
                                     <td class="fw-bold">
                                         @Model.Entries[i].LaborerName
+                                        <input type="hidden" name="Entries[@i].AttendanceRecordId" value="@Model.Entries[i].AttendanceRecordId" />
                                         <input type="hidden" name="Entries[@i].LaborerId" value="@Model.Entries[i].LaborerId" />
                                     </td>
                                     <td class="workforce-money">₱@Model.Entries[i].DailyRate.ToString("N2")</td>
-                                    <td style="max-width: 180px;">
-                                        <select class="form-select" name="Entries[@i].Status" @(isLocked ? "disabled" : null)>
-                                            @foreach (AttendanceStatus status in Enum.GetValues(typeof(AttendanceStatus)))
-                                            {
-                                                <option value="@status" selected="@(status == Model.Entries[i].Status)">@status</option>
-                                            }
-                                        </select>
-                                        @if (isLocked)
-                                        {
-                                            <input type="hidden" name="Entries[@i].Status" value="@Model.Entries[i].Status" />
-                                        }
+                                    <td>
+                                        <div class="form-check d-flex align-items-center gap-2">
+                                            <input type="hidden" name="Entries[@i].Status" value="@(isAbsent ? AttendanceStatus.Absent : AttendanceStatus.Present)" data-attendance-status />
+                                            <input type="checkbox"
+                                                   class="form-check-input"
+                                                   data-absent-toggle
+                                                   data-daily-rate="@Model.Entries[i].DailyRate.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                   @(isAbsent ? "checked" : null) />
+                                            <label class="form-check-label small">Absent</label>
+                                        </div>
                                     </td>
-                                    <td>₱@Model.Entries[i].WageAmount.ToString("N2")</td>
+                                    <td class="workforce-money" data-workforce-wage>₱@Model.Entries[i].WageAmount.ToString("N2")</td>
                                     <td>
                                         <input type="text"
                                                class="form-control"
                                                name="Entries[@i].Notes"
                                                value="@Model.Entries[i].Notes"
-                                               placeholder="Optional"
-                                               @(isLocked ? "disabled" : null) />
-                                        @if (isLocked)
-                                        {
-                                            <input type="hidden" name="Entries[@i].Notes" value="@Model.Entries[i].Notes" />
-                                        }
+                                               placeholder="Optional" />
                                     </td>
                                     <td>
-                                        @if (isLocked)
+                                        @if (Model.Entries[i].IsInPayroll)
                                         {
-                                            <span class="workforce-status workforce-status-locked">Locked</span>
+                                            <span class="workforce-status workforce-status-locked">In Payroll</span>
                                         }
                                         else
                                         {
                                             <span class="workforce-status workforce-status-open">Open</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (Model.Entries[i].AttendanceRecordId is int attendanceRecordId)
+                                        {
+                                            <form asp-action="Delete" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@attendanceRecordId" />
+                                                <input type="hidden" name="workDate" value="@Model.WorkDate.ToString("yyyy-MM-dd")" />
+                                                <button type="submit"
+                                                        class="btn btn-sm workforce-btn workforce-btn-danger"
+                                                        onclick="return confirm('Delete this attendance entry?');">
+                                                    Delete
+                                                </button>
+                                            </form>
                                         }
                                     </td>
                                 </tr>
@@ -113,7 +118,7 @@
                             @if (!Model.Entries.Any())
                             {
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">No active laborers found.</td>
+                                    <td colspan="7" class="text-center text-muted py-4">No active laborers found.</td>
                                 </tr>
                             }
                         </tbody>
@@ -122,20 +127,53 @@
             </div>
             <div class="card-footer d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="fw-bold">Total Wages: ₱@Model.TotalWage.ToString("N2")</div>
-                    <div class="small text-muted">
-                        @if (Model.IsDateLocked)
-                        {
-                            <span>This entire date is locked and cannot be edited.</span>
-                        }
-                        else
-                        {
-                            <span>Save updates attendance for all active laborers on this date.</span>
-                        }
-                    </div>
+                    <div class="fw-bold">Total Salary: <span data-workforce-total>₱@Model.TotalWage.ToString("N2")</span></div>
+                    <div class="small text-muted">Save updates attendance for all active laborers on this date.</div>
                 </div>
-                <button type="submit" class="btn workforce-btn workforce-btn-primary" @(Model.IsDateLocked ? "disabled" : null)>Save Attendance</button>
+                <button type="submit" class="btn workforce-btn workforce-btn-primary">Save Attendance</button>
             </div>
         </div>
     </form>
 </div>
+
+<script>
+    (() => {
+        const currency = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        function refreshAttendanceTotals() {
+            let total = 0;
+            document.querySelectorAll('[data-workforce-wage]').forEach(cell => {
+                const amount = Number.parseFloat(cell.getAttribute('data-wage-value') || '0');
+                if (!Number.isNaN(amount)) {
+                    total += amount;
+                }
+            });
+
+            const totalNode = document.querySelector('[data-workforce-total]');
+            if (totalNode) {
+                totalNode.textContent = `₱${currency.format(total)}`;
+            }
+        }
+
+        document.querySelectorAll('[data-absent-toggle]').forEach(toggle => {
+            const row = toggle.closest('tr');
+            if (!row) return;
+
+            const statusInput = row.querySelector('[data-attendance-status]');
+            const wageCell = row.querySelector('[data-workforce-wage]');
+            const dailyRate = Number.parseFloat(toggle.getAttribute('data-daily-rate') || '0');
+            if (!(statusInput instanceof HTMLInputElement) || !(wageCell instanceof HTMLElement)) return;
+
+            const updateRow = () => {
+                const wage = toggle.checked ? 0 : dailyRate;
+                statusInput.value = toggle.checked ? 'Absent' : 'Present';
+                wageCell.setAttribute('data-wage-value', wage.toString());
+                wageCell.textContent = `₱${currency.format(wage)}`;
+                refreshAttendanceTotals();
+            };
+
+            updateRow();
+            toggle.addEventListener('change', updateRow);
+        });
+    })();
+</script>

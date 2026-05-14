@@ -31,7 +31,11 @@
 
     <div class="payroll-summary">
         <div class="payroll-kpi">
-            <div class="label">Total Wage</div>
+            <div class="label">Duty Days</div>
+            <div class="value">@Model.Period.TotalDays</div>
+        </div>
+        <div class="payroll-kpi">
+            <div class="label">Total Salary</div>
             <div class="value">₱@Model.Period.TotalWage.ToString("N2")</div>
         </div>
         <div class="payroll-kpi">

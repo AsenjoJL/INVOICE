@@ -25,8 +25,6 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Daily(DateTime? date)
     {
         var workDate = (date ?? BusinessDate.Today()).Date;
-        var (isDateLocked, lockReason) = await GetDateLockState(workDate);
-
         var laborers = await _lookupCache.GetActiveLaborersAsync(HttpContext.RequestAborted);
 
         var laborerIds = laborers.Select(l => l.Id).ToList();
@@ -39,9 +37,7 @@ public class AttendanceController : Controller
         var existingMap = existing.ToDictionary(a => a.LaborerId, a => a);
         var model = new AttendanceDailyViewModel
         {
-            WorkDate = workDate,
-            IsDateLocked = isDateLocked,
-            DateLockReason = lockReason
+            WorkDate = workDate
         };
 
         foreach (var laborer in laborers)
@@ -50,14 +46,14 @@ public class AttendanceController : Controller
             {
                 model.Entries.Add(new AttendanceEntryViewModel
                 {
+                    AttendanceRecordId = record.Id,
                     LaborerId = laborer.Id,
                     LaborerName = laborer.FullName,
                     DailyRate = laborer.DailyRate,
                     Status = record.Status,
                     Notes = record.Notes,
                     WageAmount = record.WageAmount,
-                    IsLocked = isDateLocked,
-                    LockReason = lockReason
+                    IsInPayroll = record.PayrollPeriodId != null
                 });
             }
             else
@@ -70,9 +66,7 @@ public class AttendanceController : Controller
                     LaborerName = laborer.FullName,
                     DailyRate = laborer.DailyRate,
                     Status = AttendanceStatus.Present,
-                    WageAmount = wage,
-                    IsLocked = isDateLocked,
-                    LockReason = lockReason
+                    WageAmount = wage
                 });
             }
         }
@@ -86,13 +80,6 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Daily(AttendanceDailyViewModel model)
     {
         var workDate = model.WorkDate.Date;
-        var (isDateLocked, lockReason) = await GetDateLockState(workDate);
-        if (isDateLocked)
-        {
-            TempData["AttendanceError"] = lockReason ?? "Attendance is locked for this date.";
-            return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
-        }
-
         var laborerIds = model.Entries.Select(e => e.LaborerId).ToList();
         var laborers = await _context.Laborers
             .Where(l => laborerIds.Contains(l.Id))
@@ -104,6 +91,7 @@ public class AttendanceController : Controller
             .ToListAsync();
 
         var existingMap = existing.ToDictionary(a => a.LaborerId, a => a);
+        var payrollPeriodIdsToRecalculate = new HashSet<int>();
 
         foreach (var entry in model.Entries)
         {
@@ -112,16 +100,23 @@ public class AttendanceController : Controller
                 continue;
             }
 
-            var multiplier = GetMultiplier(entry.Status);
+            var normalizedStatus = entry.Status == AttendanceStatus.Absent
+                ? AttendanceStatus.Absent
+                : AttendanceStatus.Present;
+            var multiplier = GetMultiplier(normalizedStatus);
             var wage = laborer.DailyRate * multiplier;
 
             if (existingMap.TryGetValue(entry.LaborerId, out var record))
             {
-                record.Status = entry.Status;
+                record.Status = normalizedStatus;
                 record.RateSnapshot = laborer.DailyRate;
                 record.Multiplier = multiplier;
                 record.WageAmount = wage;
                 record.Notes = entry.Notes;
+                if (record.PayrollPeriodId.HasValue)
+                {
+                    payrollPeriodIdsToRecalculate.Add(record.PayrollPeriodId.Value);
+                }
             }
             else
             {
@@ -129,7 +124,7 @@ public class AttendanceController : Controller
                 {
                     LaborerId = entry.LaborerId,
                     WorkDate = workDate,
-                    Status = entry.Status,
+                    Status = normalizedStatus,
                     RateSnapshot = laborer.DailyRate,
                     Multiplier = multiplier,
                     WageAmount = wage,
@@ -138,34 +133,83 @@ public class AttendanceController : Controller
             }
         }
 
+        if (payrollPeriodIdsToRecalculate.Count > 0)
+        {
+            await RecalculatePayrollPeriodsAsync(payrollPeriodIdsToRecalculate);
+        }
+
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
     }
 
-    private async Task<(bool IsLocked, string? Reason)> GetDateLockState(DateTime workDate)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id, DateTime workDate)
     {
-        var hasPayrollAttendance = await _context.AttendanceRecords
-            .AsNoTracking()
-            .AnyAsync(a => a.WorkDate == workDate &&
-                           a.PayrollPeriodId != null);
-
-        if (hasPayrollAttendance)
+        var record = await _context.AttendanceRecords
+            .FirstOrDefaultAsync(a => a.Id == id);
+        if (record == null)
         {
-            return (true, "Locked because attendance on this date is already included in payroll.");
+            TempData["AttendanceError"] = "Attendance entry not found.";
+            return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
         }
 
-        return (false, null);
+        var payrollPeriodId = record.PayrollPeriodId;
+        _context.AttendanceRecords.Remove(record);
+
+        if (payrollPeriodId.HasValue)
+        {
+            await RecalculatePayrollPeriodsAsync(new[] { payrollPeriodId.Value });
+        }
+
+        await _context.SaveChangesAsync();
+        TempData["AttendanceSuccess"] = "Attendance entry deleted.";
+        return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
+    }
+
+    private async Task RecalculatePayrollPeriodsAsync(IEnumerable<int> payrollPeriodIds)
+    {
+        var ids = payrollPeriodIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var periods = await _context.PayrollPeriods
+            .Include(p => p.AttendanceRecords)
+            .Include(p => p.Adjustments)
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync();
+
+        foreach (var period in periods)
+        {
+            period.TotalDays = period.AttendanceRecords.Count;
+            period.TotalWage = period.AttendanceRecords.Sum(a => a.WageAmount);
+
+            var payableTotal = period.TotalWage + period.AdjustmentTotal;
+            ApplyPaymentStatus(period, payableTotal);
+        }
     }
 
     private static decimal GetMultiplier(AttendanceStatus status)
     {
-        return status switch
+        return status == AttendanceStatus.Absent ? 0.0m : 1.0m;
+    }
+
+    private static void ApplyPaymentStatus(PayrollPeriod period, decimal payableTotal)
+    {
+        var remaining = payableTotal - period.PaidAmount;
+        if (remaining <= 0)
         {
-            AttendanceStatus.Present => 1.0m,
-            AttendanceStatus.Late => 0.75m,
-            AttendanceStatus.HalfDay => 0.50m,
-            AttendanceStatus.Absent => 0.0m,
-            _ => 1.0m
-        };
+            period.Status = PaymentStatus.Paid;
+        }
+        else if (period.PaidAmount > 0)
+        {
+            period.Status = PaymentStatus.Partial;
+        }
+        else
+        {
+            period.Status = PaymentStatus.Unpaid;
+        }
     }
 }

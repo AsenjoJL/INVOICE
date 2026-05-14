@@ -93,7 +93,8 @@
                             <th>Laborer</th>
                             <th>Period</th>
                             <th>Run</th>
-                            <th>Total Wage</th>
+                            <th>Duty Days</th>
+                            <th>Total Salary</th>
                             <th>Deductions / Additions</th>
                             <th>Payable</th>
                             <th>Paid</th>
@@ -121,6 +122,7 @@
                                         <span class="text-muted small">legacy</span>
                                     }
                                 </td>
+                                <td>@period.TotalDays</td>
                                 <td class="payroll-money">₱@period.TotalWage.ToString("N2")</td>
                                 <td class="payroll-money">₱@period.AdjustmentTotal.ToString("+#,##0.00;-#,##0.00;0.00")</td>
                                 <td class="payroll-money">₱@payable.ToString("N2")</td>
@@ -150,7 +152,7 @@
                         @if (!Model.Any())
                         {
                             <tr>
-                                <td colspan="10" class="text-center text-muted py-4">No payroll periods found.</td>
+                                <td colspan="11" class="text-center text-muted py-4">No payroll periods found.</td>
                             </tr>
                         }
                     </tbody>
