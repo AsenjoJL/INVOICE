@@ -1,4 +1,5 @@
 using HazelInvoice.Data;
+using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
@@ -23,7 +24,7 @@ public class AttendanceController : Controller
     [HttpGet]
     public async Task<IActionResult> Daily(DateTime? date)
     {
-        var workDate = (date ?? DateTime.Today).Date;
+        var workDate = (date ?? BusinessDate.Today()).Date;
         var (isDateLocked, lockReason) = await GetDateLockState(workDate);
 
         var laborers = await _lookupCache.GetActiveLaborersAsync(HttpContext.RequestAborted);
@@ -143,27 +144,14 @@ public class AttendanceController : Controller
 
     private async Task<(bool IsLocked, string? Reason)> GetDateLockState(DateTime workDate)
     {
-        var cutoff = await _context.PayrollCutoffs
-            .AsNoTracking()
-            .Where(c => c.IsLocked && c.StartDate <= workDate && c.EndDate >= workDate)
-            .OrderByDescending(c => c.LockedAt)
-            .FirstOrDefaultAsync();
-
-        if (cutoff != null)
-        {
-            return (true, $"Locked by cutoff {cutoff.StartDate:MMM dd, yyyy} - {cutoff.EndDate:MMM dd, yyyy}.");
-        }
-
-        var hasPaidAttendance = await _context.AttendanceRecords
+        var hasPayrollAttendance = await _context.AttendanceRecords
             .AsNoTracking()
             .AnyAsync(a => a.WorkDate == workDate &&
-                           a.PayrollPeriodId != null &&
-                           a.PayrollPeriod != null &&
-                           a.PayrollPeriod.Status == PaymentStatus.Paid);
+                           a.PayrollPeriodId != null);
 
-        if (hasPaidAttendance)
+        if (hasPayrollAttendance)
         {
-            return (true, "Locked because attendance on this date is already in a paid payroll.");
+            return (true, "Locked because attendance on this date is already included in payroll.");
         }
 
         return (false, null);

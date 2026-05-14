@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using HazelInvoice.Models;
+using HazelInvoice.Helpers;
 
 namespace HazelInvoice.ViewModels;
 
 public class AttendanceDailyViewModel
 {
-    public DateTime WorkDate { get; set; } = DateTime.Today;
+    public DateTime WorkDate { get; set; } = BusinessDate.Today();
     public List<AttendanceEntryViewModel> Entries { get; set; } = new();
     public decimal TotalWage { get; set; }
     public bool IsDateLocked { get; set; }
@@ -27,19 +28,12 @@ public class AttendanceEntryViewModel
 
 public class PayrollGenerateViewModel
 {
-    public DateTime StartDate { get; set; } = DateTime.Today.AddDays(-14);
-    public DateTime EndDate { get; set; } = DateTime.Today;
+    public DateTime StartDate { get; set; } = BusinessDate.Today().AddDays(-6);
+    public DateTime EndDate { get; set; } = BusinessDate.Today();
     public List<PayrollGenerateRow> Rows { get; set; } = new();
     public List<int> SelectedLaborerIds { get; set; } = new();
-    public int? CutoffId { get; set; }
-    public bool IsCutoffLocked { get; set; }
-    public bool HasOverlappingLockedCutoff { get; set; }
-    public string? CutoffMessage { get; set; }
-    public bool CanUnlockCutoff { get; set; }
     public int? ExistingRunId { get; set; }
     public PayrollRunStatus? ExistingRunStatus { get; set; }
-    public bool CanApproveRun { get; set; }
-    public bool CanCloseRun { get; set; }
 }
 
 public class PayrollGenerateRow
@@ -56,9 +50,17 @@ public class PayrollDetailsViewModel
     public List<AttendanceRecord> AttendanceRecords { get; set; } = new();
     public List<PayrollPayment> Payments { get; set; } = new();
     public List<PayrollAdjustment> Adjustments { get; set; } = new();
+    public List<PayrollAdjustmentOption> AdjustmentOptions { get; set; } = new();
     public decimal RemainingBalance { get; set; }
     public decimal PayableTotal { get; set; }
     public PayrollPayment NewPayment { get; set; } = new();
+}
+
+public class PayrollAdjustmentOption
+{
+    public string Key { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public bool IsDeduction { get; set; }
 }
 
 public class UnpaidPayrollViewModel
@@ -70,8 +72,8 @@ public class UnpaidPayrollViewModel
 
 public class LaborCostReportViewModel
 {
-    public DateTime StartDate { get; set; } = DateTime.Today.AddDays(-30);
-    public DateTime EndDate { get; set; } = DateTime.Today;
+    public DateTime StartDate { get; set; } = BusinessDate.Today().AddDays(-30);
+    public DateTime EndDate { get; set; } = BusinessDate.Today();
     public decimal TotalCost { get; set; }
     public List<LaborCostRow> Rows { get; set; } = new();
 }

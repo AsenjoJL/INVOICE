@@ -1,4 +1,5 @@
 using HazelInvoice.Data;
+using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
@@ -13,6 +14,18 @@ public class PayrollController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private static readonly IReadOnlyDictionary<string, PayrollAdjustmentOptionDefinition> AdjustmentOptionMap =
+        new Dictionary<string, PayrollAdjustmentOptionDefinition>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["advance-cash"] = new("advance-cash", "Advance Cash", true),
+            ["loan"] = new("loan", "Loan", true),
+            ["sss"] = new("sss", "SSS Deduction", true),
+            ["cash-advance"] = new("cash-advance", "Cash Advance", true),
+            ["other-deduction"] = new("other-deduction", "Other Deduction", true),
+            ["allowance"] = new("allowance", "Allowance", false),
+            ["bonus"] = new("bonus", "Bonus", false),
+            ["other-addition"] = new("other-addition", "Other Addition", false)
+        };
 
     public PayrollController(ApplicationDbContext context, IAppCacheInvalidator cacheInvalidator)
     {
@@ -54,8 +67,9 @@ public class PayrollController : Controller
     [HttpGet]
     public async Task<IActionResult> Generate(DateTime? startDate, DateTime? endDate)
     {
-        var start = (startDate ?? DateTime.Today.AddDays(-14)).Date;
-        var end = (endDate ?? DateTime.Today).Date;
+        var businessToday = BusinessDate.Today();
+        var start = (startDate ?? businessToday.AddDays(-6)).Date;
+        var end = (endDate ?? businessToday).Date;
         var endExclusive = end.AddDays(1);
 
         var attendance = await _context.AttendanceRecords
@@ -76,27 +90,9 @@ public class PayrollController : Controller
             .OrderBy(r => r.LaborerName)
             .ToList();
 
-        var exactCutoff = await _context.PayrollCutoffs
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.StartDate == start && c.EndDate == end);
-
-        var hasOverlappingLockedCutoff = await _context.PayrollCutoffs
-            .AsNoTracking()
-            .AnyAsync(c =>
-                c.IsLocked &&
-                c.StartDate <= end &&
-                c.EndDate >= start &&
-                !(c.StartDate == start && c.EndDate == end));
-
         var existingRun = await _context.PayrollRuns
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.PeriodStart == start && r.PeriodEnd == end);
-
-        var cutoffMessage = hasOverlappingLockedCutoff
-            ? "Another locked cutoff overlaps this range. Use the exact locked range."
-            : exactCutoff?.IsLocked == true
-                ? $"Cutoff is locked ({start:MMM dd, yyyy} - {end:MMM dd, yyyy})."
-                : "Cutoff is not locked. Lock this date range before generating payroll.";
 
         var model = new PayrollGenerateViewModel
         {
@@ -104,15 +100,8 @@ public class PayrollController : Controller
             EndDate = end,
             Rows = rows,
             SelectedLaborerIds = rows.Select(r => r.LaborerId).ToList(),
-            CutoffId = exactCutoff?.Id,
-            IsCutoffLocked = exactCutoff?.IsLocked == true,
-            HasOverlappingLockedCutoff = hasOverlappingLockedCutoff,
-            CutoffMessage = cutoffMessage,
-            CanUnlockCutoff = exactCutoff?.IsLocked == true && existingRun == null,
             ExistingRunId = existingRun?.Id,
-            ExistingRunStatus = existingRun?.Status,
-            CanApproveRun = existingRun?.Status == PayrollRunStatus.Generated,
-            CanCloseRun = existingRun?.Status == PayrollRunStatus.Approved
+            ExistingRunStatus = existingRun?.Status
         };
 
         return View(model);
@@ -130,13 +119,6 @@ public class PayrollController : Controller
             return RedirectToAction(nameof(Generate), new { startDate = end.ToString("yyyy-MM-dd"), endDate = start.ToString("yyyy-MM-dd") });
         }
 
-        var cutoffValidationMessage = await ValidateCutoffForGeneration(start, end);
-        if (!string.IsNullOrWhiteSpace(cutoffValidationMessage))
-        {
-            TempData["PayrollError"] = cutoffValidationMessage;
-            return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
-        }
-
         var existingRun = await _context.PayrollRuns
             .FirstOrDefaultAsync(r => r.PeriodStart == start && r.PeriodEnd == end);
         if (existingRun != null)
@@ -147,150 +129,97 @@ public class PayrollController : Controller
 
         var endExclusive = end.AddDays(1);
 
-        if (model.SelectedLaborerIds == null || model.SelectedLaborerIds.Count == 0)
+        var selectedLaborerIds = model.SelectedLaborerIds?
+            .Distinct()
+            .ToList() ?? new List<int>();
+
+        if (selectedLaborerIds.Count == 0)
         {
+            TempData["PayrollError"] = "Select at least one laborer before generating payroll.";
             return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
         }
 
-        var attendance = await _context.AttendanceRecords
-            .Include(a => a.Laborer)
-            .Where(a => a.WorkDate >= start && a.WorkDate < endExclusive &&
-                        a.PayrollPeriodId == null &&
-                        model.SelectedLaborerIds.Contains(a.LaborerId))
-            .ToListAsync();
-
-        var groups = attendance.GroupBy(a => a.LaborerId).ToList();
-        if (groups.Count == 0)
+        try
         {
-            return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
-        }
+            var strategy = _context.Database.CreateExecutionStrategy();
 
-        await using var tx = await _context.Database.BeginTransactionAsync();
-
-        var run = new PayrollRun
-        {
-            PeriodStart = start,
-            PeriodEnd = end,
-            Status = PayrollRunStatus.Generated,
-            GeneratedAt = DateTime.Now,
-            GeneratedBy = User.Identity?.Name
-        };
-        _context.PayrollRuns.Add(run);
-        await _context.SaveChangesAsync();
-
-        var periods = new List<PayrollPeriod>();
-        foreach (var group in groups)
-        {
-            var totalWage = group.Sum(x => x.WageAmount);
-            periods.Add(new PayrollPeriod
+            await strategy.ExecuteAsync(async () =>
             {
-                PayrollRunId = run.Id,
-                LaborerId = group.Key,
-                PeriodStart = start,
-                PeriodEnd = end,
-                TotalDays = group.Count(),
-                TotalWage = totalWage,
-                AdjustmentTotal = 0,
-                PaidAmount = 0,
-                Status = PaymentStatus.Unpaid,
-                GeneratedAt = DateTime.Now
+                var attendance = await _context.AttendanceRecords
+                    .Include(a => a.Laborer)
+                    .Where(a => a.WorkDate >= start && a.WorkDate < endExclusive &&
+                                a.PayrollPeriodId == null &&
+                                selectedLaborerIds.Contains(a.LaborerId))
+                    .ToListAsync();
+
+                var groups = attendance.GroupBy(a => a.LaborerId).ToList();
+                if (groups.Count == 0)
+                {
+                    throw new InvalidOperationException("No unlocked attendance records were found for the selected laborers in this cutoff.");
+                }
+
+                await using var tx = await _context.Database.BeginTransactionAsync();
+
+                var generatedAt = BusinessDate.Now();
+                var run = new PayrollRun
+                {
+                    PeriodStart = start,
+                    PeriodEnd = end,
+                    Status = PayrollRunStatus.Generated,
+                    GeneratedAt = generatedAt,
+                    GeneratedBy = User.Identity?.Name
+                };
+                _context.PayrollRuns.Add(run);
+                await _context.SaveChangesAsync();
+
+                var periods = new List<PayrollPeriod>();
+                foreach (var group in groups)
+                {
+                    var totalWage = group.Sum(x => x.WageAmount);
+                    periods.Add(new PayrollPeriod
+                    {
+                        PayrollRunId = run.Id,
+                        LaborerId = group.Key,
+                        PeriodStart = start,
+                        PeriodEnd = end,
+                        TotalDays = group.Count(),
+                        TotalWage = totalWage,
+                        AdjustmentTotal = 0,
+                        PaidAmount = 0,
+                        Status = PaymentStatus.Unpaid,
+                        GeneratedAt = generatedAt
+                    });
+                }
+
+                _context.PayrollPeriods.AddRange(periods);
+                await _context.SaveChangesAsync();
+
+                var periodMap = periods.ToDictionary(p => p.LaborerId, p => p.Id);
+                foreach (var record in attendance)
+                {
+                    if (periodMap.TryGetValue(record.LaborerId, out var periodId))
+                    {
+                        record.PayrollPeriodId = periodId;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
             });
+
+            TempData["PayrollSuccess"] = "Payroll generated successfully.";
+            return RedirectToAction(nameof(Index));
         }
-
-        _context.PayrollPeriods.AddRange(periods);
-        await _context.SaveChangesAsync();
-
-        var periodMap = periods.ToDictionary(p => p.LaborerId, p => p.Id);
-        foreach (var record in attendance)
+        catch (InvalidOperationException ex)
         {
-            if (periodMap.TryGetValue(record.LaborerId, out var periodId))
-            {
-                record.PayrollPeriodId = periodId;
-            }
-        }
-
-        await _context.SaveChangesAsync();
-        await tx.CommitAsync();
-        TempData["PayrollSuccess"] = "Payroll generated successfully.";
-        return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> LockCutoff(DateTime startDate, DateTime endDate)
-    {
-        var start = startDate.Date;
-        var end = endDate.Date;
-        if (start > end)
-        {
-            TempData["PayrollError"] = "Invalid cutoff range.";
-            return RedirectToAction(nameof(Generate), new { startDate = end.ToString("yyyy-MM-dd"), endDate = start.ToString("yyyy-MM-dd") });
-        }
-
-        var hasOverlappingLockedCutoff = await _context.PayrollCutoffs
-            .AsNoTracking()
-            .AnyAsync(c =>
-                c.IsLocked &&
-                c.StartDate <= end &&
-                c.EndDate >= start &&
-                !(c.StartDate == start && c.EndDate == end));
-
-        if (hasOverlappingLockedCutoff)
-        {
-            TempData["PayrollError"] = "Cannot lock this range because it overlaps an existing locked cutoff.";
+            TempData["PayrollError"] = ex.Message;
             return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
         }
-
-        var cutoff = await _context.PayrollCutoffs
-            .FirstOrDefaultAsync(c => c.StartDate == start && c.EndDate == end);
-
-        if (cutoff == null)
+        catch (DbUpdateException)
         {
-            cutoff = new PayrollCutoff
-            {
-                StartDate = start,
-                EndDate = end
-            };
-            _context.PayrollCutoffs.Add(cutoff);
+            TempData["PayrollError"] = "Payroll generation could not be saved. Refresh the page and try again. If the issue persists, check for duplicate or already-assigned attendance in this cutoff.";
+            return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
         }
-
-        cutoff.IsLocked = true;
-        cutoff.LockedAt = DateTime.Now;
-        cutoff.LockedBy = User.Identity?.Name;
-
-        await _context.SaveChangesAsync();
-        TempData["PayrollSuccess"] = $"Cutoff locked: {start:MMM dd, yyyy} - {end:MMM dd, yyyy}.";
-        return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UnlockCutoff(int cutoffId)
-    {
-        var cutoff = await _context.PayrollCutoffs.FirstOrDefaultAsync(c => c.Id == cutoffId);
-        if (cutoff == null)
-        {
-            TempData["PayrollError"] = "Cutoff not found.";
-            return RedirectToAction(nameof(Generate));
-        }
-
-        var hasGeneratedRunForCutoff = await _context.PayrollRuns
-            .AsNoTracking()
-            .AnyAsync(r => r.PeriodStart == cutoff.StartDate && r.PeriodEnd == cutoff.EndDate);
-
-        if (hasGeneratedRunForCutoff)
-        {
-            TempData["PayrollError"] = "Cannot unlock a cutoff that already has generated payroll.";
-            return RedirectToAction(nameof(Generate), new { startDate = cutoff.StartDate.ToString("yyyy-MM-dd"), endDate = cutoff.EndDate.ToString("yyyy-MM-dd") });
-        }
-
-        cutoff.IsLocked = false;
-        cutoff.LockedAt = null;
-        cutoff.LockedBy = null;
-
-        await _context.SaveChangesAsync();
-        TempData["PayrollSuccess"] = "Cutoff unlocked.";
-        return RedirectToAction(nameof(Generate), new { startDate = cutoff.StartDate.ToString("yyyy-MM-dd"), endDate = cutoff.EndDate.ToString("yyyy-MM-dd") });
     }
 
     public async Task<IActionResult> Details(int id)
@@ -324,12 +253,13 @@ public class PayrollController : Controller
             AttendanceRecords = attendance,
             Payments = payments,
             Adjustments = adjustments,
+            AdjustmentOptions = GetAdjustmentOptions(),
             RemainingBalance = remaining,
             PayableTotal = payableTotal,
             NewPayment = new PayrollPayment
             {
                 PayrollPeriodId = period.Id,
-                Date = DateTime.Today,
+                Date = BusinessDate.Today(),
                 PaymentMethod = PaymentMethod.Cash
             }
         };
@@ -361,15 +291,25 @@ public class PayrollController : Controller
             ModelState.AddModelError(nameof(PayrollPayment.Amount), "Amount must be greater than 0.");
         }
 
+        var payableTotal = period.TotalWage + period.AdjustmentTotal;
+        var remainingBalance = payableTotal - period.PaidAmount;
+        if (payment.Amount > remainingBalance)
+        {
+            ModelState.AddModelError(nameof(PayrollPayment.Amount), $"Amount cannot exceed the remaining balance of {remainingBalance:N2}.");
+        }
+
         if (!ModelState.IsValid)
         {
+            TempData["PayrollError"] = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .FirstOrDefault() ?? "Payment could not be saved.";
             return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
         }
 
         payment.RecordedById = User.Identity?.Name;
-        _context.PayrollPayments.Add(payment);
-
         var laborerName = period.Laborer?.FullName ?? "Laborer";
+        _context.PayrollPayments.Add(payment);
         _context.Expenses.Add(new Expense
         {
             Date = payment.Date,
@@ -382,8 +322,6 @@ public class PayrollController : Controller
             RecordedById = payment.RecordedById
         });
         period.PaidAmount += payment.Amount;
-
-        var payableTotal = period.TotalWage + period.AdjustmentTotal;
         ApplyPaymentStatus(period, payableTotal);
 
         await _context.SaveChangesAsync();
@@ -395,7 +333,7 @@ public class PayrollController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddAdjustment(int payrollPeriodId, decimal amount, string? reason, DateTime? date)
+    public async Task<IActionResult> AddAdjustment(int payrollPeriodId, string? adjustmentType, decimal amount, string? note, DateTime? date)
     {
         var period = await _context.PayrollPeriods
             .Include(p => p.PayrollRun)
@@ -411,29 +349,44 @@ public class PayrollController : Controller
             return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
         }
 
-        if (amount == 0)
+        if (amount <= 0)
         {
-            TempData["PayrollError"] = "Adjustment amount cannot be zero.";
+            TempData["PayrollError"] = "Amount must be greater than zero.";
+            return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
+        }
+
+        if (!TryGetAdjustmentOption(adjustmentType, out var option))
+        {
+            TempData["PayrollError"] = "Select a valid deduction or addition type.";
+            return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
+        }
+
+        var signedAmount = option.IsDeduction ? -amount : amount;
+        var payableTotalBeforeAdjustment = period.TotalWage + period.AdjustmentTotal;
+        var payableTotalAfterAdjustment = payableTotalBeforeAdjustment + signedAmount;
+        if (payableTotalAfterAdjustment < 0)
+        {
+            TempData["PayrollError"] = "Adjustment would make the payable total negative.";
             return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
         }
 
         var adjustment = new PayrollAdjustment
         {
             PayrollPeriodId = payrollPeriodId,
-            Date = (date ?? DateTime.Today).Date,
-            Amount = amount,
-            Reason = string.IsNullOrWhiteSpace(reason) ? "Manual adjustment" : reason.Trim(),
+            Date = (date ?? BusinessDate.Today()).Date,
+            Amount = signedAmount,
+            Reason = BuildAdjustmentReason(option.Label, note),
             CreatedBy = User.Identity?.Name,
-            CreatedAt = DateTime.Now
+            CreatedAt = BusinessDate.Now()
         };
         _context.PayrollAdjustments.Add(adjustment);
 
-        period.AdjustmentTotal += amount;
+        period.AdjustmentTotal += signedAmount;
         var payableTotal = period.TotalWage + period.AdjustmentTotal;
         ApplyPaymentStatus(period, payableTotal);
 
         await _context.SaveChangesAsync();
-        TempData["PayrollSuccess"] = "Adjustment saved.";
+        TempData["PayrollSuccess"] = $"{option.Label} saved.";
         return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
     }
 
@@ -455,7 +408,7 @@ public class PayrollController : Controller
         }
 
         run.Status = PayrollRunStatus.Approved;
-        run.ApprovedAt = DateTime.Now;
+        run.ApprovedAt = BusinessDate.Now();
         await _context.SaveChangesAsync();
         TempData["PayrollSuccess"] = "Payroll run approved.";
         return RedirectToAction(nameof(Generate), new { startDate = run.PeriodStart.ToString("yyyy-MM-dd"), endDate = run.PeriodEnd.ToString("yyyy-MM-dd") });
@@ -488,35 +441,40 @@ public class PayrollController : Controller
         }
 
         run.Status = PayrollRunStatus.Closed;
-        run.ClosedAt = DateTime.Now;
+        run.ClosedAt = BusinessDate.Now();
         await _context.SaveChangesAsync();
         TempData["PayrollSuccess"] = "Payroll run closed.";
         return RedirectToAction(nameof(Generate), new { startDate = run.PeriodStart.ToString("yyyy-MM-dd"), endDate = run.PeriodEnd.ToString("yyyy-MM-dd") });
     }
 
-    private async Task<string?> ValidateCutoffForGeneration(DateTime start, DateTime end)
+    private static List<PayrollAdjustmentOption> GetAdjustmentOptions()
     {
-        var exactLockedCutoffExists = await _context.PayrollCutoffs
-            .AsNoTracking()
-            .AnyAsync(c => c.IsLocked && c.StartDate == start && c.EndDate == end);
-        if (!exactLockedCutoffExists)
+        return AdjustmentOptionMap.Values
+            .Select(option => new PayrollAdjustmentOption
+            {
+                Key = option.Key,
+                Label = option.Label,
+                IsDeduction = option.IsDeduction
+            })
+            .ToList();
+    }
+
+    private static bool TryGetAdjustmentOption(string? key, out PayrollAdjustmentOptionDefinition option)
+    {
+        if (!string.IsNullOrWhiteSpace(key) && AdjustmentOptionMap.TryGetValue(key, out option!))
         {
-            return "Lock this exact cutoff range before generating payroll.";
+            return true;
         }
 
-        var hasOverlappingLockedCutoff = await _context.PayrollCutoffs
-            .AsNoTracking()
-            .AnyAsync(c =>
-                c.IsLocked &&
-                c.StartDate <= end &&
-                c.EndDate >= start &&
-                !(c.StartDate == start && c.EndDate == end));
-        if (hasOverlappingLockedCutoff)
-        {
-            return "Another locked cutoff overlaps this range. Use the exact locked cutoff only.";
-        }
+        option = null!;
+        return false;
+    }
 
-        return null;
+    private static string BuildAdjustmentReason(string label, string? note)
+    {
+        return string.IsNullOrWhiteSpace(note)
+            ? label
+            : $"{label}: {note.Trim()}";
     }
 
     private static void ApplyPaymentStatus(PayrollPeriod period, decimal payableTotal)
@@ -535,4 +493,6 @@ public class PayrollController : Controller
             period.Status = PaymentStatus.Unpaid;
         }
     }
+
+    private sealed record PayrollAdjustmentOptionDefinition(string Key, string Label, bool IsDeduction);
 }

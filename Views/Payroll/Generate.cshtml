@@ -4,6 +4,7 @@
     ViewData["Title"] = "Generate Payroll";
     var selectableCount = Model.Rows.Count;
     var totalWage = Model.Rows.Sum(r => r.TotalWage);
+    var hasExistingRun = Model.ExistingRunId.HasValue;
 }
 
 <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
@@ -12,7 +13,7 @@
     <div class="payroll-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
             <h1>Generate Payroll</h1>
-            <div class="sub">Pick a date range, select laborers, then create payroll periods.</div>
+            <div class="sub">Pick a weekly attendance range, uncheck anyone not ready, then create payroll periods.</div>
         </div>
         <a asp-action="Index" class="btn btn-light text-dark fw-bold"><i class="bi bi-arrow-left"></i> Back to Payroll</a>
     </div>
@@ -23,11 +24,11 @@
             <div class="value">@selectableCount</div>
         </div>
         <div class="payroll-kpi">
-            <div class="label">Date Range</div>
+            <div class="label">Attendance Week</div>
             <div class="value">@Model.StartDate.ToString("MMM dd") - @Model.EndDate.ToString("MMM dd")</div>
         </div>
         <div class="payroll-kpi warn">
-            <div class="label">Estimated Wage</div>
+            <div class="label">Estimated Payroll</div>
             <div class="value">₱@totalWage.ToString("N2")</div>
         </div>
     </div>
@@ -56,61 +57,13 @@
     </form>
 
     <div class="payroll-filter d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-            @if (Model.IsCutoffLocked)
-            {
-                <span class="badge bg-success">Cutoff Locked</span>
-            }
-            else
-            {
-                <span class="badge bg-secondary">Cutoff Unlocked</span>
-            }
-            @if (Model.HasOverlappingLockedCutoff)
-            {
-                <span class="badge bg-danger">Overlapping Locked Cutoff</span>
-            }
-            <span class="payroll-inline-note">@Model.CutoffMessage</span>
+        <div class="payroll-inline-note">
+            Only attendance not already included in payroll can be generated here.
         </div>
-        <div class="d-flex gap-2">
-            @if (Model.ExistingRunId.HasValue && Model.ExistingRunStatus.HasValue)
-            {
-                <span class="badge bg-dark">Run #@Model.ExistingRunId · @Model.ExistingRunStatus</span>
-            }
-
-            @if (Model.IsCutoffLocked && Model.CutoffId.HasValue)
-            {
-                <form asp-action="UnlockCutoff" method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="cutoffId" value="@Model.CutoffId.Value" />
-                    <button type="submit" class="btn btn-outline-warning" @(Model.CanUnlockCutoff ? null : "disabled")>Unlock Cutoff</button>
-                </form>
-            }
-            else
-            {
-                <form asp-action="LockCutoff" method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
-                    <input type="hidden" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
-                    <button type="submit" class="btn btn-success">Lock Cutoff</button>
-                </form>
-            }
-            @if (Model.ExistingRunId.HasValue && Model.CanApproveRun)
-            {
-                <form asp-action="ApproveRun" method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="runId" value="@Model.ExistingRunId.Value" />
-                    <button type="submit" class="btn btn-primary">Approve Run</button>
-                </form>
-            }
-            @if (Model.ExistingRunId.HasValue && Model.CanCloseRun)
-            {
-                <form asp-action="CloseRun" method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="runId" value="@Model.ExistingRunId.Value" />
-                    <button type="submit" class="btn btn-dark">Close Run</button>
-                </form>
-            }
-        </div>
+        @if (hasExistingRun && Model.ExistingRunStatus.HasValue)
+        {
+            <span class="badge bg-dark">Run #@Model.ExistingRunId · @Model.ExistingRunStatus</span>
+        }
     </div>
 
     <form asp-action="Generate" method="post">
@@ -163,7 +116,7 @@
                 <div class="payroll-inline-note">Period: @Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
                 <button type="submit"
                         class="btn btn-primary"
-                        @((Model.IsCutoffLocked && !Model.HasOverlappingLockedCutoff && !Model.ExistingRunId.HasValue) ? null : "disabled")>
+                        @((Model.Rows.Any() && !hasExistingRun) ? null : "disabled")>
                     Create Payroll Periods
                 </button>
             </div>

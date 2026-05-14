@@ -8,7 +8,7 @@
     var endDate = ViewData["EndDate"] as DateTime?;
     var totalPeriods = Model.Count();
     var unpaidCount = Model.Count(p => p.Status == PaymentStatus.Unpaid);
-    var totalBalance = Model.Sum(p => p.TotalWage - p.PaidAmount);
+    var totalBalance = Model.Sum(p => (p.TotalWage + p.AdjustmentTotal) - p.PaidAmount);
 }
 
 <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
@@ -18,11 +18,12 @@
         <div>
             <div class="admin-section-kicker">Workforce Finance</div>
             <h1>Payroll</h1>
-            <div class="sub">Simple flow: generate periods, review balances, then record payment.</div>
+            <div class="sub">Simple weekly flow: attendance, salary, deductions, then payment.</div>
             <div class="payroll-steps">
-                <span class="payroll-step">1. Generate</span>
-                <span class="payroll-step">2. Review</span>
-                <span class="payroll-step">3. Pay</span>
+                <span class="payroll-step">1. Attendance</span>
+                <span class="payroll-step">2. Generate</span>
+                <span class="payroll-step">3. Deduct</span>
+                <span class="payroll-step">4. Pay</span>
             </div>
         </div>
         <a asp-action="Generate" class="btn admin-action-btn"><i class="bi bi-magic"></i> Generate Payroll</a>
@@ -93,7 +94,7 @@
                             <th>Period</th>
                             <th>Run</th>
                             <th>Total Wage</th>
-                            <th>Adjustments</th>
+                            <th>Deductions / Additions</th>
                             <th>Payable</th>
                             <th>Paid</th>
                             <th>Balance</th>
