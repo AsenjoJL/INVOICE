@@ -15,14 +15,16 @@
     var drPaperWidth = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "210mm" : "8.5in";
     var drPaperHeight = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "297mm" : "11in";
 
-    const int rowsPerPage = 26;
+    // Keep the per-sheet item cap in one place so print pagination stays consistent
+    // if the business rule changes again later.
+    const int maxItemsPerPrintedPage = 30;
     // Preserve saved line order to keep printed output consistent with the original receipt.
     var allLines = (Model.Lines ?? Enumerable.Empty<HazelInvoice.Models.ReceiptLine>())
         .OrderBy(l => l.Id)
         .ToList();
     var pages = allLines
         .Select((line, idx) => new { line, idx })
-        .GroupBy(x => x.idx / rowsPerPage)
+        .GroupBy(x => x.idx / maxItemsPerPrintedPage)
         .Select(g => g.Select(x => x.line).ToList())
         .ToList();
 
@@ -135,7 +137,7 @@
                             <td class="col-amount">@item.Amount.ToString("N2")</td>
                         </tr>
                     }
-                    @for (int i = count; i < rowsPerPage; i++)
+                    @for (int i = count; i < maxItemsPerPrintedPage; i++)
                     {
                         <tr>
                             <td class="col-qty">&nbsp;</td>
