@@ -15,7 +15,7 @@
     var drPaperWidth = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "210mm" : "8.5in";
     var drPaperHeight = string.Equals(paperSize, "A4", StringComparison.OrdinalIgnoreCase) ? "297mm" : "11in";
 
-    const int rowsPerPage = 28;
+    const int rowsPerPage = 26;
     // Preserve saved line order to keep printed output consistent with the original receipt.
     var allLines = (Model.Lines ?? Enumerable.Empty<HazelInvoice.Models.ReceiptLine>())
         .OrderBy(l => l.Id)

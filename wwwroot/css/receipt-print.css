@@ -282,6 +282,8 @@ body.receipt-body {
 
 .page-footer {
     margin-top: 10px;
+    break-inside: avoid;
+    page-break-inside: avoid;
 }
 
 .ack-block {
@@ -292,6 +294,8 @@ body.receipt-body {
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    break-inside: avoid;
+    page-break-inside: avoid;
 }
 
 .footer-note {
@@ -310,6 +314,8 @@ body.receipt-body {
     text-align: center;
     width: 100%;
     padding-left: 0;
+    break-inside: avoid;
+    page-break-inside: avoid;
 }
 
 .received-input {
@@ -380,6 +386,8 @@ body.receipt-borderless .received-input {
 
     .receipt-page .page-footer {
         margin-top: auto;
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 
     .header-top {
@@ -504,4 +512,12 @@ body.receipt-borderless .received-input {
     .footer-note { margin-top: 0; margin-bottom: 8px; font-size: 8pt; text-align: center; }
     .received-line { margin-top: 0; font-size: 9pt; justify-content: center; padding-left: 0; }
     .received-input { width: 1.4in; }
+
+    .total-row,
+    .ack-block,
+    .footer-note,
+    .received-line {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
 }
