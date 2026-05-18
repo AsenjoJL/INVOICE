@@ -44,6 +44,21 @@ public class PayrollGenerateRow
     public decimal TotalWage { get; set; }
 }
 
+public class PayrollIndexViewModel
+{
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public PaymentStatus? Status { get; set; }
+    public int CurrentPage { get; set; } = 1;
+    public int PageSize { get; set; } = 25;
+    public int TotalPages { get; set; }
+    public int TotalPeriods { get; set; }
+    public int FilteredUnpaidCount { get; set; }
+    public decimal FilteredBalanceTotal { get; set; }
+    public decimal PageTotalBalance { get; set; }
+    public List<PayrollPeriod> Periods { get; set; } = new();
+}
+
 public class PayrollDetailsViewModel
 {
     public PayrollPeriod Period { get; set; } = new();

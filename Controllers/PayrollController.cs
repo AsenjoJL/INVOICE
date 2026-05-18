@@ -33,11 +33,10 @@ public class PayrollController : Controller
         _cacheInvalidator = cacheInvalidator;
     }
 
-    public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, PaymentStatus? status)
+    public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, PaymentStatus? status, int page = 1, int pageSize = 25)
     {
-        ViewData["StartDate"] = startDate;
-        ViewData["EndDate"] = endDate;
-        ViewData["Status"] = status?.ToString() ?? "";
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 10, 100);
 
         var query = _context.PayrollPeriods
             .AsNoTracking()
@@ -60,8 +59,37 @@ public class PayrollController : Controller
             query = query.Where(p => p.Status == status.Value);
         }
 
-        var periods = await query.OrderByDescending(p => p.PeriodEnd).ToListAsync();
-        return View(periods);
+        var totalPeriods = await query.CountAsync();
+        var filteredUnpaidCount = await query.CountAsync(p => p.Status == PaymentStatus.Unpaid);
+        var filteredBalanceTotal = await query.SumAsync(p => (p.TotalWage + p.AdjustmentTotal) - p.PaidAmount);
+        var totalPages = totalPeriods == 0 ? 1 : (int)Math.Ceiling(totalPeriods / (double)pageSize);
+        if (page > totalPages) page = totalPages;
+
+        var periods = await query
+            .OrderByDescending(p => p.PeriodEnd)
+            .ThenByDescending(p => p.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var pageTotalBalance = periods.Sum(p => (p.TotalWage + p.AdjustmentTotal) - p.PaidAmount);
+
+        var model = new PayrollIndexViewModel
+        {
+            StartDate = startDate,
+            EndDate = endDate,
+            Status = status,
+            CurrentPage = page,
+            PageSize = pageSize,
+            TotalPages = totalPages,
+            TotalPeriods = totalPeriods,
+            FilteredUnpaidCount = filteredUnpaidCount,
+            FilteredBalanceTotal = filteredBalanceTotal,
+            PageTotalBalance = pageTotalBalance,
+            Periods = periods
+        };
+
+        return View(model);
     }
 
     [HttpGet]
@@ -222,7 +250,19 @@ public class PayrollController : Controller
         }
     }
 
-    public async Task<IActionResult> Details(int id)
+    [HttpGet]
+    public async Task<IActionResult> DetailsModal(int id)
+    {
+        var model = await BuildPayrollDetailsViewModelAsync(id);
+        if (model == null)
+        {
+            return NotFound();
+        }
+
+        return PartialView("_PayrollDetailsPartial", model);
+    }
+
+    private async Task<PayrollDetailsViewModel?> BuildPayrollDetailsViewModelAsync(int id)
     {
         var period = await _context.PayrollPeriods
             .Include(p => p.Laborer)
@@ -233,7 +273,7 @@ public class PayrollController : Controller
 
         if (period == null)
         {
-            return NotFound();
+            return null;
         }
 
         var attendance = await _context.AttendanceRecords
@@ -247,7 +287,7 @@ public class PayrollController : Controller
         var payableTotal = period.TotalWage + period.AdjustmentTotal;
         var remaining = payableTotal - period.PaidAmount;
 
-        var model = new PayrollDetailsViewModel
+        return new PayrollDetailsViewModel
         {
             Period = period,
             AttendanceRecords = attendance,
@@ -263,6 +303,15 @@ public class PayrollController : Controller
                 PaymentMethod = PaymentMethod.Cash
             }
         };
+    }
+
+    public async Task<IActionResult> Details(int id)
+    {
+        var model = await BuildPayrollDetailsViewModelAsync(id);
+        if (model == null)
+        {
+            return NotFound();
+        }
 
         return View(model);
     }
@@ -280,9 +329,16 @@ public class PayrollController : Controller
             return NotFound();
         }
 
+        var isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
         if (period.PayrollRun?.Status == PayrollRunStatus.Closed)
         {
             TempData["PayrollError"] = "This payroll run is closed. Payments are locked.";
+            if (isAjax)
+            {
+                var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollPeriodId);
+                return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+            }
             return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
         }
 
@@ -304,6 +360,11 @@ public class PayrollController : Controller
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage)
                 .FirstOrDefault() ?? "Payment could not be saved.";
+            if (isAjax)
+            {
+                var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollPeriodId);
+                return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+            }
             return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
         }
 
@@ -328,6 +389,13 @@ public class PayrollController : Controller
         _cacheInvalidator.InvalidateDashboard();
         _cacheInvalidator.InvalidateProfitReports();
         TempData["PayrollSuccess"] = "Payment saved.";
+
+        if (isAjax)
+        {
+            var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollPeriodId);
+            return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+        }
+
         return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
     }
 
@@ -343,21 +411,38 @@ public class PayrollController : Controller
             return NotFound();
         }
 
+        var isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
         if (period.PayrollRun?.Status == PayrollRunStatus.Closed)
         {
             TempData["PayrollError"] = "This payroll run is closed. Adjustments are locked.";
+            if (isAjax)
+            {
+                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+                return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+            }
             return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
         }
 
         if (amount <= 0)
         {
             TempData["PayrollError"] = "Amount must be greater than zero.";
+            if (isAjax)
+            {
+                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+                return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+            }
             return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
         }
 
         if (!TryGetAdjustmentOption(adjustmentType, out var option))
         {
             TempData["PayrollError"] = "Select a valid deduction or addition type.";
+            if (isAjax)
+            {
+                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+                return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+            }
             return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
         }
 
@@ -367,6 +452,11 @@ public class PayrollController : Controller
         if (payableTotalAfterAdjustment < 0)
         {
             TempData["PayrollError"] = "Adjustment would make the payable total negative.";
+            if (isAjax)
+            {
+                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+                return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+            }
             return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
         }
 
@@ -387,6 +477,13 @@ public class PayrollController : Controller
 
         await _context.SaveChangesAsync();
         TempData["PayrollSuccess"] = $"{option.Label} saved.";
+
+        if (isAjax)
+        {
+            var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+            return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
+        }
+
         return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
     }
 
