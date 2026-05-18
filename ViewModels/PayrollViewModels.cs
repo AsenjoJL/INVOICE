@@ -16,14 +16,14 @@ public class AttendanceDailyViewModel
 
 public class AttendanceEntryViewModel
 {
+    public int? AttendanceRecordId { get; set; }
     public int LaborerId { get; set; }
     public string LaborerName { get; set; } = string.Empty;
     public decimal DailyRate { get; set; }
     public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
     public string? Notes { get; set; }
     public decimal WageAmount { get; set; }
-    public bool IsLocked { get; set; }
-    public string? LockReason { get; set; }
+    public bool IsInPayroll { get; set; }
 }
 
 public class PayrollGenerateViewModel
