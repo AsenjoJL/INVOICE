@@ -237,6 +237,72 @@
     background: #ffffff;
 }
 
+.payroll-modal-header {
+    padding: 20px 24px;
+    margin-bottom: 16px;
+}
+
+.payroll-modal-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 20px;
+}
+
+.payroll-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+}
+
+.payroll-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.payroll-form-field-full,
+.payroll-form-actions {
+    grid-column: 1 / -1;
+}
+
+.payroll-form-actions {
+    padding-top: 4px;
+}
+
+.modal-content .payroll-header,
+.modal-content .payroll-kpi,
+.modal-content .payroll-panel {
+    border-radius: 20px;
+}
+
+.modal-content .payroll-header {
+    border-color: #ededed;
+}
+
+.modal-content .payroll-panel .card-body {
+    padding: 20px;
+}
+
+.modal-content .payroll-panel .card-body.p-0 {
+    padding: 0 !important;
+}
+
+.modal-content .payroll-page {
+    padding: 0;
+}
+
+.modal-content .btn-link {
+    justify-content: flex-start;
+    width: fit-content;
+}
+
+.payroll-modal-layout > .col-12 + .col-12 .payroll-panel:first-child {
+    margin-top: 0;
+}
+
+.modal-content .payroll-panel {
+    width: 100%;
+}
+
 .payroll-status.paid,
 .payroll-status.partial,
 .payroll-status.unpaid,
@@ -252,6 +318,14 @@
     .payroll-summary {
         grid-template-columns: 1fr;
     }
+
+    .payroll-modal-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .payroll-form-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 768px) {
@@ -261,6 +335,10 @@
     .payroll-panel .card-header,
     .payroll-table-card .card-footer {
         padding: 20px;
+    }
+
+    .payroll-modal-summary {
+        grid-template-columns: 1fr;
     }
 }
 
