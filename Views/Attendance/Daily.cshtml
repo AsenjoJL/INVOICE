@@ -43,6 +43,7 @@
     <form asp-action="Daily" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="WorkDate" />
+        <input type="hidden" name="workDate" value="@Model.WorkDate.ToString("yyyy-MM-dd")" />
         <div class="card workforce-card admin-surface-card">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -51,6 +52,9 @@
                             <tr>
                                 <th>Laborer</th>
                                 <th>Daily Rate</th>
+                                <th>First Work</th>
+                                <th>Duty Days</th>
+                                <th>Absences</th>
                                 <th>Absent</th>
                                 <th>Wage</th>
                                 <th>Notes</th>
@@ -62,6 +66,7 @@
                             @for (var i = 0; i < Model.Entries.Count; i++)
                             {
                                 var isAbsent = Model.Entries[i].Status == AttendanceStatus.Absent;
+                                var firstWorkDateText = Model.Entries[i].FirstWorkDate?.ToString("MMM dd, yyyy") ?? "—";
                                 <tr>
                                     <td class="fw-bold">
                                         @Model.Entries[i].LaborerName
@@ -69,6 +74,9 @@
                                         <input type="hidden" name="Entries[@i].LaborerId" value="@Model.Entries[i].LaborerId" />
                                     </td>
                                     <td class="workforce-money">₱@Model.Entries[i].DailyRate.ToString("N2")</td>
+                                    <td>@firstWorkDateText</td>
+                                    <td>@Model.Entries[i].TotalDutyDays</td>
+                                    <td>@Model.Entries[i].TotalAbsenceDays</td>
                                     <td>
                                         <div class="form-check d-flex align-items-center gap-2">
                                             <input type="hidden" name="Entries[@i].Status" value="@(isAbsent ? AttendanceStatus.Absent : AttendanceStatus.Present)" data-attendance-status />
@@ -101,16 +109,15 @@
                                     <td class="text-end">
                                         @if (Model.Entries[i].AttendanceRecordId is int attendanceRecordId)
                                         {
-                                            <form asp-action="Delete" method="post" class="d-inline">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@attendanceRecordId" />
-                                                <input type="hidden" name="workDate" value="@Model.WorkDate.ToString("yyyy-MM-dd")" />
-                                                <button type="submit"
-                                                        class="btn btn-sm workforce-btn workforce-btn-danger"
-                                                        onclick="return confirm('Delete this attendance entry?');">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            <button type="submit"
+                                                    name="id"
+                                                    value="@attendanceRecordId"
+                                                    formaction="@Url.Action("Delete", "Attendance")"
+                                                    formmethod="post"
+                                                    class="btn btn-sm workforce-btn workforce-btn-danger"
+                                                    onclick="return confirm('Delete this attendance entry?');">
+                                                Delete
+                                            </button>
                                         }
                                     </td>
                                 </tr>
@@ -118,7 +125,7 @@
                             @if (!Model.Entries.Any())
                             {
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">No active laborers found.</td>
+                                    <td colspan="10" class="text-center text-muted py-4">No active laborers found.</td>
                                 </tr>
                             }
                         </tbody>
@@ -128,7 +135,7 @@
             <div class="card-footer d-flex justify-content-between align-items-center">
                 <div>
                     <div class="fw-bold">Total Salary: <span data-workforce-total>₱@Model.TotalWage.ToString("N2")</span></div>
-                    <div class="small text-muted">Save updates attendance for all active laborers on this date.</div>
+                    <div class="small text-muted">Duty days are counted from the first recorded work date per laborer.</div>
                 </div>
                 <button type="submit" class="btn workforce-btn workforce-btn-primary">Save Attendance</button>
             </div>

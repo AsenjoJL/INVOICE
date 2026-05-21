@@ -6,6 +6,7 @@ using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace HazelInvoice.Controllers;
 
@@ -112,7 +113,7 @@ public class PayrollController : Controller
             {
                 LaborerId = g.Key,
                 LaborerName = g.First().Laborer?.FullName ?? "Unknown",
-                TotalDays = g.Count(),
+                TotalDays = g.Count(x => x.Status != AttendanceStatus.Absent),
                 TotalWage = g.Sum(x => x.WageAmount)
             })
             .OrderBy(r => r.LaborerName)
@@ -210,7 +211,7 @@ public class PayrollController : Controller
                         LaborerId = group.Key,
                         PeriodStart = start,
                         PeriodEnd = end,
-                        TotalDays = group.Count(),
+                        TotalDays = group.Count(x => x.Status != AttendanceStatus.Absent),
                         TotalWage = totalWage,
                         AdjustmentTotal = 0,
                         PaidAmount = 0,
@@ -248,6 +249,21 @@ public class PayrollController : Controller
             TempData["PayrollError"] = "Payroll generation could not be saved. Refresh the page and try again. If the issue persists, check for duplicate or already-assigned attendance in this cutoff.";
             return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
         }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportPayslipCsv(int id)
+    {
+        var model = await BuildPayrollDetailsViewModelAsync(id);
+        if (model == null)
+        {
+            return NotFound();
+        }
+
+        var csv = BuildPayslipCsv(model);
+        var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(csv);
+        var fileName = $"payslip-{model.Period.Id}-{model.Period.Laborer?.FullName?.Replace(' ', '-') ?? "laborer"}.csv";
+        return File(bytes, "text/csv", fileName);
     }
 
     [HttpGet]
@@ -589,6 +605,54 @@ public class PayrollController : Controller
         {
             period.Status = PaymentStatus.Unpaid;
         }
+    }
+
+    private static string BuildPayslipCsv(PayrollDetailsViewModel model)
+    {
+        static string Escape(string? value)
+        {
+            value ??= string.Empty;
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("PAYSLIP SUMMARY");
+        sb.AppendLine("Field,Value");
+        sb.AppendLine($"Laborer,{Escape(model.Period.Laborer?.FullName)}");
+        sb.AppendLine($"Period,{Escape($"{model.Period.PeriodStart:MMM dd, yyyy} - {model.Period.PeriodEnd:MMM dd, yyyy}")}");
+        sb.AppendLine($"Duty Days,{model.Period.TotalDays}");
+        sb.AppendLine($"Gross Salary,{model.GrossSalary:N2}");
+        sb.AppendLine($"Total Deductions,{model.TotalDeductions:N2}");
+        sb.AppendLine($"Total Additions,{model.TotalAdditions:N2}");
+        sb.AppendLine($"Net Salary,{model.NetSalary:N2}");
+        sb.AppendLine($"Paid,{model.Period.PaidAmount:N2}");
+        sb.AppendLine($"Balance,{model.RemainingBalance:N2}");
+        sb.AppendLine();
+        sb.AppendLine("ATTENDANCE");
+        sb.AppendLine("Date,Status,Rate,Multiplier,Wage");
+
+        foreach (var record in model.AttendanceRecords)
+        {
+            sb.AppendLine($"{record.WorkDate:yyyy-MM-dd},{record.Status},{record.RateSnapshot:N2},{record.Multiplier:0.00},{record.WageAmount:N2}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("ADJUSTMENTS");
+        sb.AppendLine("Date,Amount,Reason");
+        foreach (var adjustment in model.Adjustments)
+        {
+            sb.AppendLine($"{adjustment.Date:yyyy-MM-dd},{adjustment.Amount:N2},{Escape(adjustment.Reason)}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("PAYMENTS");
+        sb.AppendLine("Date,Amount,Method,Reference");
+        foreach (var payment in model.Payments)
+        {
+            sb.AppendLine($"{payment.Date:yyyy-MM-dd},{payment.Amount:N2},{payment.PaymentMethod},{Escape(payment.ReferenceNo)}");
+        }
+
+        return sb.ToString();
     }
 
     private sealed record PayrollAdjustmentOptionDefinition(string Key, string Label, bool IsDeduction);

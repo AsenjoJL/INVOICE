@@ -67,7 +67,7 @@ public class PayrollReportsController : Controller
             {
                 LaborerId = g.Key,
                 LaborerName = g.First().Laborer?.FullName ?? "Unknown",
-                TotalDays = g.Count(),
+                TotalDays = g.Count(x => x.Status != AttendanceStatus.Absent),
                 TotalWage = g.Sum(x => x.WageAmount)
             })
             .OrderBy(r => r.LaborerName)

@@ -82,7 +82,7 @@
                                 </th>
                                 <th>Laborer</th>
                                 <th>Total Days</th>
-                                <th>Total Wage</th>
+                                <th>Gross Salary</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -99,7 +99,7 @@
                                     </td>
                                     <td class="fw-bold">@row.LaborerName</td>
                                     <td>@row.TotalDays</td>
-                                    <td class="payroll-money">₱@row.TotalWage.ToString("N2")</td>
+                                <td class="payroll-money">₱@row.TotalWage.ToString("N2")</td>
                                 </tr>
                             }
                             @if (!Model.Rows.Any())

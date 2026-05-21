@@ -13,7 +13,10 @@
         <div class="sub">@Model.Period.Laborer?.FullName · @Model.Period.PeriodStart.ToString("MMM dd, yyyy") - @Model.Period.PeriodEnd.ToString("MMM dd, yyyy")</div>
         <div class="sub">Run: #@Model.Period.PayrollRunId · @Model.Period.PayrollRun?.Status</div>
     </div>
-    <a asp-action="Index" class="btn btn-light text-dark fw-bold"><i class="bi bi-arrow-left"></i> Back</a>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-action="ExportPayslipCsv" asp-route-id="@Model.Period.Id" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Export CSV</a>
+        <a asp-action="Index" class="btn btn-light text-dark fw-bold"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
 </div>
 
 @if (TempData["PayrollError"] is string payrollError && !string.IsNullOrWhiteSpace(payrollError))
@@ -31,16 +34,20 @@
         <div class="value">@Model.Period.TotalDays</div>
     </div>
     <div class="payroll-kpi">
-        <div class="label">Total Salary</div>
-        <div class="value">₱@Model.Period.TotalWage.ToString("N2")</div>
+        <div class="label">Gross Salary</div>
+        <div class="value">₱@Model.GrossSalary.ToString("N2")</div>
     </div>
     <div class="payroll-kpi">
-        <div class="label">Deductions / Additions</div>
-        <div class="value">₱@Model.Period.AdjustmentTotal.ToString("+#,##0.00;-#,##0.00;0.00")</div>
+        <div class="label">Total Deductions</div>
+        <div class="value">₱@Model.TotalDeductions.ToString("N2")</div>
     </div>
     <div class="payroll-kpi">
-        <div class="label">Payable Total</div>
-        <div class="value">₱@Model.PayableTotal.ToString("N2")</div>
+        <div class="label">Total Additions</div>
+        <div class="value">₱@Model.TotalAdditions.ToString("N2")</div>
+    </div>
+    <div class="payroll-kpi">
+        <div class="label">Net Salary</div>
+        <div class="value">₱@Model.NetSalary.ToString("N2")</div>
     </div>
     <div class="payroll-kpi">
         <div class="label">Paid</div>

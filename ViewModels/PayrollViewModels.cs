@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using HazelInvoice.Models;
 using HazelInvoice.Helpers;
 
@@ -24,6 +25,10 @@ public class AttendanceEntryViewModel
     public string? Notes { get; set; }
     public decimal WageAmount { get; set; }
     public bool IsInPayroll { get; set; }
+    public DateTime? FirstWorkDate { get; set; }
+    public int TotalDutyDays { get; set; }
+    public int TotalAbsenceDays { get; set; }
+    public int TotalTrackedDays { get; set; }
 }
 
 public class PayrollGenerateViewModel
@@ -69,6 +74,18 @@ public class PayrollDetailsViewModel
     public decimal RemainingBalance { get; set; }
     public decimal PayableTotal { get; set; }
     public PayrollPayment NewPayment { get; set; } = new();
+
+    public decimal GrossSalary => Period.TotalWage;
+
+    public decimal TotalDeductions => Adjustments
+        .Where(a => a.Amount < 0)
+        .Sum(a => Math.Abs(a.Amount));
+
+    public decimal TotalAdditions => Adjustments
+        .Where(a => a.Amount > 0)
+        .Sum(a => a.Amount);
+
+    public decimal NetSalary => GrossSalary + Period.AdjustmentTotal;
 }
 
 public class PayrollAdjustmentOption

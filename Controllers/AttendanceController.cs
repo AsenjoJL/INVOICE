@@ -28,6 +28,20 @@ public class AttendanceController : Controller
         var laborers = await _lookupCache.GetActiveLaborersAsync(HttpContext.RequestAborted);
 
         var laborerIds = laborers.Select(l => l.Id).ToList();
+        var history = await _context.AttendanceRecords
+            .AsNoTracking()
+            .Where(a => laborerIds.Contains(a.LaborerId))
+            .GroupBy(a => a.LaborerId)
+            .Select(g => new AttendanceHistorySummary(
+                g.Key,
+                g.Min(x => x.WorkDate),
+                g.Count(x => x.Status != AttendanceStatus.Absent),
+                g.Count(x => x.Status == AttendanceStatus.Absent),
+                g.Count()))
+            .ToListAsync();
+
+        var historyMap = history.ToDictionary(x => x.LaborerId, x => x);
+
         var existing = await _context.AttendanceRecords
             .AsNoTracking()
             .Include(a => a.PayrollPeriod)
@@ -44,6 +58,7 @@ public class AttendanceController : Controller
         {
             if (existingMap.TryGetValue(laborer.Id, out var record))
             {
+                historyMap.TryGetValue(laborer.Id, out var summary);
                 model.Entries.Add(new AttendanceEntryViewModel
                 {
                     AttendanceRecordId = record.Id,
@@ -53,11 +68,16 @@ public class AttendanceController : Controller
                     Status = record.Status,
                     Notes = record.Notes,
                     WageAmount = record.WageAmount,
-                    IsInPayroll = record.PayrollPeriodId != null
+                    IsInPayroll = record.PayrollPeriodId != null,
+                    FirstWorkDate = summary?.FirstWorkDate ?? laborer.HiredDate?.Date ?? workDate,
+                    TotalDutyDays = summary?.TotalDutyDays ?? 0,
+                    TotalAbsenceDays = summary?.TotalAbsenceDays ?? 0,
+                    TotalTrackedDays = summary?.TotalTrackedDays ?? 0
                 });
             }
             else
             {
+                historyMap.TryGetValue(laborer.Id, out var summary);
                 var multiplier = GetMultiplier(AttendanceStatus.Present);
                 var wage = laborer.DailyRate * multiplier;
                 model.Entries.Add(new AttendanceEntryViewModel
@@ -66,7 +86,11 @@ public class AttendanceController : Controller
                     LaborerName = laborer.FullName,
                     DailyRate = laborer.DailyRate,
                     Status = AttendanceStatus.Present,
-                    WageAmount = wage
+                    WageAmount = wage,
+                    FirstWorkDate = summary?.FirstWorkDate ?? laborer.HiredDate?.Date ?? workDate,
+                    TotalDutyDays = summary?.TotalDutyDays ?? 0,
+                    TotalAbsenceDays = summary?.TotalAbsenceDays ?? 0,
+                    TotalTrackedDays = summary?.TotalTrackedDays ?? 0
                 });
             }
         }
@@ -183,7 +207,7 @@ public class AttendanceController : Controller
 
         foreach (var period in periods)
         {
-            period.TotalDays = period.AttendanceRecords.Count;
+            period.TotalDays = period.AttendanceRecords.Count(a => a.Status != AttendanceStatus.Absent);
             period.TotalWage = period.AttendanceRecords.Sum(a => a.WageAmount);
 
             var payableTotal = period.TotalWage + period.AdjustmentTotal;
@@ -212,4 +236,11 @@ public class AttendanceController : Controller
             period.Status = PaymentStatus.Unpaid;
         }
     }
+
+    private sealed record AttendanceHistorySummary(
+        int LaborerId,
+        DateTime FirstWorkDate,
+        int TotalDutyDays,
+        int TotalAbsenceDays,
+        int TotalTrackedDays);
 }
