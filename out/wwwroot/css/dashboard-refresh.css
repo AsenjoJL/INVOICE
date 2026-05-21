@@ -16,26 +16,7 @@
         radial-gradient(circle at top right, rgba(59, 130, 246, 0.06), transparent 28%),
         var(--dash-bg);
     border-radius: 34px;
-    padding: 2rem clamp(2.2rem, 3.2vw, 3.2rem) 3rem;
-    overflow: hidden;
-    box-sizing: border-box;
-}
-
-.dashboard-refresh > section,
-.dashboard-refresh > .row {
-    position: relative;
-    z-index: 1;
-}
-
-.dashboard-refresh > .row {
-    --bs-gutter-x: 1rem;
-    margin-left: 0;
-    margin-right: 0;
-}
-
-.dashboard-refresh > .row > [class*="col-"] {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding: 2rem 1.4rem 3rem;
 }
 
 .dashboard-refresh .dashboard-hero-panel,
@@ -49,10 +30,9 @@
 
 .dashboard-refresh .dashboard-hero-panel {
     border-radius: 32px;
-    padding: 1.45rem 1.55rem;
+    padding: 1.4rem 1.5rem;
     position: relative;
     overflow: hidden;
-    margin-bottom: 1.3rem;
 }
 
 .dashboard-refresh .dashboard-hero-panel::after {
@@ -104,23 +84,18 @@
     border-radius: 24px;
     border: 1px solid var(--dash-border);
     min-width: 290px;
-    padding: 1.15rem 1.2rem;
 }
 
-.dashboard-refresh .dashboard-hero-highlight strong,
-.dashboard-refresh .dashboard-highlight-value {
+.dashboard-refresh .dashboard-hero-highlight strong {
     color: var(--dash-text);
-    font-size: clamp(1.7rem, 3vw, 2.35rem);
-    font-weight: 400;
-    line-height: 1.05;
-    display: block;
+    font-size: clamp(2rem, 4vw, 3rem);
 }
 
 .dashboard-refresh .dashboard-kpi-strip {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 1rem;
-    margin: 1.15rem 0 1.5rem;
+    margin: 1.25rem 0 1.5rem;
 }
 
 .dashboard-refresh .dashboard-kpi-tile {
@@ -178,20 +153,17 @@
 
 .dashboard-refresh .dashboard-kpi-label {
     font-size: 0.7rem;
-    font-weight: 500;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.18em;
     color: #73857b;
 }
 
-.dashboard-refresh .dashboard-kpi-copy strong,
-.dashboard-refresh .dashboard-kpi-number {
+.dashboard-refresh .dashboard-kpi-copy strong {
     color: var(--dash-text);
-    font-size: clamp(1.15rem, 1.7vw, 1.55rem);
-    font-weight: 400;
+    font-size: clamp(1.35rem, 2vw, 1.85rem);
     letter-spacing: -0.04em;
     line-height: 1.05;
-    display: block;
 }
 
 .dashboard-refresh .dashboard-kpi-copy small {
@@ -203,34 +175,31 @@
     position: absolute;
     right: 0.95rem;
     bottom: 0.95rem;
-    opacity: 0.82;
 }
 
 .dashboard-refresh .dashboard-module-bar {
     border-radius: 24px;
-    padding: 1rem 1.05rem;
+    padding: 1rem;
     gap: 0.8rem;
-    margin-bottom: 1.5rem;
 }
 
 .dashboard-refresh .dashboard-module-pill {
     background: #fff;
     border: 1px solid var(--dash-border);
     color: var(--dash-text);
-    font-weight: 500;
+    font-weight: 700;
     padding: 0.85rem 1rem;
-    box-shadow: none;
 }
 
 .dashboard-refresh .dashboard-module-pill.active {
-    background: linear-gradient(135deg, #183324, #224433);
+    background: linear-gradient(135deg, #0f8a4b, #0d6f3e);
     color: #fff;
-    border-color: #224433;
-    box-shadow: 0 8px 18px rgba(17, 35, 25, 0.12);
+    border-color: #0d6f3e;
+    box-shadow: 0 14px 28px rgba(15, 138, 75, 0.2);
 }
 
 .dashboard-refresh .dashboard-section-heading {
-    margin: 1.55rem 0 1rem;
+    margin: 1.8rem 0 1rem;
 }
 
 .dashboard-refresh .dashboard-section-heading h2 {
@@ -241,7 +210,7 @@
 
 .dashboard-refresh .metric-card {
     border-radius: 24px;
-    padding: 1rem 1.05rem;
+    padding: 1.1rem 1.15rem;
     min-height: 220px;
 }
 
@@ -252,35 +221,33 @@
 
 .dashboard-refresh .metric-label {
     color: #73857b;
-    font-weight: 500;
+    font-weight: 800;
     letter-spacing: 0.18em;
 }
 
 .dashboard-refresh .metric-value {
     color: var(--dash-text);
-    font-size: clamp(1.45rem, 2vw, 2.05rem);
-    font-weight: 400;
+    font-size: clamp(1.9rem, 2.8vw, 2.7rem);
     letter-spacing: -0.05em;
-    margin: 0.6rem 0 0.35rem;
+    margin: 0.75rem 0 0.35rem;
 }
 
 .dashboard-refresh .kpi-trend {
     border-radius: 999px;
-    padding: 0.3rem 0.55rem;
-    font-weight: 500;
-    opacity: 0.82;
+    padding: 0.35rem 0.6rem;
+    font-weight: 800;
 }
 
 .dashboard-refresh .unpaid-cta {
     margin-top: auto;
-    background: #fcfdfc;
-    border: 1px solid #edf3ee;
+    background: #fff7f5;
+    border: 1px solid #ffd7ce;
     border-radius: 16px;
     padding: 0.65rem 0.8rem;
 }
 
 .dashboard-refresh .unpaid-link {
-    font-weight: 500;
+    font-weight: 800;
     color: #c2410c;
     text-transform: uppercase;
     letter-spacing: 0.14em;
@@ -293,7 +260,6 @@
 .dashboard-refresh .surface-card {
     border-radius: 28px;
     overflow: hidden;
-    margin-bottom: 0.1rem;
 }
 
 .dashboard-refresh .surface-card-header {
@@ -303,17 +269,16 @@
 
 .dashboard-refresh .surface-card-title {
     color: var(--dash-text);
-    font-weight: 500;
+    font-weight: 800;
     letter-spacing: -0.02em;
 }
 
 .dashboard-refresh .section-chip {
-    background: #f7faf8;
-    color: #6b7d72;
-    border: 1px solid #e8efea;
+    background: #f0f7f2;
+    color: #5d7665;
+    border: 1px solid #e0ece3;
     border-radius: 999px;
     padding: 0.45rem 0.75rem;
-    font-weight: 400;
 }
 
 .dashboard-refresh .surface-card-body {
@@ -351,29 +316,13 @@
 
 .dashboard-refresh .dashboard-table-link {
     color: #0f8a4b;
-    font-weight: 500;
-}
-
-.dashboard-refresh .dashboard-table-name {
-    font-weight: 500;
-    color: var(--dash-text);
-}
-
-.dashboard-refresh .dashboard-table-amount {
-    font-weight: 400;
-    color: #24352c;
-}
-
-.dashboard-refresh .dashboard-table-amount-accent {
-    color: #476356;
+    font-weight: 800;
 }
 
 .dashboard-refresh .badge-soft-danger,
 .dashboard-refresh .badge-soft-success {
     border-radius: 999px;
-    padding: 0.38rem 0.65rem;
-    font-weight: 500;
-    opacity: 0.88;
+    padding: 0.45rem 0.7rem;
 }
 
 @media (max-width: 1400px) {
@@ -384,12 +333,8 @@
 
 @media (max-width: 992px) {
     .dashboard-refresh.dashboard-shell {
-        padding: 1.25rem 1.2rem 2rem;
+        padding: 1.25rem 0.4rem 2rem;
         border-radius: 26px;
-    }
-
-    .dashboard-refresh > .row {
-        --bs-gutter-x: 0.85rem;
     }
 
     .dashboard-refresh .dashboard-kpi-strip {
@@ -407,10 +352,6 @@
 }
 
 @media (max-width: 640px) {
-    .dashboard-refresh.dashboard-shell {
-        padding: 1rem 0.95rem 1.6rem;
-    }
-
     .dashboard-refresh .dashboard-kpi-strip {
         grid-template-columns: 1fr;
     }

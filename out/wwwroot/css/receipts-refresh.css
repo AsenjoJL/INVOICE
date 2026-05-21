@@ -1,0 +1,272 @@
+.receipts-refresh {
+    --receipt-bg: #f8fbf8;
+    --receipt-surface: rgba(255, 255, 255, 0.94);
+    --receipt-border: #dce9df;
+    --receipt-text: #132118;
+    --receipt-muted: #6d7d73;
+    --receipt-accent: #138a4b;
+    --receipt-accent-soft: #e8f7ee;
+    --receipt-warm: #fff7f2;
+    --receipt-shadow: 0 18px 38px rgba(17, 40, 26, 0.06);
+}
+
+.receipts-refresh.invoice-ui {
+    background:
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.07), transparent 28%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent 24%),
+        var(--receipt-bg);
+    border-radius: 32px;
+    padding: 1.5rem !important;
+}
+
+.receipts-refresh .invoice-hero,
+.receipts-refresh .invoice-card,
+.receipts-refresh .admin-surface-card {
+    background: var(--receipt-surface);
+    border: 1px solid var(--receipt-border);
+    box-shadow: var(--receipt-shadow);
+}
+
+.receipts-refresh .invoice-hero {
+    border-radius: 30px;
+    padding: 1.45rem 1.5rem;
+}
+
+.receipts-refresh .invoice-title {
+    color: var(--receipt-text);
+    letter-spacing: -0.04em;
+    font-size: clamp(2rem, 3vw, 2.55rem);
+}
+
+.receipts-refresh .invoice-sub,
+.receipts-refresh .form-text,
+.receipts-refresh .text-muted,
+.receipts-refresh .metric-state {
+    color: var(--receipt-muted) !important;
+}
+
+.receipts-refresh .invoice-actions .invoice-btn {
+    border-radius: 16px;
+    min-height: 46px;
+    padding-inline: 1rem;
+    font-weight: 700;
+}
+
+.receipts-refresh .invoice-btn.invoice-btn-primary,
+.receipts-refresh .invoice-btn.invoice-btn-solid {
+    background: linear-gradient(135deg, #111827, #0b1220);
+    border-color: #0b1220;
+    box-shadow: 0 12px 24px rgba(17, 24, 39, 0.12);
+}
+
+.receipts-refresh .invoice-btn.invoice-btn-ghost,
+.receipts-refresh .invoice-btn.invoice-btn-outline {
+    background: #fff;
+    border-color: var(--receipt-border);
+    color: var(--receipt-text);
+}
+
+.receipts-refresh .receipts-summary-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 1.15rem 0 1.5rem;
+}
+
+.receipts-refresh .receipts-summary-card {
+    background: var(--receipt-surface);
+    border: 1px solid var(--receipt-border);
+    border-radius: 22px;
+    box-shadow: var(--receipt-shadow);
+    padding: 1rem 1.05rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-height: 120px;
+}
+
+.receipts-refresh .receipts-summary-label,
+.receipts-refresh .invoice-card-title,
+.receipts-refresh .invoice-table thead th,
+.receipts-refresh .form-label {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.receipts-refresh .receipts-summary-label,
+.receipts-refresh .form-label,
+.receipts-refresh .invoice-table thead th {
+    color: #73867a;
+}
+
+.receipts-refresh .receipts-summary-card strong {
+    font-size: clamp(1.3rem, 2vw, 1.75rem);
+    letter-spacing: -0.04em;
+    color: var(--receipt-text);
+}
+
+.receipts-refresh .receipts-summary-card small {
+    color: var(--receipt-muted);
+}
+
+.receipts-refresh .invoice-card {
+    border-radius: 26px;
+    overflow: hidden;
+}
+
+.receipts-refresh .invoice-card-header {
+    padding: 1.1rem 1.15rem;
+    border-bottom: 1px solid #ebf3ed;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.receipts-refresh .invoice-card-body {
+    padding: 1.15rem;
+}
+
+.receipts-refresh .invoice-card-body.p-0 {
+    padding: 0;
+}
+
+.receipts-refresh .invoice-tag,
+.receipts-refresh .status-pill {
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--receipt-border);
+}
+
+.receipts-refresh .invoice-table thead th {
+    border-bottom-color: #ebf3ed;
+    background: #fcfefc;
+}
+
+.receipts-refresh .invoice-table tbody td,
+.receipts-refresh .invoice-table tfoot td {
+    border-bottom-color: #ebf3ed;
+    vertical-align: middle;
+}
+
+.receipts-refresh .invoice-table tbody tr:hover td {
+    background: #fbfefb;
+}
+
+.receipts-refresh .invoice-icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--receipt-border);
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.receipts-refresh .btn-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: nowrap;
+}
+
+.receipts-refresh .btn-group > .invoice-icon-btn,
+.receipts-refresh .btn-group > form .invoice-icon-btn {
+    margin: 0;
+}
+
+.receipts-refresh .btn-group > form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.receipts-refresh .invoice-grid {
+    gap: 1.3rem;
+}
+
+.receipts-refresh .invoice-summary {
+    gap: 1rem;
+}
+
+.receipts-refresh .invoice-summary-line {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #edf3ee;
+}
+
+.receipts-refresh .invoice-summary-line:last-child {
+    border-bottom: 0;
+}
+
+.receipts-refresh .invoice-summary-total {
+    color: var(--receipt-text);
+    font-size: 1.3rem;
+}
+
+.receipts-refresh .invoice-field .form-control,
+.receipts-refresh .invoice-field .form-select,
+.receipts-refresh .admin-inline-filter .form-control,
+.receipts-refresh .admin-inline-filter .form-select {
+    min-height: 46px;
+    border-radius: 15px;
+    border-color: var(--receipt-border);
+    box-shadow: none;
+    background: #fff;
+}
+
+.receipts-refresh .invoice-field .form-control:focus,
+.receipts-refresh .invoice-field .form-select:focus,
+.receipts-refresh .admin-inline-filter .form-control:focus,
+.receipts-refresh .admin-inline-filter .form-select:focus {
+    border-color: #bdd7c2;
+    box-shadow: 0 0 0 4px rgba(19, 138, 75, 0.08);
+}
+
+.receipts-refresh .admin-inline-filter {
+    gap: 0.7rem;
+}
+
+.receipts-refresh .invoice-actions-bar {
+    gap: 0.8rem;
+}
+
+.receipts-refresh .invoice-actions-bar .invoice-btn {
+    flex: 1 1 180px;
+}
+
+.receipts-refresh .receipt-items-table-wrap {
+    border-top: 1px solid #edf3ee;
+}
+
+.receipts-refresh .invoice-line-items-table tfoot td {
+    background: #fcfefc;
+}
+
+.receipts-refresh .admin-page-footerbar {
+    padding: 0.75rem 0.25rem 0;
+}
+
+@media (max-width: 1200px) {
+    .receipts-refresh .receipts-summary-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .receipts-refresh.invoice-ui {
+        border-radius: 24px;
+        padding: 1rem !important;
+    }
+
+    .receipts-refresh .invoice-hero {
+        padding: 1.1rem;
+    }
+
+    .receipts-refresh .receipts-summary-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .receipts-refresh .invoice-card-header,
+    .receipts-refresh .invoice-card-body {
+        padding-inline: 1rem;
+    }
+}

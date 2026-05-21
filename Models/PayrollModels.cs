@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using HazelInvoice.Helpers;
 
 namespace HazelInvoice.Models;
 
@@ -48,7 +49,7 @@ public class AttendanceRecord
     public int LaborerId { get; set; }
     public Laborer? Laborer { get; set; }
 
-    public DateTime WorkDate { get; set; } = DateTime.Now;
+    public DateTime WorkDate { get; set; } = BusinessDate.Today();
 
     public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
 
@@ -96,7 +97,7 @@ public class PayrollPeriod
 
     public PaymentStatus Status { get; set; } = PaymentStatus.Unpaid;
 
-    public DateTime GeneratedAt { get; set; } = DateTime.Now;
+    public DateTime GeneratedAt { get; set; } = BusinessDate.Now();
 
     [StringLength(200)]
     public string? Notes { get; set; }
@@ -115,7 +116,7 @@ public class PayrollRun
 
     public PayrollRunStatus Status { get; set; } = PayrollRunStatus.Generated;
 
-    public DateTime GeneratedAt { get; set; } = DateTime.Now;
+    public DateTime GeneratedAt { get; set; } = BusinessDate.Now();
     public DateTime? ApprovedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
 
@@ -153,7 +154,7 @@ public class PayrollPayment
     public int PayrollPeriodId { get; set; }
     public PayrollPeriod? PayrollPeriod { get; set; }
 
-    public DateTime Date { get; set; } = DateTime.Now;
+    public DateTime Date { get; set; } = BusinessDate.Today();
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal Amount { get; set; }
@@ -173,7 +174,7 @@ public class PayrollAdjustment
     public int PayrollPeriodId { get; set; }
     public PayrollPeriod? PayrollPeriod { get; set; }
 
-    public DateTime Date { get; set; } = DateTime.Now;
+    public DateTime Date { get; set; } = BusinessDate.Today();
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal Amount { get; set; }
@@ -184,5 +185,5 @@ public class PayrollAdjustment
     [StringLength(100)]
     public string? CreatedBy { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = BusinessDate.Now();
 }
