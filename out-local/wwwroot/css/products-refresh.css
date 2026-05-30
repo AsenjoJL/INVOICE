@@ -1,0 +1,201 @@
+.product-refresh {
+    --product-refresh-bg: #f8fbf8;
+    --product-refresh-surface: rgba(255, 255, 255, 0.94);
+    --product-refresh-border: #dce9df;
+    --product-refresh-text: #122019;
+    --product-refresh-muted: #6b7b72;
+    --product-refresh-accent: #138a4b;
+    --product-refresh-accent-soft: #e9f7ee;
+    --product-refresh-shadow: 0 18px 38px rgba(17, 40, 26, 0.06);
+}
+
+.product-refresh.product-page,
+.product-refresh.product-form-page {
+    background:
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.06), transparent 26%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent 20%),
+        var(--product-refresh-bg);
+    border-radius: 32px;
+    padding: 1.5rem !important;
+}
+
+.product-refresh .product-header,
+.product-refresh .product-card,
+.product-refresh .metric-card,
+.product-refresh .info-collapse,
+.product-refresh .product-form-card,
+.product-refresh .product-form-section {
+    background: var(--product-refresh-surface);
+    border-color: var(--product-refresh-border);
+    box-shadow: var(--product-refresh-shadow);
+}
+
+.product-refresh .product-header-main {
+    padding: 0.15rem 0;
+}
+
+.product-refresh .product-header h1,
+.product-refresh .product-form-banner h4 {
+    color: var(--product-refresh-text);
+    font-size: clamp(2rem, 3vw, 2.55rem);
+    letter-spacing: -0.04em;
+}
+
+.product-refresh .product-header .sub,
+.product-refresh .product-form-banner .subtitle,
+.product-refresh .product-meta,
+.product-refresh .row-summary {
+    color: var(--product-refresh-muted);
+}
+
+.product-refresh .product-date-chip,
+.product-refresh .product-form-kicker,
+.product-refresh .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border: 1px solid #e4efe7;
+    background: #f4faf5;
+    border-radius: 999px;
+    padding: 0.45rem 0.85rem;
+    color: #6b8474;
+}
+
+.product-refresh .product-summary-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.product-refresh .product-form-strip {
+    margin-bottom: 1.2rem;
+}
+
+.product-refresh .product-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-height: 118px;
+    padding: 1rem 1.05rem;
+    border-radius: 22px;
+    background: var(--product-refresh-surface);
+    border: 1px solid var(--product-refresh-border);
+    box-shadow: var(--product-refresh-shadow);
+}
+
+.product-refresh .product-summary-label,
+.product-refresh .product-form-kicker {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #74867b;
+}
+
+.product-refresh .product-summary-card strong {
+    font-size: clamp(1.25rem, 2vw, 1.7rem);
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: var(--product-refresh-text);
+}
+
+.product-refresh .product-summary-card small {
+    color: var(--product-refresh-muted);
+}
+
+.product-refresh .product-search-bar,
+.product-refresh .filter-pill,
+.product-refresh .product-card .dropdown-menu {
+    background: #fff;
+    border-color: var(--product-refresh-border);
+    box-shadow: var(--product-refresh-shadow);
+}
+
+.product-refresh .product-actions .btn,
+.product-refresh .product-tools .btn,
+.product-refresh .product-form-actions .btn,
+.product-refresh .action-menu-btn {
+    min-height: 46px;
+}
+
+.product-refresh .btn-primary-ghost {
+    background: linear-gradient(135deg, #111827, #0b1220);
+    border-color: #0b1220;
+    box-shadow: 0 12px 24px rgba(17, 24, 39, 0.12);
+}
+
+.product-refresh .metric-card {
+    border-radius: 24px !important;
+}
+
+.product-refresh .metric-value {
+    font-size: clamp(1.7rem, 2.4vw, 2.25rem);
+    color: var(--product-refresh-text);
+}
+
+.product-refresh .product-table th {
+    background: #fbfefb;
+    border-bottom-color: #eaf2ec;
+}
+
+.product-refresh .product-table td {
+    border-bottom-color: #eaf2ec;
+}
+
+.product-refresh .product-table tbody tr:hover td {
+    background: #fbfefb;
+}
+
+.product-refresh .product-name {
+    color: var(--product-refresh-text);
+    font-size: 1rem;
+}
+
+.product-refresh .product-price-primary {
+    font-size: 1rem;
+}
+
+.product-refresh .product-weekly-flag,
+.product-refresh .status-pill {
+    border-color: var(--product-refresh-border);
+    background: #fff;
+}
+
+.product-refresh .product-card .dropdown-item:hover,
+.product-refresh .product-card .dropdown-item:focus {
+    background: #f5faf6;
+}
+
+.product-refresh .product-form-card .form-control,
+.product-refresh .product-form-card .form-select {
+    border-color: var(--product-refresh-border);
+}
+
+.product-refresh .product-form-card .form-control:focus,
+.product-refresh .product-form-card .form-select:focus {
+    border-color: #bdd7c2;
+    box-shadow: 0 0 0 4px rgba(19, 138, 75, 0.08);
+}
+
+.product-refresh .sku-pill {
+    background: #f4faf5;
+    border-color: #e4efe7;
+}
+
+@media (max-width: 1200px) {
+    .product-refresh .product-summary-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .product-refresh.product-page,
+    .product-refresh.product-form-page {
+        border-radius: 24px;
+        padding: 1rem !important;
+    }
+
+    .product-refresh .product-summary-strip {
+        grid-template-columns: 1fr;
+    }
+}
