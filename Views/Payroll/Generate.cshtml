@@ -1,10 +1,10 @@
-@model HazelInvoice.ViewModels.PayrollGenerateViewModel
+@model HazelInvoice.ViewModels.CreatePayrollRunViewModel
 
 @{
     ViewData["Title"] = "Generate Payroll";
-    var selectableCount = Model.Rows.Count;
-    var totalWage = Model.Rows.Sum(r => r.TotalWage);
-    var hasExistingRun = Model.ExistingRunId.HasValue;
+    var selectableCount = Model.Preview.Count;
+    var totalWage = Model.Preview.Sum(r => r.GrossWage);
+    var hasExistingRun = Model.HasExistingRun;
 }
 
 <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
@@ -13,7 +13,7 @@
     <div class="payroll-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
             <h1>Generate Payroll</h1>
-            <div class="sub">Pick a weekly attendance range, uncheck anyone not ready, then create payroll periods.</div>
+            <div class="sub">Pick a weekly attendance range, review the payroll preview, then create a payroll run.</div>
         </div>
         <a asp-action="Index" class="btn btn-light text-dark fw-bold"><i class="bi bi-arrow-left"></i> Back to Payroll</a>
     </div>
@@ -25,7 +25,7 @@
         </div>
         <div class="payroll-kpi">
             <div class="label">Attendance Week</div>
-            <div class="value">@Model.StartDate.ToString("MMM dd") - @Model.EndDate.ToString("MMM dd")</div>
+            <div class="value">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd")</div>
         </div>
         <div class="payroll-kpi warn">
             <div class="label">Estimated Payroll</div>
@@ -45,14 +45,10 @@
     <form method="get" class="row g-2 align-items-end payroll-filter" data-auto-submit="true">
         <div class="col-md-4">
             <label class="form-label small fw-bold">Start Date</label>
-            <input type="date" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
-        </div>
-        <div class="col-md-4">
-            <label class="form-label small fw-bold">End Date</label>
-            <input type="date" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+            <input type="date" name="weekStart" class="form-control" value="@Model.WeekStart.ToString("yyyy-MM-dd")" />
         </div>
         <div class="col-md-4 d-flex align-items-end">
-            <a asp-action="Generate" class="btn btn-outline-secondary w-100">Reset to Default Range</a>
+            <button type="submit" class="btn btn-outline-secondary w-100">Reload Week</button>
         </div>
     </form>
 
@@ -60,16 +56,15 @@
         <div class="payroll-inline-note">
             Only attendance not already included in payroll can be generated here.
         </div>
-        @if (hasExistingRun && Model.ExistingRunStatus.HasValue)
+        @if (hasExistingRun)
         {
-            <span class="badge bg-dark">Run #@Model.ExistingRunId · @Model.ExistingRunStatus</span>
+            <span class="badge bg-dark">Payroll run already exists for this week</span>
         }
     </div>
 
-    <form asp-action="Generate" method="post">
+    <form asp-action="CreateRun" method="post">
         @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="StartDate" />
-        <input type="hidden" asp-for="EndDate" />
+        <input type="hidden" name="weekStart" value="@Model.WeekStart.ToString("yyyy-MM-dd")" />
 
         <div class="payroll-table-card">
             <div class="card-body p-0">
@@ -77,32 +72,26 @@
                     <table class="table table-hover align-middle mb-0 payroll-table">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:48px;">
-                                    <input type="checkbox" id="selectAllLaborers" data-select-all-target=".laborer-check" />
-                                </th>
+                                <th style="width:48px;"></th>
                                 <th>Laborer</th>
                                 <th>Total Days</th>
                                 <th>Gross Salary</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @for (var i = 0; i < Model.Rows.Count; i++)
+                            @for (var i = 0; i < Model.Preview.Count; i++)
                             {
-                                var row = Model.Rows[i];
+                                var row = Model.Preview[i];
                                 <tr>
                                     <td>
-                                        <input type="checkbox"
-                                               class="laborer-check"
-                                               name="SelectedLaborerIds"
-                                               value="@row.LaborerId"
-                                               @(Model.SelectedLaborerIds.Contains(row.LaborerId) ? "checked" : "") />
+                                        <input type="checkbox" class="laborer-check" checked disabled />
                                     </td>
                                     <td class="fw-bold">@row.LaborerName</td>
                                     <td>@row.TotalDays</td>
-                                <td class="payroll-money">₱@row.TotalWage.ToString("N2")</td>
+                                    <td class="payroll-money">₱@row.GrossWage.ToString("N2")</td>
                                 </tr>
                             }
-                            @if (!Model.Rows.Any())
+                            @if (!Model.Preview.Any())
                             {
                                 <tr>
                                     <td colspan="4" class="text-center text-muted py-4">No attendance records available for payroll generation.</td>
@@ -113,11 +102,9 @@
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="payroll-inline-note">Period: @Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</div>
-                <button type="submit"
-                        class="btn btn-primary"
-                        @((Model.Rows.Any() && !hasExistingRun) ? null : "disabled")>
-                    Create Payroll Periods
+                <div class="payroll-inline-note">Period: @Model.WeekStart.ToString("MMM dd, yyyy") - @Model.WeekEnd.ToString("MMM dd, yyyy")</div>
+                <button type="submit" class="btn btn-primary" @(Model.Preview.Any() && !hasExistingRun ? null : "disabled")>
+                    Create Payroll Run
                 </button>
             </div>
         </div>

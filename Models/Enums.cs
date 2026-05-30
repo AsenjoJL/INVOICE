@@ -25,15 +25,24 @@ public enum PaymentMethod
 public enum AttendanceStatus
 {
     Present,
-    Absent,
-    Late,
-    HalfDay
+    Absent
+}
+
+public enum AttendanceSource
+{
+    Auto,
+    Manual
 }
 
 public enum PayrollRunStatus
 {
     Draft,
-    Generated,
     Approved,
     Closed
+}
+
+public enum AdjustmentType
+{
+    Addition,
+    Deduction
 }

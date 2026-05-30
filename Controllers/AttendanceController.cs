@@ -44,7 +44,6 @@ public class AttendanceController : Controller
 
         var existing = await _context.AttendanceRecords
             .AsNoTracking()
-            .Include(a => a.PayrollPeriod)
             .Where(a => a.WorkDate == workDate && laborerIds.Contains(a.LaborerId))
             .ToListAsync();
 
@@ -68,8 +67,8 @@ public class AttendanceController : Controller
                     Status = record.Status,
                     Notes = record.Notes,
                     WageAmount = record.WageAmount,
-                    IsInPayroll = record.PayrollPeriodId != null,
-                    FirstWorkDate = summary?.FirstWorkDate ?? laborer.HiredDate?.Date ?? workDate,
+                    IsInPayroll = record.PayrollEntryId != null,
+                    FirstWorkDate = summary?.FirstWorkDate ?? laborer.HiredDate.Date,
                     TotalDutyDays = summary?.TotalDutyDays ?? 0,
                     TotalAbsenceDays = summary?.TotalAbsenceDays ?? 0,
                     TotalTrackedDays = summary?.TotalTrackedDays ?? 0
@@ -87,7 +86,7 @@ public class AttendanceController : Controller
                     DailyRate = laborer.DailyRate,
                     Status = AttendanceStatus.Present,
                     WageAmount = wage,
-                    FirstWorkDate = summary?.FirstWorkDate ?? laborer.HiredDate?.Date ?? workDate,
+                    FirstWorkDate = summary?.FirstWorkDate ?? laborer.HiredDate.Date,
                     TotalDutyDays = summary?.TotalDutyDays ?? 0,
                     TotalAbsenceDays = summary?.TotalAbsenceDays ?? 0,
                     TotalTrackedDays = summary?.TotalTrackedDays ?? 0
@@ -110,12 +109,11 @@ public class AttendanceController : Controller
             .ToDictionaryAsync(l => l.Id, l => l);
 
         var existing = await _context.AttendanceRecords
-            .Include(a => a.PayrollPeriod)
             .Where(a => a.WorkDate == workDate && laborerIds.Contains(a.LaborerId))
             .ToListAsync();
 
         var existingMap = existing.ToDictionary(a => a.LaborerId, a => a);
-        var payrollPeriodIdsToRecalculate = new HashSet<int>();
+        var payrollEntryIdsToRecalculate = new HashSet<int>();
 
         foreach (var entry in model.Entries)
         {
@@ -134,12 +132,11 @@ public class AttendanceController : Controller
             {
                 record.Status = normalizedStatus;
                 record.RateSnapshot = laborer.DailyRate;
-                record.Multiplier = multiplier;
                 record.WageAmount = wage;
                 record.Notes = entry.Notes;
-                if (record.PayrollPeriodId.HasValue)
+                if (record.PayrollEntryId.HasValue)
                 {
-                    payrollPeriodIdsToRecalculate.Add(record.PayrollPeriodId.Value);
+                    payrollEntryIdsToRecalculate.Add(record.PayrollEntryId.Value);
                 }
             }
             else
@@ -150,16 +147,15 @@ public class AttendanceController : Controller
                     WorkDate = workDate,
                     Status = normalizedStatus,
                     RateSnapshot = laborer.DailyRate,
-                    Multiplier = multiplier,
                     WageAmount = wage,
                     Notes = entry.Notes
                 });
             }
         }
 
-        if (payrollPeriodIdsToRecalculate.Count > 0)
+        if (payrollEntryIdsToRecalculate.Count > 0)
         {
-            await RecalculatePayrollPeriodsAsync(payrollPeriodIdsToRecalculate);
+            await RecalculatePayrollEntriesAsync(payrollEntryIdsToRecalculate);
         }
 
         await _context.SaveChangesAsync();
@@ -178,12 +174,12 @@ public class AttendanceController : Controller
             return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
         }
 
-        var payrollPeriodId = record.PayrollPeriodId;
+        var payrollEntryId = record.PayrollEntryId;
         _context.AttendanceRecords.Remove(record);
 
-        if (payrollPeriodId.HasValue)
+        if (payrollEntryId.HasValue)
         {
-            await RecalculatePayrollPeriodsAsync(new[] { payrollPeriodId.Value });
+            await RecalculatePayrollEntriesAsync(new[] { payrollEntryId.Value });
         }
 
         await _context.SaveChangesAsync();
@@ -191,28 +187,33 @@ public class AttendanceController : Controller
         return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
     }
 
-    private async Task RecalculatePayrollPeriodsAsync(IEnumerable<int> payrollPeriodIds)
+    private async Task RecalculatePayrollEntriesAsync(IEnumerable<int> payrollEntryIds)
     {
-        var ids = payrollPeriodIds.Distinct().ToList();
+        var ids = payrollEntryIds.Distinct().ToList();
         if (ids.Count == 0)
         {
             return;
         }
 
-        var periods = await _context.PayrollPeriods
-            .Include(p => p.AttendanceRecords)
-            .Include(p => p.Adjustments)
-            .Where(p => ids.Contains(p.Id))
+        var entries = await _context.PayrollEntries
+            .Include(e => e.AttendanceRecords)
+            .Include(e => e.Adjustments)
+            .Include(e => e.AdvanceDeductions)
+            .Where(e => ids.Contains(e.Id))
             .ToListAsync();
 
-        foreach (var period in periods)
+        foreach (var entry in entries)
         {
-            period.TotalDays = period.AttendanceRecords.Count(a => a.Status != AttendanceStatus.Absent);
-            period.TotalWage = period.AttendanceRecords.Sum(a => a.WageAmount);
-
-            var payableTotal = period.TotalWage + period.AdjustmentTotal;
-            ApplyPaymentStatus(period, payableTotal);
+            entry.TotalDays = entry.AttendanceRecords.Count(a => a.Status != AttendanceStatus.Absent);
+            entry.GrossWage = entry.AttendanceRecords.Where(a => a.Status != AttendanceStatus.Absent).Sum(a => a.WageAmount);
+            entry.TotalAdditions = entry.Adjustments.Where(a => a.Type == AdjustmentType.Addition).Sum(a => a.Amount);
+            entry.TotalDeductions = entry.Adjustments.Where(a => a.Type == AdjustmentType.Deduction).Sum(a => a.Amount)
+                + entry.AdvanceDeductions.Sum(d => d.DeductAmount);
+            entry.NetPay = entry.GrossWage + entry.TotalAdditions - entry.TotalDeductions;
+            ApplyEntryStatus(entry);
         }
+
+        await _context.SaveChangesAsync();
     }
 
     private static decimal GetMultiplier(AttendanceStatus status)
@@ -220,20 +221,20 @@ public class AttendanceController : Controller
         return status == AttendanceStatus.Absent ? 0.0m : 1.0m;
     }
 
-    private static void ApplyPaymentStatus(PayrollPeriod period, decimal payableTotal)
+    private static void ApplyEntryStatus(PayrollEntry entry)
     {
-        var remaining = payableTotal - period.PaidAmount;
+        var remaining = entry.NetPay - entry.PaidAmount;
         if (remaining <= 0)
         {
-            period.Status = PaymentStatus.Paid;
+            entry.Status = PaymentStatus.Paid;
         }
-        else if (period.PaidAmount > 0)
+        else if (entry.PaidAmount > 0)
         {
-            period.Status = PaymentStatus.Partial;
+            entry.Status = PaymentStatus.Partial;
         }
         else
         {
-            period.Status = PaymentStatus.Unpaid;
+            entry.Status = PaymentStatus.Unpaid;
         }
     }
 

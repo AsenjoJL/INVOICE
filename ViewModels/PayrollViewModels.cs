@@ -1,18 +1,34 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using HazelInvoice.Models;
 using HazelInvoice.Helpers;
+using HazelInvoice.Models;
 
 namespace HazelInvoice.ViewModels;
 
+public class AttendanceWeekViewModel
+{
+    public DateTime WeekStart { get; set; }
+    public DateTime WeekEnd { get; set; }
+    public List<AttendanceWeekRow> Rows { get; set; } = new();
+    public decimal TotalWage { get; set; }
+}
+
+public class AttendanceWeekRow
+{
+    public int LaborerId { get; set; }
+    public string LaborerName { get; set; } = string.Empty;
+    public decimal DailyRate { get; set; }
+    public Dictionary<DateTime, AttendanceRecord?> DailyRecords { get; set; } = new();
+    public int TotalPresent { get; set; }
+    public int TotalAbsent { get; set; }
+    public decimal WeekWage { get; set; }
+}
+
 public class AttendanceDailyViewModel
 {
-    public DateTime WorkDate { get; set; } = BusinessDate.Today();
+    public DateTime WorkDate { get; set; }
     public List<AttendanceEntryViewModel> Entries { get; set; } = new();
     public decimal TotalWage { get; set; }
-    public bool IsDateLocked { get; set; }
-    public string? DateLockReason { get; set; }
 }
 
 public class AttendanceEntryViewModel
@@ -21,32 +37,14 @@ public class AttendanceEntryViewModel
     public int LaborerId { get; set; }
     public string LaborerName { get; set; } = string.Empty;
     public decimal DailyRate { get; set; }
-    public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
+    public AttendanceStatus Status { get; set; }
     public string? Notes { get; set; }
     public decimal WageAmount { get; set; }
     public bool IsInPayroll { get; set; }
-    public DateTime? FirstWorkDate { get; set; }
+    public DateTime FirstWorkDate { get; set; }
     public int TotalDutyDays { get; set; }
     public int TotalAbsenceDays { get; set; }
     public int TotalTrackedDays { get; set; }
-}
-
-public class PayrollGenerateViewModel
-{
-    public DateTime StartDate { get; set; } = BusinessDate.Today().AddDays(-6);
-    public DateTime EndDate { get; set; } = BusinessDate.Today();
-    public List<PayrollGenerateRow> Rows { get; set; } = new();
-    public List<int> SelectedLaborerIds { get; set; } = new();
-    public int? ExistingRunId { get; set; }
-    public PayrollRunStatus? ExistingRunStatus { get; set; }
-}
-
-public class PayrollGenerateRow
-{
-    public int LaborerId { get; set; }
-    public string LaborerName { get; set; } = string.Empty;
-    public int TotalDays { get; set; }
-    public decimal TotalWage { get; set; }
 }
 
 public class PayrollIndexViewModel
@@ -57,35 +55,30 @@ public class PayrollIndexViewModel
     public int CurrentPage { get; set; } = 1;
     public int PageSize { get; set; } = 25;
     public int TotalPages { get; set; }
-    public int TotalPeriods { get; set; }
-    public int FilteredUnpaidCount { get; set; }
-    public decimal FilteredBalanceTotal { get; set; }
+    public int TotalEntries { get; set; }
+    public int UnpaidCount { get; set; }
+    public decimal TotalBalance { get; set; }
     public decimal PageTotalBalance { get; set; }
-    public List<PayrollPeriod> Periods { get; set; } = new();
+    public List<PayrollEntry> Entries { get; set; } = new();
 }
 
-public class PayrollDetailsViewModel
+public class CreatePayrollRunViewModel
 {
-    public PayrollPeriod Period { get; set; } = new();
-    public List<AttendanceRecord> AttendanceRecords { get; set; } = new();
-    public List<PayrollPayment> Payments { get; set; } = new();
-    public List<PayrollAdjustment> Adjustments { get; set; } = new();
-    public List<PayrollAdjustmentOption> AdjustmentOptions { get; set; } = new();
-    public decimal RemainingBalance { get; set; }
-    public decimal PayableTotal { get; set; }
-    public PayrollPayment NewPayment { get; set; } = new();
+    public DateTime WeekStart { get; set; }
+    public DateTime WeekEnd { get; set; }
+    public List<PayrollRunPreviewRow> Preview { get; set; } = new();
+    public bool HasExistingRun { get; set; }
+}
 
-    public decimal GrossSalary => Period.TotalWage;
-
-    public decimal TotalDeductions => Adjustments
-        .Where(a => a.Amount < 0)
-        .Sum(a => Math.Abs(a.Amount));
-
-    public decimal TotalAdditions => Adjustments
-        .Where(a => a.Amount > 0)
-        .Sum(a => a.Amount);
-
-    public decimal NetSalary => GrossSalary + Period.AdjustmentTotal;
+public class PayrollRunPreviewRow
+{
+    public int LaborerId { get; set; }
+    public string LaborerName { get; set; } = string.Empty;
+    public int TotalDays { get; set; }
+    public decimal GrossWage { get; set; }
+    public decimal PendingAdvanceDeductions { get; set; }
+    public decimal NetPay { get; set; }
+    public bool IsSelected { get; set; } = true;
 }
 
 public class PayrollAdjustmentOption
@@ -95,11 +88,51 @@ public class PayrollAdjustmentOption
     public bool IsDeduction { get; set; }
 }
 
+public class PayrollEntryDetailsViewModel
+{
+    public PayrollEntry Entry { get; set; } = new();
+    public List<AttendanceRecord> AttendanceRecords { get; set; } = new();
+    public List<PayrollPayment> Payments { get; set; } = new();
+    public List<Adjustment> Adjustments { get; set; } = new();
+    public List<AdvanceDeduction> AdvanceDeductions { get; set; } = new();
+    public decimal RemainingBalance { get; set; }
+    public PayrollPayment NewPayment { get; set; } = new();
+    public List<PayrollAdjustmentOption> AdjustmentOptions { get; set; } = new();
+}
+
+public class PayslipViewModel
+{
+    public string LaborerName { get; set; } = string.Empty;
+    public string? LaborerRole { get; set; }
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+    public int TotalDays { get; set; }
+    public decimal DailyRate { get; set; }
+    public decimal GrossWage { get; set; }
+    public List<(string Label, decimal Amount)> Deductions { get; set; } = new();
+    public List<(string Label, decimal Amount)> Additions { get; set; } = new();
+    public decimal TotalDeductions { get; set; }
+    public decimal TotalAdditions { get; set; }
+    public decimal NetPay { get; set; }
+    public decimal PaidAmount { get; set; }
+    public decimal Balance { get; set; }
+    public PaymentStatus Status { get; set; }
+}
+
+public class CashAdvanceViewModel
+{
+    public int LaborerId { get; set; }
+    public string LaborerName { get; set; } = string.Empty;
+    public List<CashAdvance> Advances { get; set; } = new();
+    public decimal TotalOutstanding { get; set; }
+    public CashAdvance NewAdvance { get; set; } = new();
+}
+
 public class UnpaidPayrollViewModel
 {
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public List<PayrollPeriod> Periods { get; set; } = new();
+    public List<PayrollEntry> Entries { get; set; } = new();
 }
 
 public class LaborCostReportViewModel

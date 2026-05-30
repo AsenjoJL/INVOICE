@@ -1,20 +1,20 @@
 @using HazelInvoice.Models
 @using HazelInvoice.Helpers
-@model HazelInvoice.ViewModels.PayrollDetailsViewModel
+@model HazelInvoice.ViewModels.PayrollEntryDetailsViewModel
 
 @{
     var balance = Model.RemainingBalance;
-    var isRunClosed = Model.Period.PayrollRun?.Status == PayrollRunStatus.Closed;
+    var isRunClosed = Model.Entry.PayrollRun?.Status == PayrollRunStatus.Closed;
 }
 
 <div class="payroll-header payroll-modal-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
     <div>
         <h1>Payroll Details</h1>
-        <div class="sub">@Model.Period.Laborer?.FullName · @Model.Period.PeriodStart.ToString("MMM dd, yyyy") - @Model.Period.PeriodEnd.ToString("MMM dd, yyyy")</div>
-        <div class="sub">Run: #@Model.Period.PayrollRunId · @Model.Period.PayrollRun?.Status</div>
+        <div class="sub">@Model.Entry.Laborer?.FullName · @Model.Entry.PeriodStart.ToString("MMM dd, yyyy") - @Model.Entry.PeriodEnd.ToString("MMM dd, yyyy")</div>
+        <div class="sub">Run: #@Model.Entry.PayrollRunId · @Model.Entry.PayrollRun?.Status</div>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        <a asp-action="ExportPayslipCsv" asp-route-id="@Model.Period.Id" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Export CSV</a>
+        <a asp-action="ExportPayslipCsv" asp-route-id="@Model.Entry.Id" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Export CSV</a>
         <a asp-action="Index" class="btn btn-light text-dark fw-bold"><i class="bi bi-arrow-left"></i> Back</a>
     </div>
 </div>
@@ -31,27 +31,27 @@
 <div class="payroll-summary payroll-modal-summary">
     <div class="payroll-kpi">
         <div class="label">Duty Days</div>
-        <div class="value">@Model.Period.TotalDays</div>
+        <div class="value">@Model.Entry.TotalDays</div>
     </div>
     <div class="payroll-kpi">
         <div class="label">Gross Salary</div>
-        <div class="value">₱@Model.GrossSalary.ToString("N2")</div>
+        <div class="value">₱@Model.Entry.GrossWage.ToString("N2")</div>
     </div>
     <div class="payroll-kpi">
         <div class="label">Total Deductions</div>
-        <div class="value">₱@Model.TotalDeductions.ToString("N2")</div>
+        <div class="value">₱@Model.Entry.TotalDeductions.ToString("N2")</div>
     </div>
     <div class="payroll-kpi">
         <div class="label">Total Additions</div>
-        <div class="value">₱@Model.TotalAdditions.ToString("N2")</div>
+        <div class="value">₱@Model.Entry.TotalAdditions.ToString("N2")</div>
     </div>
     <div class="payroll-kpi">
         <div class="label">Net Salary</div>
-        <div class="value">₱@Model.NetSalary.ToString("N2")</div>
+        <div class="value">₱@Model.Entry.NetPay.ToString("N2")</div>
     </div>
     <div class="payroll-kpi">
         <div class="label">Paid</div>
-        <div class="value text-success">₱@Model.Period.PaidAmount.ToString("N2")</div>
+        <div class="value text-success">₱@Model.Entry.PaidAmount.ToString("N2")</div>
     </div>
     <div class="payroll-kpi danger">
         <div class="label">Balance</div>
@@ -59,7 +59,7 @@
     </div>
     <div class="payroll-kpi">
         <div class="label">Status</div>
-        <div class="value">@Model.Period.Status</div>
+        <div class="value">@Model.Entry.Status</div>
     </div>
 </div>
 
@@ -86,7 +86,7 @@
                                     <td>@record.WorkDate.ToString("MMM dd, yyyy")</td>
                                     <td>@record.Status</td>
                                     <td class="payroll-money">₱@record.RateSnapshot.ToString("N2")</td>
-                                    <td>@record.Multiplier.ToString("0.00")</td>
+                                    <td>@(record.Status == AttendanceStatus.Absent ? "0.00" : "1.00")</td>
                                     <td class="payroll-money">₱@record.WageAmount.ToString("N2")</td>
                                 </tr>
                             }
@@ -108,7 +108,7 @@
             <div class="card-body">
                 <form asp-action="AddPayment" method="post" class="payroll-modal-form payroll-form-grid" data-ajax="true">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="PayrollPeriodId" value="@Model.Period.Id" />
+                    <input type="hidden" name="PayrollEntryId" value="@Model.Entry.Id" />
                     <div class="payroll-form-field">
                         <label class="form-label small fw-bold">Date</label>
                         <input type="date" name="Date" class="form-control" value="@BusinessDate.Today().ToString("yyyy-MM-dd")" />
@@ -158,7 +158,7 @@
             <div class="card-body">
                 <form asp-action="AddAdjustment" method="post" class="payroll-modal-form payroll-form-grid mb-3" data-ajax="true">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="payrollPeriodId" value="@Model.Period.Id" />
+                    <input type="hidden" name="payrollEntryId" value="@Model.Entry.Id" />
                     <div class="payroll-form-field">
                         <label class="form-label small fw-bold">Date</label>
                         <input type="date" name="date" class="form-control" value="@BusinessDate.Today().ToString("yyyy-MM-dd")" />

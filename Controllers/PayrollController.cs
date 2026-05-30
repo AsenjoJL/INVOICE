@@ -15,6 +15,7 @@ public class PayrollController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+
     private static readonly IReadOnlyDictionary<string, PayrollAdjustmentOptionDefinition> AdjustmentOptionMap =
         new Dictionary<string, PayrollAdjustmentOptionDefinition>(StringComparer.OrdinalIgnoreCase)
         {
@@ -39,41 +40,43 @@ public class PayrollController : Controller
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 10, 100);
 
-        var query = _context.PayrollPeriods
+        var query = _context.PayrollEntries
             .AsNoTracking()
-            .Include(p => p.Laborer)
-            .Include(p => p.PayrollRun)
+            .Include(e => e.Laborer)
+            .Include(e => e.PayrollRun)
             .AsQueryable();
 
         if (startDate.HasValue)
         {
             var start = startDate.Value.Date;
-            query = query.Where(p => p.PeriodEnd >= start);
+            query = query.Where(e => e.PeriodEnd >= start);
         }
+
         if (endDate.HasValue)
         {
             var end = endDate.Value.Date;
-            query = query.Where(p => p.PeriodStart <= end);
+            query = query.Where(e => e.PeriodStart <= end);
         }
+
         if (status.HasValue)
         {
-            query = query.Where(p => p.Status == status.Value);
+            query = query.Where(e => e.Status == status.Value);
         }
 
-        var totalPeriods = await query.CountAsync();
-        var filteredUnpaidCount = await query.CountAsync(p => p.Status == PaymentStatus.Unpaid);
-        var filteredBalanceTotal = await query.SumAsync(p => (p.TotalWage + p.AdjustmentTotal) - p.PaidAmount);
-        var totalPages = totalPeriods == 0 ? 1 : (int)Math.Ceiling(totalPeriods / (double)pageSize);
+        var totalEntries = await query.CountAsync();
+        var unpaidCount = await query.CountAsync(e => e.Status == PaymentStatus.Unpaid);
+        var totalBalance = await query.SumAsync(e => e.NetPay - e.PaidAmount);
+        var totalPages = totalEntries == 0 ? 1 : (int)Math.Ceiling(totalEntries / (double)pageSize);
         if (page > totalPages) page = totalPages;
 
-        var periods = await query
-            .OrderByDescending(p => p.PeriodEnd)
-            .ThenByDescending(p => p.Id)
+        var entries = await query
+            .OrderByDescending(e => e.PeriodEnd)
+            .ThenByDescending(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        var pageTotalBalance = periods.Sum(p => (p.TotalWage + p.AdjustmentTotal) - p.PaidAmount);
+        var pageTotalBalance = entries.Sum(e => e.NetPay - e.PaidAmount);
 
         var model = new PayrollIndexViewModel
         {
@@ -83,54 +86,54 @@ public class PayrollController : Controller
             CurrentPage = page,
             PageSize = pageSize,
             TotalPages = totalPages,
-            TotalPeriods = totalPeriods,
-            FilteredUnpaidCount = filteredUnpaidCount,
-            FilteredBalanceTotal = filteredBalanceTotal,
+            TotalEntries = totalEntries,
+            UnpaidCount = unpaidCount,
+            TotalBalance = totalBalance,
             PageTotalBalance = pageTotalBalance,
-            Periods = periods
+            Entries = entries
         };
 
         return View(model);
     }
 
     [HttpGet]
-    public async Task<IActionResult> Generate(DateTime? startDate, DateTime? endDate)
+    public async Task<IActionResult> Generate(DateTime? weekStart)
     {
-        var businessToday = BusinessDate.Today();
-        var start = (startDate ?? businessToday.AddDays(-6)).Date;
-        var end = (endDate ?? businessToday).Date;
-        var endExclusive = end.AddDays(1);
+        var start = GetWeekStart(weekStart ?? BusinessDate.Today());
+        var end = start.AddDays(6);
 
         var attendance = await _context.AttendanceRecords
             .AsNoTracking()
             .Include(a => a.Laborer)
-            .Where(a => a.WorkDate >= start && a.WorkDate < endExclusive && a.PayrollPeriodId == null)
+            .Where(a => a.WorkDate >= start && a.WorkDate <= end && a.PayrollEntryId == null)
             .ToListAsync();
 
         var rows = attendance
             .GroupBy(a => a.LaborerId)
-            .Select(g => new PayrollGenerateRow
+            .Select(g => new PayrollRunPreviewRow
             {
                 LaborerId = g.Key,
                 LaborerName = g.First().Laborer?.FullName ?? "Unknown",
                 TotalDays = g.Count(x => x.Status != AttendanceStatus.Absent),
-                TotalWage = g.Sum(x => x.WageAmount)
+                GrossWage = g.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount),
+                PendingAdvanceDeductions = _context.CashAdvances
+                    .Where(c => c.LaborerId == g.Key && c.RemainingBalance > 0)
+                    .Sum(c => c.RemainingBalance),
+                NetPay = g.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount)
             })
             .OrderBy(r => r.LaborerName)
             .ToList();
 
         var existingRun = await _context.PayrollRuns
             .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.PeriodStart == start && r.PeriodEnd == end);
+            .FirstOrDefaultAsync(r => r.WeekStart == start && r.WeekEnd == end);
 
-        var model = new PayrollGenerateViewModel
+        var model = new CreatePayrollRunViewModel
         {
-            StartDate = start,
-            EndDate = end,
-            Rows = rows,
-            SelectedLaborerIds = rows.Select(r => r.LaborerId).ToList(),
-            ExistingRunId = existingRun?.Id,
-            ExistingRunStatus = existingRun?.Status
+            WeekStart = start,
+            WeekEnd = end,
+            Preview = rows,
+            HasExistingRun = existingRun != null
         };
 
         return View(model);
@@ -138,132 +141,125 @@ public class PayrollController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Generate(PayrollGenerateViewModel model)
+    public async Task<IActionResult> CreateRun(DateTime weekStart)
     {
-        var start = model.StartDate.Date;
-        var end = model.EndDate.Date;
-        if (start > end)
-        {
-            TempData["PayrollError"] = "Invalid cutoff range.";
-            return RedirectToAction(nameof(Generate), new { startDate = end.ToString("yyyy-MM-dd"), endDate = start.ToString("yyyy-MM-dd") });
-        }
+        var start = GetWeekStart(weekStart);
+        var end = start.AddDays(6);
 
         var existingRun = await _context.PayrollRuns
-            .FirstOrDefaultAsync(r => r.PeriodStart == start && r.PeriodEnd == end);
+            .FirstOrDefaultAsync(r => r.WeekStart == start && r.WeekEnd == end);
         if (existingRun != null)
         {
-            TempData["PayrollError"] = "Payroll for this locked cutoff has already been generated.";
-            return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
+            TempData["PayrollError"] = "Payroll for this week has already been generated.";
+            return RedirectToAction(nameof(Generate), new { weekStart = start.ToString("yyyy-MM-dd") });
         }
 
-        var endExclusive = end.AddDays(1);
+        var attendance = await _context.AttendanceRecords
+            .Include(a => a.Laborer)
+            .Where(a => a.WorkDate >= start && a.WorkDate <= end && a.PayrollEntryId == null)
+            .ToListAsync();
 
-        var selectedLaborerIds = model.SelectedLaborerIds?
-            .Distinct()
-            .ToList() ?? new List<int>();
-
-        if (selectedLaborerIds.Count == 0)
+        if (attendance.Count == 0)
         {
-            TempData["PayrollError"] = "Select at least one laborer before generating payroll.";
-            return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
+            TempData["PayrollError"] = "No unassigned attendance records were found for the selected week.";
+            return RedirectToAction(nameof(Generate), new { weekStart = start.ToString("yyyy-MM-dd") });
         }
 
-        try
+        var grouped = attendance.GroupBy(a => a.LaborerId).ToList();
+        if (grouped.Count == 0)
         {
-            var strategy = _context.Database.CreateExecutionStrategy();
+            TempData["PayrollError"] = "No laborers were eligible for payroll generation.";
+            return RedirectToAction(nameof(Generate), new { weekStart = start.ToString("yyyy-MM-dd") });
+        }
 
-            await strategy.ExecuteAsync(async () =>
+        await using var tx = await _context.Database.BeginTransactionAsync();
+
+        var run = new PayrollRun
+        {
+            WeekStart = start,
+            WeekEnd = end,
+            Status = PayrollRunStatus.Draft,
+            CreatedAt = BusinessDate.Now(),
+            CreatedBy = User.Identity?.Name
+        };
+        _context.PayrollRuns.Add(run);
+        await _context.SaveChangesAsync();
+
+        var entries = new List<PayrollEntry>();
+
+        foreach (var group in grouped)
+        {
+            var grossWage = group.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount);
+            var entry = new PayrollEntry
             {
-                var attendance = await _context.AttendanceRecords
-                    .Include(a => a.Laborer)
-                    .Where(a => a.WorkDate >= start && a.WorkDate < endExclusive &&
-                                a.PayrollPeriodId == null &&
-                                selectedLaborerIds.Contains(a.LaborerId))
-                    .ToListAsync();
-
-                var groups = attendance.GroupBy(a => a.LaborerId).ToList();
-                if (groups.Count == 0)
-                {
-                    throw new InvalidOperationException("No unlocked attendance records were found for the selected laborers in this cutoff.");
-                }
-
-                await using var tx = await _context.Database.BeginTransactionAsync();
-
-                var generatedAt = BusinessDate.Now();
-                var run = new PayrollRun
-                {
-                    PeriodStart = start,
-                    PeriodEnd = end,
-                    Status = PayrollRunStatus.Generated,
-                    GeneratedAt = generatedAt,
-                    GeneratedBy = User.Identity?.Name
-                };
-                _context.PayrollRuns.Add(run);
-                await _context.SaveChangesAsync();
-
-                var periods = new List<PayrollPeriod>();
-                foreach (var group in groups)
-                {
-                    var totalWage = group.Sum(x => x.WageAmount);
-                    periods.Add(new PayrollPeriod
-                    {
-                        PayrollRunId = run.Id,
-                        LaborerId = group.Key,
-                        PeriodStart = start,
-                        PeriodEnd = end,
-                        TotalDays = group.Count(x => x.Status != AttendanceStatus.Absent),
-                        TotalWage = totalWage,
-                        AdjustmentTotal = 0,
-                        PaidAmount = 0,
-                        Status = PaymentStatus.Unpaid,
-                        GeneratedAt = generatedAt
-                    });
-                }
-
-                _context.PayrollPeriods.AddRange(periods);
-                await _context.SaveChangesAsync();
-
-                var periodMap = periods.ToDictionary(p => p.LaborerId, p => p.Id);
-                foreach (var record in attendance)
-                {
-                    if (periodMap.TryGetValue(record.LaborerId, out var periodId))
-                    {
-                        record.PayrollPeriodId = periodId;
-                    }
-                }
-
-                await _context.SaveChangesAsync();
-                await tx.CommitAsync();
-            });
-
-            TempData["PayrollSuccess"] = "Payroll generated successfully.";
-            return RedirectToAction(nameof(Index));
+                PayrollRunId = run.Id,
+                LaborerId = group.Key,
+                PeriodStart = start,
+                PeriodEnd = end,
+                TotalDays = group.Count(x => x.Status != AttendanceStatus.Absent),
+                GrossWage = grossWage,
+                TotalAdditions = 0m,
+                TotalDeductions = 0m,
+                NetPay = grossWage,
+                PaidAmount = 0m,
+                Status = PaymentStatus.Unpaid,
+                GeneratedAt = BusinessDate.Now()
+            };
+            entries.Add(entry);
         }
-        catch (InvalidOperationException ex)
+
+        _context.PayrollEntries.AddRange(entries);
+        await _context.SaveChangesAsync();
+
+        var advanceDeductions = new List<AdvanceDeduction>();
+        foreach (var entry in entries)
         {
-            TempData["PayrollError"] = ex.Message;
-            return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
-        }
-        catch (DbUpdateException)
-        {
-            TempData["PayrollError"] = "Payroll generation could not be saved. Refresh the page and try again. If the issue persists, check for duplicate or already-assigned attendance in this cutoff.";
-            return RedirectToAction(nameof(Generate), new { startDate = start.ToString("yyyy-MM-dd"), endDate = end.ToString("yyyy-MM-dd") });
-        }
-    }
+            var remainingGross = entry.GrossWage;
+            var advances = await _context.CashAdvances
+                .Where(a => a.LaborerId == entry.LaborerId && a.RemainingBalance > 0)
+                .OrderBy(a => a.Date)
+                .ToListAsync();
 
-    [HttpGet]
-    public async Task<IActionResult> ExportPayslipCsv(int id)
-    {
-        var model = await BuildPayrollDetailsViewModelAsync(id);
-        if (model == null)
-        {
-            return NotFound();
+            foreach (var advance in advances)
+            {
+                if (remainingGross <= 0m)
+                    break;
+
+                var deductAmount = Math.Min(advance.RemainingBalance, remainingGross);
+                if (deductAmount <= 0m)
+                    continue;
+
+                advanceDeductions.Add(new AdvanceDeduction
+                {
+                    PayrollEntryId = entry.Id,
+                    CashAdvanceId = advance.Id,
+                    DeductAmount = deductAmount
+                });
+
+                advance.RemainingBalance -= deductAmount;
+                remainingGross -= deductAmount;
+            }
+
+            entry.TotalDeductions = advanceDeductions.Where(d => d.PayrollEntryId == entry.Id).Sum(d => d.DeductAmount);
+            entry.NetPay = entry.GrossWage - entry.TotalDeductions;
         }
 
-        var csv = BuildPayslipCsv(model);
-        var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(csv);
-        var fileName = $"payslip-{model.Period.Id}-{model.Period.Laborer?.FullName?.Replace(' ', '-') ?? "laborer"}.csv";
-        return File(bytes, "text/csv", fileName);
+        _context.AdvanceDeductions.AddRange(advanceDeductions);
+
+        var entryMap = entries.ToDictionary(e => e.LaborerId, e => e.Id);
+        foreach (var record in attendance)
+        {
+            if (entryMap.TryGetValue(record.LaborerId, out var entryId))
+            {
+                record.PayrollEntryId = entryId;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        TempData["PayrollSuccess"] = "Payroll run created successfully.";
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpGet]
@@ -278,46 +274,45 @@ public class PayrollController : Controller
         return PartialView("_PayrollDetailsPartial", model);
     }
 
-    private async Task<PayrollDetailsViewModel?> BuildPayrollDetailsViewModelAsync(int id)
+    private async Task<PayrollEntryDetailsViewModel?> BuildPayrollDetailsViewModelAsync(int id)
     {
-        var period = await _context.PayrollPeriods
-            .Include(p => p.Laborer)
-            .Include(p => p.PayrollRun)
-            .Include(p => p.Payments)
-            .Include(p => p.Adjustments)
-            .FirstOrDefaultAsync(p => p.Id == id);
+        var entry = await _context.PayrollEntries
+            .Include(e => e.Laborer)
+            .Include(e => e.PayrollRun)
+            .Include(e => e.Payments)
+            .Include(e => e.Adjustments)
+            .Include(e => e.AdvanceDeductions)
+                .ThenInclude(d => d.CashAdvance)
+            .FirstOrDefaultAsync(e => e.Id == id);
 
-        if (period == null)
+        if (entry == null)
         {
             return null;
         }
 
         var attendance = await _context.AttendanceRecords
             .AsNoTracking()
-            .Where(a => a.PayrollPeriodId == id)
+            .Where(a => a.PayrollEntryId == id)
             .OrderBy(a => a.WorkDate)
             .ToListAsync();
 
-        var payments = period.Payments.OrderByDescending(p => p.Date).ToList();
-        var adjustments = period.Adjustments.OrderByDescending(a => a.Date).ThenByDescending(a => a.CreatedAt).ToList();
-        var payableTotal = period.TotalWage + period.AdjustmentTotal;
-        var remaining = payableTotal - period.PaidAmount;
+        var remainingBalance = entry.NetPay - entry.PaidAmount;
 
-        return new PayrollDetailsViewModel
+        return new PayrollEntryDetailsViewModel
         {
-            Period = period,
+            Entry = entry,
             AttendanceRecords = attendance,
-            Payments = payments,
-            Adjustments = adjustments,
-            AdjustmentOptions = GetAdjustmentOptions(),
-            RemainingBalance = remaining,
-            PayableTotal = payableTotal,
+            Payments = entry.Payments.OrderByDescending(p => p.Date).ToList(),
+            Adjustments = entry.Adjustments.OrderByDescending(a => a.Date).ThenByDescending(a => a.CreatedAt).ToList(),
+            AdvanceDeductions = entry.AdvanceDeductions.OrderByDescending(d => d.CashAdvance.Date).ToList(),
+            RemainingBalance = remainingBalance,
             NewPayment = new PayrollPayment
             {
-                PayrollPeriodId = period.Id,
+                PayrollEntryId = entry.Id,
                 Date = BusinessDate.Today(),
                 PaymentMethod = PaymentMethod.Cash
-            }
+            },
+            AdjustmentOptions = GetAdjustmentOptions()
         };
     }
 
@@ -332,30 +327,67 @@ public class PayrollController : Controller
         return View(model);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Payslip(int entryId)
+    {
+        var model = await BuildPayslipViewModelAsync(entryId);
+        if (model == null)
+        {
+            return NotFound();
+        }
+
+        return PartialView("_Payslip", model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportRun(int runId)
+    {
+        var run = await _context.PayrollRuns
+            .Include(r => r.Entries)
+                .ThenInclude(e => e.Laborer)
+            .FirstOrDefaultAsync(r => r.Id == runId);
+
+        if (run == null)
+        {
+            return NotFound();
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Laborer,PeriodStart,PeriodEnd,GrossWage,TotalDeductions,TotalAdditions,NetPay,PaidAmount,Status");
+
+        foreach (var entry in run.Entries.OrderBy(e => e.Laborer.FullName))
+        {
+            sb.AppendLine($"{Escape(entry.Laborer?.FullName)},{entry.PeriodStart:yyyy-MM-dd},{entry.PeriodEnd:yyyy-MM-dd},{entry.GrossWage:N2},{entry.TotalDeductions:N2},{entry.TotalAdditions:N2},{entry.NetPay:N2},{entry.PaidAmount:N2},{entry.Status}");
+        }
+
+        var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(sb.ToString());
+        return File(bytes, "text/csv", $"payroll-run-{run.Id}.csv");
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddPayment(PayrollPayment payment)
     {
-        var period = await _context.PayrollPeriods
-            .Include(p => p.PayrollRun)
-            .Include(p => p.Laborer)
-            .FirstOrDefaultAsync(p => p.Id == payment.PayrollPeriodId);
-        if (period == null)
+        var entry = await _context.PayrollEntries
+            .Include(e => e.PayrollRun)
+            .Include(e => e.Laborer)
+            .FirstOrDefaultAsync(e => e.Id == payment.PayrollEntryId);
+
+        if (entry == null)
         {
             return NotFound();
         }
 
         var isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
-
-        if (period.PayrollRun?.Status == PayrollRunStatus.Closed)
+        if (entry.PayrollRun?.Status == PayrollRunStatus.Closed)
         {
             TempData["PayrollError"] = "This payroll run is closed. Payments are locked.";
             if (isAjax)
             {
-                var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollPeriodId);
+                var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollEntryId);
                 return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
             }
-            return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
+            return RedirectToAction(nameof(Details), new { id = payment.PayrollEntryId });
         }
 
         if (payment.Amount <= 0)
@@ -363,8 +395,7 @@ public class PayrollController : Controller
             ModelState.AddModelError(nameof(PayrollPayment.Amount), "Amount must be greater than 0.");
         }
 
-        var payableTotal = period.TotalWage + period.AdjustmentTotal;
-        var remainingBalance = payableTotal - period.PaidAmount;
+        var remainingBalance = entry.NetPay - entry.PaidAmount;
         if (payment.Amount > remainingBalance)
         {
             ModelState.AddModelError(nameof(PayrollPayment.Amount), $"Amount cannot exceed the remaining balance of {remainingBalance:N2}.");
@@ -378,66 +409,66 @@ public class PayrollController : Controller
                 .FirstOrDefault() ?? "Payment could not be saved.";
             if (isAjax)
             {
-                var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollPeriodId);
+                var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollEntryId);
                 return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
             }
-            return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
+            return RedirectToAction(nameof(Details), new { id = payment.PayrollEntryId });
         }
 
         payment.RecordedById = User.Identity?.Name;
-        var laborerName = period.Laborer?.FullName ?? "Laborer";
         _context.PayrollPayments.Add(payment);
         _context.Expenses.Add(new Expense
         {
             Date = payment.Date,
             Category = "Payroll",
-            Vendor = laborerName,
+            Vendor = entry.Laborer?.FullName,
             Amount = payment.Amount,
             PaymentMethod = payment.PaymentMethod,
             ReferenceNo = payment.ReferenceNo,
-            Description = $"Payroll: {laborerName} ({period.PeriodStart:MMM dd, yyyy} - {period.PeriodEnd:MMM dd, yyyy})",
+            Description = $"Payroll: {entry.Laborer?.FullName} ({entry.PeriodStart:MMM dd, yyyy} - {entry.PeriodEnd:MMM dd, yyyy})",
             RecordedById = payment.RecordedById
         });
-        period.PaidAmount += payment.Amount;
-        ApplyPaymentStatus(period, payableTotal);
+
+        entry.PaidAmount += payment.Amount;
+        ApplyEntryStatus(entry);
 
         await _context.SaveChangesAsync();
+        await TryCloseRun(entry.PayrollRunId);
         _cacheInvalidator.InvalidateDashboard();
         _cacheInvalidator.InvalidateProfitReports();
         TempData["PayrollSuccess"] = "Payment saved.";
 
         if (isAjax)
         {
-            var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollPeriodId);
+            var model = await BuildPayrollDetailsViewModelAsync(payment.PayrollEntryId);
             return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
         }
 
-        return RedirectToAction(nameof(Details), new { id = payment.PayrollPeriodId });
+        return RedirectToAction(nameof(Details), new { id = payment.PayrollEntryId });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddAdjustment(int payrollPeriodId, string? adjustmentType, decimal amount, string? note, DateTime? date)
+    public async Task<IActionResult> AddAdjustment(int payrollEntryId, string? adjustmentType, decimal amount, string? note, DateTime? date)
     {
-        var period = await _context.PayrollPeriods
-            .Include(p => p.PayrollRun)
-            .FirstOrDefaultAsync(p => p.Id == payrollPeriodId);
-        if (period == null)
+        var entry = await _context.PayrollEntries
+            .Include(e => e.PayrollRun)
+            .FirstOrDefaultAsync(e => e.Id == payrollEntryId);
+        if (entry == null)
         {
             return NotFound();
         }
 
         var isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
-
-        if (period.PayrollRun?.Status == PayrollRunStatus.Closed)
+        if (entry.PayrollRun?.Status == PayrollRunStatus.Closed)
         {
             TempData["PayrollError"] = "This payroll run is closed. Adjustments are locked.";
             if (isAjax)
             {
-                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+                var model = await BuildPayrollDetailsViewModelAsync(payrollEntryId);
                 return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
             }
-            return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
+            return RedirectToAction(nameof(Details), new { id = payrollEntryId });
         }
 
         if (amount <= 0)
@@ -445,10 +476,10 @@ public class PayrollController : Controller
             TempData["PayrollError"] = "Amount must be greater than zero.";
             if (isAjax)
             {
-                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+                var model = await BuildPayrollDetailsViewModelAsync(payrollEntryId);
                 return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
             }
-            return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
+            return RedirectToAction(nameof(Details), new { id = payrollEntryId });
         }
 
         if (!TryGetAdjustmentOption(adjustmentType, out var option))
@@ -456,108 +487,130 @@ public class PayrollController : Controller
             TempData["PayrollError"] = "Select a valid deduction or addition type.";
             if (isAjax)
             {
-                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+                var model = await BuildPayrollDetailsViewModelAsync(payrollEntryId);
                 return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
             }
-            return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
+            return RedirectToAction(nameof(Details), new { id = payrollEntryId });
         }
 
-        var signedAmount = option.IsDeduction ? -amount : amount;
-        var payableTotalBeforeAdjustment = period.TotalWage + period.AdjustmentTotal;
-        var payableTotalAfterAdjustment = payableTotalBeforeAdjustment + signedAmount;
-        if (payableTotalAfterAdjustment < 0)
+        var adjustment = new Adjustment
         {
-            TempData["PayrollError"] = "Adjustment would make the payable total negative.";
-            if (isAjax)
-            {
-                var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
-                return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
-            }
-            return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
-        }
-
-        var adjustment = new PayrollAdjustment
-        {
-            PayrollPeriodId = payrollPeriodId,
+            PayrollEntryId = payrollEntryId,
+            Type = option.IsDeduction ? AdjustmentType.Deduction : AdjustmentType.Addition,
+            Amount = amount,
             Date = (date ?? BusinessDate.Today()).Date,
-            Amount = signedAmount,
             Reason = BuildAdjustmentReason(option.Label, note),
             CreatedBy = User.Identity?.Name,
             CreatedAt = BusinessDate.Now()
         };
-        _context.PayrollAdjustments.Add(adjustment);
 
-        period.AdjustmentTotal += signedAmount;
-        var payableTotal = period.TotalWage + period.AdjustmentTotal;
-        ApplyPaymentStatus(period, payableTotal);
-
+        _context.Adjustments.Add(adjustment);
         await _context.SaveChangesAsync();
+        await RecalculateEntry(payrollEntryId);
         TempData["PayrollSuccess"] = $"{option.Label} saved.";
 
         if (isAjax)
         {
-            var model = await BuildPayrollDetailsViewModelAsync(payrollPeriodId);
+            var model = await BuildPayrollDetailsViewModelAsync(payrollEntryId);
             return model == null ? NotFound() : PartialView("_PayrollDetailsPartial", model);
         }
 
-        return RedirectToAction(nameof(Details), new { id = payrollPeriodId });
+        return RedirectToAction(nameof(Details), new { id = payrollEntryId });
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ApproveRun(int runId)
+    private async Task RecalculateEntry(int entryId)
     {
-        var run = await _context.PayrollRuns.FirstOrDefaultAsync(r => r.Id == runId);
-        if (run == null)
+        var entry = await _context.PayrollEntries
+            .Include(e => e.AttendanceRecords)
+            .Include(e => e.Adjustments)
+            .Include(e => e.AdvanceDeductions)
+            .FirstOrDefaultAsync(e => e.Id == entryId);
+
+        if (entry == null)
         {
-            TempData["PayrollError"] = "Payroll run not found.";
-            return RedirectToAction(nameof(Generate));
+            return;
         }
 
-        if (run.Status != PayrollRunStatus.Generated)
-        {
-            TempData["PayrollError"] = "Only generated runs can be approved.";
-            return RedirectToAction(nameof(Generate), new { startDate = run.PeriodStart.ToString("yyyy-MM-dd"), endDate = run.PeriodEnd.ToString("yyyy-MM-dd") });
-        }
+        entry.TotalDays = entry.AttendanceRecords.Count(a => a.Status == AttendanceStatus.Present);
+        entry.GrossWage = entry.AttendanceRecords.Where(a => a.Status == AttendanceStatus.Present).Sum(a => a.WageAmount);
+        entry.TotalAdditions = entry.Adjustments.Where(a => a.Type == AdjustmentType.Addition).Sum(a => a.Amount);
+        entry.TotalDeductions = entry.Adjustments.Where(a => a.Type == AdjustmentType.Deduction).Sum(a => a.Amount)
+            + entry.AdvanceDeductions.Sum(d => d.DeductAmount);
+        entry.NetPay = entry.GrossWage + entry.TotalAdditions - entry.TotalDeductions;
 
-        run.Status = PayrollRunStatus.Approved;
-        run.ApprovedAt = BusinessDate.Now();
+        ApplyEntryStatus(entry);
         await _context.SaveChangesAsync();
-        TempData["PayrollSuccess"] = "Payroll run approved.";
-        return RedirectToAction(nameof(Generate), new { startDate = run.PeriodStart.ToString("yyyy-MM-dd"), endDate = run.PeriodEnd.ToString("yyyy-MM-dd") });
+        await TryCloseRun(entry.PayrollRunId);
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CloseRun(int runId)
+    private async Task<PayslipViewModel?> BuildPayslipViewModelAsync(int entryId)
+    {
+        var entry = await _context.PayrollEntries
+            .Include(e => e.Laborer)
+            .Include(e => e.AttendanceRecords)
+            .Include(e => e.Adjustments)
+            .Include(e => e.AdvanceDeductions)
+                .ThenInclude(d => d.CashAdvance)
+            .Include(e => e.Payments)
+            .FirstOrDefaultAsync(e => e.Id == entryId);
+
+        if (entry == null)
+        {
+            return null;
+        }
+
+        return new PayslipViewModel
+        {
+            LaborerName = entry.Laborer?.FullName ?? string.Empty,
+            LaborerRole = entry.Laborer?.Role,
+            PeriodStart = entry.PeriodStart,
+            PeriodEnd = entry.PeriodEnd,
+            TotalDays = entry.TotalDays,
+            DailyRate = entry.Laborer?.DailyRate ?? 0m,
+            GrossWage = entry.GrossWage,
+            Deductions = entry.Adjustments.Where(a => a.Type == AdjustmentType.Deduction)
+                .Select(a => (a.Reason ?? "Deduction", a.Amount)).Concat(
+                    entry.AdvanceDeductions.Select(d => ($"Advance: {d.CashAdvance.Date:MMM dd}", d.DeductAmount)))
+                .ToList(),
+            Additions = entry.Adjustments.Where(a => a.Type == AdjustmentType.Addition)
+                .Select(a => (a.Reason ?? "Addition", a.Amount))
+                .ToList(),
+            TotalDeductions = entry.TotalDeductions,
+            TotalAdditions = entry.TotalAdditions,
+            NetPay = entry.NetPay,
+            PaidAmount = entry.PaidAmount,
+            Balance = entry.NetPay - entry.PaidAmount,
+            Status = entry.Status
+        };
+    }
+
+    private static void ApplyEntryStatus(PayrollEntry entry)
+    {
+        var remaining = entry.NetPay - entry.PaidAmount;
+        entry.Status = remaining <= 0
+            ? PaymentStatus.Paid
+            : entry.PaidAmount > 0
+                ? PaymentStatus.Partial
+                : PaymentStatus.Unpaid;
+    }
+
+    private async Task TryCloseRun(int runId)
     {
         var run = await _context.PayrollRuns
-            .Include(r => r.PayrollPeriods)
+            .Include(r => r.Entries)
             .FirstOrDefaultAsync(r => r.Id == runId);
-        if (run == null)
+
+        if (run == null || run.Status == PayrollRunStatus.Closed)
         {
-            TempData["PayrollError"] = "Payroll run not found.";
-            return RedirectToAction(nameof(Generate));
+            return;
         }
 
-        if (run.Status != PayrollRunStatus.Approved)
+        if (run.Entries.All(e => e.Status == PaymentStatus.Paid))
         {
-            TempData["PayrollError"] = "Only approved runs can be closed.";
-            return RedirectToAction(nameof(Generate), new { startDate = run.PeriodStart.ToString("yyyy-MM-dd"), endDate = run.PeriodEnd.ToString("yyyy-MM-dd") });
+            run.Status = PayrollRunStatus.Closed;
+            run.ClosedAt = BusinessDate.Now();
+            await _context.SaveChangesAsync();
         }
-
-        var hasUnpaid = run.PayrollPeriods.Any(p => p.Status != PaymentStatus.Paid);
-        if (hasUnpaid)
-        {
-            TempData["PayrollError"] = "Cannot close run while there are unpaid laborers.";
-            return RedirectToAction(nameof(Generate), new { startDate = run.PeriodStart.ToString("yyyy-MM-dd"), endDate = run.PeriodEnd.ToString("yyyy-MM-dd") });
-        }
-
-        run.Status = PayrollRunStatus.Closed;
-        run.ClosedAt = BusinessDate.Now();
-        await _context.SaveChangesAsync();
-        TempData["PayrollSuccess"] = "Payroll run closed.";
-        return RedirectToAction(nameof(Generate), new { startDate = run.PeriodStart.ToString("yyyy-MM-dd"), endDate = run.PeriodEnd.ToString("yyyy-MM-dd") });
     }
 
     private static List<PayrollAdjustmentOption> GetAdjustmentOptions()
@@ -590,69 +643,16 @@ public class PayrollController : Controller
             : $"{label}: {note.Trim()}";
     }
 
-    private static void ApplyPaymentStatus(PayrollPeriod period, decimal payableTotal)
+    private static string Escape(string? value)
     {
-        var remaining = payableTotal - period.PaidAmount;
-        if (remaining <= 0)
-        {
-            period.Status = PaymentStatus.Paid;
-        }
-        else if (period.PaidAmount > 0)
-        {
-            period.Status = PaymentStatus.Partial;
-        }
-        else
-        {
-            period.Status = PaymentStatus.Unpaid;
-        }
+        value ??= string.Empty;
+        return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 
-    private static string BuildPayslipCsv(PayrollDetailsViewModel model)
+    private static DateTime GetWeekStart(DateTime date)
     {
-        static string Escape(string? value)
-        {
-            value ??= string.Empty;
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        var sb = new StringBuilder();
-        sb.AppendLine("PAYSLIP SUMMARY");
-        sb.AppendLine("Field,Value");
-        sb.AppendLine($"Laborer,{Escape(model.Period.Laborer?.FullName)}");
-        sb.AppendLine($"Period,{Escape($"{model.Period.PeriodStart:MMM dd, yyyy} - {model.Period.PeriodEnd:MMM dd, yyyy}")}");
-        sb.AppendLine($"Duty Days,{model.Period.TotalDays}");
-        sb.AppendLine($"Gross Salary,{model.GrossSalary:N2}");
-        sb.AppendLine($"Total Deductions,{model.TotalDeductions:N2}");
-        sb.AppendLine($"Total Additions,{model.TotalAdditions:N2}");
-        sb.AppendLine($"Net Salary,{model.NetSalary:N2}");
-        sb.AppendLine($"Paid,{model.Period.PaidAmount:N2}");
-        sb.AppendLine($"Balance,{model.RemainingBalance:N2}");
-        sb.AppendLine();
-        sb.AppendLine("ATTENDANCE");
-        sb.AppendLine("Date,Status,Rate,Multiplier,Wage");
-
-        foreach (var record in model.AttendanceRecords)
-        {
-            sb.AppendLine($"{record.WorkDate:yyyy-MM-dd},{record.Status},{record.RateSnapshot:N2},{record.Multiplier:0.00},{record.WageAmount:N2}");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("ADJUSTMENTS");
-        sb.AppendLine("Date,Amount,Reason");
-        foreach (var adjustment in model.Adjustments)
-        {
-            sb.AppendLine($"{adjustment.Date:yyyy-MM-dd},{adjustment.Amount:N2},{Escape(adjustment.Reason)}");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("PAYMENTS");
-        sb.AppendLine("Date,Amount,Method,Reference");
-        foreach (var payment in model.Payments)
-        {
-            sb.AppendLine($"{payment.Date:yyyy-MM-dd},{payment.Amount:N2},{payment.PaymentMethod},{Escape(payment.ReferenceNo)}");
-        }
-
-        return sb.ToString();
+        var delta = date.DayOfWeek == DayOfWeek.Sunday ? -6 : DayOfWeek.Monday - date.DayOfWeek;
+        return date.AddDays(delta).Date;
     }
 
     private sealed record PayrollAdjustmentOptionDefinition(string Key, string Label, bool IsDeduction);

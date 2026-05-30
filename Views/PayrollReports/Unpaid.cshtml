@@ -2,7 +2,7 @@
 
 @{
     ViewData["Title"] = "Unpaid Laborers";
-    ViewData["NotePurpose"] = "Shows payroll periods that still have balance.";
+    ViewData["NotePurpose"] = "Shows payroll entries that still have balance.";
     ViewData["NoteInstructions"] = "Use date filters to narrow the period range.";
 }
 
@@ -49,17 +49,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var period in Model.Periods)
+                        @foreach (var entry in Model.Entries)
                         {
-                            var balance = period.TotalWage - period.PaidAmount;
+                            var balance = entry.NetPay - entry.PaidAmount;
                             <tr>
-                                <td class="fw-bold">@period.Laborer?.FullName</td>
-                                <td>@period.PeriodStart.ToString("MMM dd, yyyy") - @period.PeriodEnd.ToString("MMM dd, yyyy")</td>
-                                <td>₱@period.TotalWage.ToString("N2")</td>
-                                <td>₱@period.PaidAmount.ToString("N2")</td>
+                                <td class="fw-bold">@entry.Laborer?.FullName</td>
+                                <td>@entry.PeriodStart.ToString("MMM dd, yyyy") - @entry.PeriodEnd.ToString("MMM dd, yyyy")</td>
+                                <td>₱@entry.GrossWage.ToString("N2")</td>
+                                <td>₱@entry.PaidAmount.ToString("N2")</td>
                                 <td>₱@balance.ToString("N2")</td>
                                 <td>
-                                    @if (period.Status == HazelInvoice.Models.PaymentStatus.Partial)
+                                    @if (entry.Status == HazelInvoice.Models.PaymentStatus.Partial)
                                     {
                                         <span class="payroll-status partial">Partial</span>
                                     }
@@ -69,16 +69,16 @@
                                     }
                                 </td>
                                 <td class="text-end">
-                                    <a asp-controller="Payroll" asp-action="Details" asp-route-id="@period.Id" class="btn btn-sm btn-outline-secondary">
+                                    <a asp-controller="Payroll" asp-action="Details" asp-route-id="@entry.Id" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </td>
                             </tr>
                         }
-                        @if (!Model.Periods.Any())
+                        @if (!Model.Entries.Any())
                         {
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No unpaid payroll periods found.</td>
+                                <td colspan="7" class="text-center text-muted py-4">No unpaid payroll entries found.</td>
                             </tr>
                         }
                     </tbody>

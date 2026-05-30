@@ -19,31 +19,31 @@ public class PayrollReportsController : Controller
 
     public async Task<IActionResult> Unpaid(DateTime? startDate, DateTime? endDate)
     {
-        var query = _context.PayrollPeriods
+        var query = _context.PayrollEntries
             .AsNoTracking()
-            .Include(p => p.Laborer)
-            .Where(p => p.Status != PaymentStatus.Paid);
+            .Include(e => e.Laborer)
+            .Where(e => e.Status != PaymentStatus.Paid);
 
         if (startDate.HasValue)
         {
             var start = startDate.Value.Date;
-            query = query.Where(p => p.PeriodEnd >= start);
+            query = query.Where(e => e.PeriodEnd >= start);
         }
         if (endDate.HasValue)
         {
             var end = endDate.Value.Date;
-            query = query.Where(p => p.PeriodStart <= end);
+            query = query.Where(e => e.PeriodStart <= end);
         }
 
-        var periods = await query
-            .OrderByDescending(p => p.PeriodEnd)
+        var entries = await query
+            .OrderByDescending(e => e.PeriodEnd)
             .ToListAsync();
 
         var model = new UnpaidPayrollViewModel
         {
             StartDate = startDate?.Date,
             EndDate = endDate?.Date,
-            Periods = periods
+            Entries = entries
         };
 
         return View(model);
