@@ -28,11 +28,11 @@
 
 .dashboard-refresh.dashboard-shell {
     background:
-        radial-gradient(circle at top left, rgba(20, 184, 166, 0.08), transparent 34%),
-        radial-gradient(circle at top right, rgba(59, 130, 246, 0.06), transparent 28%),
+        radial-gradient(circle at top left, rgba(20, 184, 166, 0.05), transparent 50%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.04), transparent 45%),
         var(--dash-bg);
-    border-radius: 34px;
-    padding: 2rem clamp(2.2rem, 3.2vw, 3.2rem) 3rem;
+    border-radius: 28px;
+    padding: 2.2rem clamp(2rem, 3vw, 3rem) 3rem;
     overflow: hidden;
     box-sizing: border-box;
 }
@@ -58,17 +58,18 @@
 .dashboard-refresh .dashboard-module-bar,
 .dashboard-refresh .metric-card,
 .dashboard-refresh .surface-card {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--dash-border);
-    box-shadow: var(--dash-shadow-soft);
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    box-shadow: 0 8px 20px rgba(18, 42, 28, 0.08);
+    backdrop-filter: blur(8px);
 }
 
 .dashboard-refresh .dashboard-hero-panel {
-    border-radius: 32px;
-    padding: 1.45rem 1.55rem;
+    border-radius: 20px;
+    padding: 1.6rem 1.8rem;
     position: relative;
     overflow: hidden;
-    margin-bottom: 1.3rem;
+    margin-bottom: 1.5rem;
 }
 
 .dashboard-refresh .dashboard-hero-panel::after {
@@ -82,12 +83,15 @@
 }
 
 .dashboard-refresh .dashboard-hero-kicker {
-    background: #eef7f0;
-    color: #5f7d67;
-    border: 1px solid #e1efe4;
+    background: rgba(15, 138, 75, 0.08);
+    color: #0f8a4b;
+    border: none;
     border-radius: 999px;
-    padding: 0.4rem 0.85rem;
+    padding: 0.4rem 0.9rem;
     width: fit-content;
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
 }
 
 .dashboard-refresh .dashboard-hero-title {
@@ -117,8 +121,15 @@
 
 .dashboard-refresh .dash-btn.dash-btn-dark {
     background: linear-gradient(135deg, #0f8a4b, #0d6f3e);
-    border-color: #0d6f3e;
-    box-shadow: 0 12px 24px rgba(15, 138, 75, 0.2);
+    border: none;
+    box-shadow: 0 8px 16px rgba(15, 138, 75, 0.2);
+    font-weight: 600;
+    transition: all 200ms ease;
+}
+
+.dashboard-refresh .dash-btn.dash-btn-dark:hover {
+    box-shadow: 0 12px 24px rgba(15, 138, 75, 0.28);
+    transform: translateY(-2px);
 }
 
 .dashboard-refresh .dash-btn.dash-btn-light,
@@ -137,13 +148,12 @@
 }
     .dashboard-refresh .dashboard-hero-highlight {
         background: linear-gradient(180deg, #ffffff, #f7fbf8);
-        border-radius: 18px;
-        border: 1px solid var(--dash-border);
-        min-width: 260px;
-        padding: 1.25rem 1.4rem;
-        text-align: right;
-    }
-
+    border-radius: 16px;
+    border: none;
+    min-width: 260px;
+    padding: 1.4rem 1.6rem;
+    text-align: right;
+    box-shadow: 0 6px 16px rgba(15, 138, 75, 0.1);
 .dashboard-refresh .dashboard-hero-highlight strong,
 .dashboard-refresh .dashboard-highlight-value {
     color: var(--dash-text);
@@ -191,17 +201,18 @@
         display: flex;
         gap: 1rem;
         align-items: flex-start;
-        padding: 1.2rem 1.2rem 1rem;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.96);
-        border: 1px solid var(--dash-border);
-        box-shadow: var(--dash-shadow-soft);
-        min-height: 140px;
-    }
+    padding: 1.3rem 1.3rem 1.1rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.97);
+    border: none;
+    box-shadow: 0 6px 18px rgba(18, 42, 28, 0.06);
+    min-height: 140px;
+    transition: transform 200ms ease, box-shadow 200ms ease;
+}
 
-.dashboard-refresh .dashboard-kpi-icon {
-    width: 46px;
-    height: 46px;
+.dashboard-refresh .dashboard-kpi-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(18, 42, 28, 0.12);
     border-radius: 16px;
     display: inline-flex;
     align-items: center;
@@ -320,15 +331,14 @@
 }
     .dashboard-refresh .dashboard-module-pill {
         background: #fff;
-        border: 1px solid var(--dash-border);
-        color: var(--dash-text);
-        font-weight: 600;
-        padding: 0.6rem 0.9rem;
-        box-shadow: none;
-        border-radius: 999px;
-        transition: transform 160ms ease, box-shadow 160ms ease;
-    }
-
+    border: none;
+    color: var(--dash-text);
+    font-weight: 600;
+    padding: 0.65rem 1rem;
+    box-shadow: 0 2px 8px rgba(18, 42, 28, 0.05);
+    border-radius: 999px;
+    transition: all 180ms ease;
+    font-size: 0.9rem;
 .dashboard-refresh .dashboard-module-pill.active {
     background: linear-gradient(135deg, #183324, #224433);
     color: #fff;
@@ -336,15 +346,17 @@
     box-shadow: 0 8px 18px rgba(17, 35, 25, 0.12);
 }
     .dashboard-refresh .dashboard-module-pill.active {
-        background: linear-gradient(135deg, #0f8a4b, #116b42);
-        color: #fff;
-        border-color: transparent;
-        box-shadow: 0 10px 22px rgba(15, 138, 75, 0.18);
-        transform: translateY(-2px);
-    }
+    background: linear-gradient(135deg, #0f8a4b, #0d6f3e);
+    color: #fff;
+    border: none;
+    box-shadow: 0 8px 20px rgba(15, 138, 75, 0.22);
+    transform: translateY(-3px);
 
 .dashboard-refresh .dashboard-section-heading {
-    margin: 1.55rem 0 1rem;
+    margin: 1.8rem 0 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 .dashboard-refresh .dashboard-section-heading h2 {
@@ -367,10 +379,15 @@
 }
     .dashboard-refresh .metric-card {
         border-radius: 14px;
-        padding: 1.05rem 1.15rem;
-        min-height: 180px;
-    }
+    padding: 1.2rem 1.3rem;
+    min-height: 180px;
+    border: none;
+    transition: transform 200ms ease, box-shadow 200ms ease;
+}
 
+.dashboard-refresh .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(18, 42, 28, 0.12) !important;
 .dashboard-refresh .metric-head {
     align-items: flex-start;
     gap: 0.75rem;
@@ -413,12 +430,11 @@
 }
     .dashboard-refresh .unpaid-cta {
         margin-top: auto;
-        background: #fcfdfc;
-        border: 1px solid #edf3ee;
-        border-radius: 12px;
-        padding: 0.6rem 0.75rem;
-    }
-
+    background: #fbfefb;
+    border: none;
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
 .dashboard-refresh .unpaid-link {
     font-weight: 500;
     color: #c2410c;
@@ -431,9 +447,10 @@
 }
 
 .dashboard-refresh .surface-card {
-    border-radius: 28px;
+    border-radius: 16px;
     overflow: hidden;
     margin-bottom: 0.1rem;
+    border: none;
 }
 
 .dashboard-refresh .surface-card-header {
@@ -441,9 +458,9 @@
     border-bottom: 1px solid #edf3ee;
 }
     .dashboard-refresh .surface-card-header {
-        padding: 0.95rem 1rem;
-        border-bottom: 1px solid #edf3ee;
-    }
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid #f0f3f1;
+    background: #fafbfa;
 
 .dashboard-refresh .surface-card-title {
     color: var(--dash-text);
@@ -467,19 +484,22 @@
 .dashboard-refresh .table-admin thead th,
 .dashboard-refresh .table thead th {
     font-size: 0.72rem;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #799083;
-    border-bottom-color: #edf3ee;
+    color: #7d8d85;
+    border-bottom: 1px solid #f0f3f1;
+    font-weight: 600;
+    background: transparent;
 }
 
 .dashboard-refresh .table-admin tbody td,
 .dashboard-refresh .table tbody td {
-    border-bottom-color: #edf3ee;
+    border-bottom-color: #f0f3f1;
+    font-size: 0.9rem;
 }
 
 .dashboard-refresh .table-striped > tbody > tr:nth-of-type(odd) > * {
-    background-color: #fbfefb;
+    background-color: #fdfdfd;
 }
 
 .dashboard-refresh .avatar-initial {
@@ -489,8 +509,14 @@
 
 .dashboard-refresh .dashboard-inline-link {
     background: #fff;
-    border: 1px solid var(--dash-border);
-    box-shadow: var(--dash-shadow-soft);
+    border: none;
+    box-shadow: 0 2px 6px rgba(18, 42, 28, 0.04);
+    transition: all 160ms ease;
+}
+
+.dashboard-refresh .dashboard-inline-link:hover {
+    box-shadow: 0 4px 12px rgba(18, 42, 28, 0.08);
+    transform: translateY(-1px);
 }
 
 .dashboard-refresh .dashboard-table-link {
@@ -515,9 +541,10 @@
 .dashboard-refresh .badge-soft-danger,
 .dashboard-refresh .badge-soft-success {
     border-radius: 999px;
-    padding: 0.38rem 0.65rem;
+    padding: 0.4rem 0.7rem;
     font-weight: 500;
-    opacity: 0.88;
+    opacity: 0.9;
+    border: none;
 }
 
 @media (max-width: 1400px) {
