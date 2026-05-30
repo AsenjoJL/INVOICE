@@ -20,12 +20,6 @@ namespace HazelInvoice.Migrations
                 name: "FK_PayrollPayments_PayrollPeriods_PayrollPeriodId",
                 table: "PayrollPayments");
 
-            migrationBuilder.DropTable(
-                name: "PayrollAdjustments");
-
-            migrationBuilder.DropTable(
-                name: "PayrollPeriods");
-
             migrationBuilder.DropColumn(
                 name: "Multiplier",
                 table: "AttendanceRecords");
@@ -276,6 +270,22 @@ namespace HazelInvoice.Migrations
                 name: "IX_PayrollEntries_Status",
                 table: "PayrollEntries",
                 column: "Status");
+
+            migrationBuilder.Sql(@"
+INSERT INTO ""PayrollEntries"" (""Id"", ""PayrollRunId"", ""LaborerId"", ""PeriodStart"", ""PeriodEnd"", ""TotalDays"", ""GrossWage"", ""TotalDeductions"", ""TotalAdditions"", ""NetPay"", ""PaidAmount"", ""Status"", ""GeneratedAt"", ""Notes"")
+SELECT ""Id"", ""PayrollRunId"", ""LaborerId"", ""PeriodStart"", ""PeriodEnd"", ""TotalDays"", ""TotalWage"", 0, 0, ""PaidAmount"", ""PaidAmount"", ""Status"", ""GeneratedAt"", ""Notes""
+FROM ""PayrollPeriods"";
+
+INSERT INTO ""Adjustments"" (""Id"", ""PayrollEntryId"", ""Type"", ""Amount"", ""Reason"", ""Date"", ""CreatedBy"", ""CreatedAt"")
+SELECT ""Id"", ""PayrollPeriodId"", 0, ""Amount"", ""Reason"", ""Date"", ""CreatedBy"", ""CreatedAt""
+FROM ""PayrollAdjustments"";
+
+SELECT setval(pg_get_serial_sequence('""PayrollEntries""','Id'), COALESCE((SELECT MAX(""Id"") FROM ""PayrollEntries""), 1), true);
+SELECT setval(pg_get_serial_sequence('""Adjustments""','Id'), COALESCE((SELECT MAX(""Id"") FROM ""Adjustments""), 1), true);
+SELECT setval(pg_get_serial_sequence('""AdvanceDeductions""','Id'), COALESCE((SELECT MAX(""Id"") FROM ""AdvanceDeductions""), 1), true);
+
+DROP TABLE IF EXISTS ""PayrollAdjustments"";
+DROP TABLE IF EXISTS ""PayrollPeriods"";");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_AttendanceRecords_PayrollEntries_PayrollEntryId",
