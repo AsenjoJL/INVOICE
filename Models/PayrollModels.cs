@@ -11,7 +11,7 @@ public class Laborer
     public int Id { get; set; }
 
     [StringLength(20)]
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
 
     [Required]
     [StringLength(120)]
