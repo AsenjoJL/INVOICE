@@ -8,17 +8,56 @@
     var initial = string.IsNullOrWhiteSpace(userName) ? "A" : userName.Substring(0, 1).ToUpperInvariant();
 
     <div class="admin-account-card">
-        <a class="admin-account-link" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage account">
-            <span class="admin-account-avatar">@initial</span>
-            <span class="admin-account-copy">
-                <strong>@userName</strong>
-                <small>Signed in</small>
-            </span>
-        </a>
-        <form class="admin-account-form" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-            <button type="submit" class="admin-account-logout">Sign out</button>
-        </form>
+        <div class="admin-account-dropdown">
+            <button class="admin-account-toggle" type="button" aria-label="Account menu" aria-expanded="false">
+                <span class="admin-account-avatar">@initial</span>
+                <span class="admin-account-copy">
+                    <strong>@userName</strong>
+                    <small>Signed in</small>
+                </span>
+                <i class="bi bi-chevron-down admin-account-icon"></i>
+            </button>
+            <div class="admin-account-menu">
+                <a class="admin-account-menu-item" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage account">
+                    <i class="bi bi-gear"></i>
+                    <span>Manage Account</span>
+                </a>
+                <a class="admin-account-menu-item" asp-area="Identity" asp-page="/Account/Manage/ChangePassword" title="Change password">
+                    <i class="bi bi-key"></i>
+                    <span>Change Password</span>
+                </a>
+                <hr class="admin-account-menu-divider" />
+                <form class="admin-account-menu-item admin-account-logout-item" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                    <button type="submit" class="admin-account-menu-button">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Sign out</span>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggleBtn = document.querySelector('.admin-account-toggle');
+            const menu = document.querySelector('.admin-account-menu');
+
+            if (!toggleBtn || !menu) return;
+
+            toggleBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                menu.classList.toggle('show');
+                toggleBtn.setAttribute('aria-expanded', menu.classList.contains('show'));
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!toggleBtn.contains(e.target) && !menu.contains(e.target)) {
+                    menu.classList.remove('show');
+                    toggleBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+    </script>
 }
 else
 {
