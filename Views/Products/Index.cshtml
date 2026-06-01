@@ -327,10 +327,10 @@
                                 <td class="product-meta fw-semibold">@item.Unit</td>
                                 <td class="product-cost">
                                     <div class="product-price-primary @(item.EffectiveDeliveryPrice == 0 ? "zero" : "")">
-                                        ₱@item.EffectiveDeliveryPrice.ToString("N2")
+                                        P@item.EffectiveDeliveryPrice.ToString("F2")
                                     </div>
                                     <div class="product-meta">
-                                        Cost ₱@item.EffectiveCost.ToString("N2") · Base ₱@item.EffectiveBasePrice.ToString("N2")
+                                        Cost P@item.EffectiveCost.ToString("F2") · Base P@item.EffectiveBasePrice.ToString("F2")
                                         @if (item.HasWeeklyPrice)
                                         {
                                             <span class="product-weekly-flag">Weekly</span>
