@@ -108,18 +108,31 @@ public class PayrollController : Controller
             .Where(a => a.WorkDate >= start && a.WorkDate <= end && a.PayrollEntryId == null)
             .ToListAsync();
 
+        var laborerIds = attendance.Select(a => a.LaborerId).Distinct().ToList();
+        var advanceBalanceMap = await _context.CashAdvances
+            .AsNoTracking()
+            .Where(c => laborerIds.Contains(c.LaborerId) && c.RemainingBalance > 0)
+            .GroupBy(c => c.LaborerId)
+            .Select(g => new { LaborerId = g.Key, Balance = g.Sum(c => c.RemainingBalance) })
+            .ToDictionaryAsync(x => x.LaborerId, x => x.Balance);
+
         var rows = attendance
             .GroupBy(a => a.LaborerId)
-            .Select(g => new PayrollRunPreviewRow
+            .Select(g =>
             {
-                LaborerId = g.Key,
-                LaborerName = g.First().Laborer?.FullName ?? "Unknown",
-                TotalDays = g.Count(x => x.Status != AttendanceStatus.Absent),
-                GrossWage = g.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount),
-                PendingAdvanceDeductions = _context.CashAdvances
-                    .Where(c => c.LaborerId == g.Key && c.RemainingBalance > 0)
-                    .Sum(c => c.RemainingBalance),
-                NetPay = g.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount)
+                var grossWage = g.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount);
+                var pendingAdvances = advanceBalanceMap.GetValueOrDefault(g.Key);
+                var estimatedDeductions = Math.Min(grossWage, pendingAdvances);
+
+                return new PayrollRunPreviewRow
+                {
+                    LaborerId = g.Key,
+                    LaborerName = g.First().Laborer?.FullName ?? "Unknown",
+                    TotalDays = g.Count(x => x.Status != AttendanceStatus.Absent),
+                    GrossWage = grossWage,
+                    PendingAdvanceDeductions = estimatedDeductions,
+                    NetPay = grossWage - estimatedDeductions
+                };
             })
             .OrderBy(r => r.LaborerName)
             .ToList();
@@ -337,6 +350,43 @@ public class PayrollController : Controller
         }
 
         return PartialView("_Payslip", model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportPayslipCsv(int id)
+    {
+        var model = await BuildPayslipViewModelAsync(id);
+        if (model == null)
+        {
+            return NotFound();
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Laborer,PeriodStart,PeriodEnd,DutyDays,DailyRate,GrossWage,TotalDeductions,TotalAdditions,NetPay,PaidAmount,Balance,Status");
+        sb.AppendLine($"{Escape(model.LaborerName)},{model.PeriodStart:yyyy-MM-dd},{model.PeriodEnd:yyyy-MM-dd},{model.TotalDays},{model.DailyRate:N2},{model.GrossWage:N2},{model.TotalDeductions:N2},{model.TotalAdditions:N2},{model.NetPay:N2},{model.PaidAmount:N2},{model.Balance:N2},{model.Status}");
+
+        if (model.Deductions.Any())
+        {
+            sb.AppendLine();
+            sb.AppendLine("Deduction,Amount");
+            foreach (var deduction in model.Deductions)
+            {
+                sb.AppendLine($"{Escape(deduction.Label)},{deduction.Amount:N2}");
+            }
+        }
+
+        if (model.Additions.Any())
+        {
+            sb.AppendLine();
+            sb.AppendLine("Addition,Amount");
+            foreach (var addition in model.Additions)
+            {
+                sb.AppendLine($"{Escape(addition.Label)},{addition.Amount:N2}");
+            }
+        }
+
+        var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(sb.ToString());
+        return File(bytes, "text/csv", $"payslip-{id}-{model.PeriodEnd:yyyyMMdd}.csv");
     }
 
     [HttpGet]

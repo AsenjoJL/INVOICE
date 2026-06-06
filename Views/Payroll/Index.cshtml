@@ -104,7 +104,8 @@
                             <th>Run</th>
                             <th>Duty Days</th>
                             <th>Gross Salary</th>
-                            <th>Adjustments</th>
+                            <th>Deductions</th>
+                            <th>Additions</th>
                             <th>Net Salary</th>
                             <th>Paid</th>
                             <th>Balance</th>
@@ -133,7 +134,8 @@
                                 </td>
                                 <td>@entry.TotalDays</td>
                                 <td class="payroll-money">₱@entry.GrossWage.ToString("N2")</td>
-                                <td class="payroll-money">₱@entry.TotalDeductions.ToString("+#,##0.00;-#,##0.00;0.00")</td>
+                                <td class="payroll-money">₱@entry.TotalDeductions.ToString("N2")</td>
+                                <td class="payroll-money">₱@entry.TotalAdditions.ToString("N2")</td>
                                 <td class="payroll-money">₱@payable.ToString("N2")</td>
                                 <td class="payroll-money text-success">₱@entry.PaidAmount.ToString("N2")</td>
                                 <td class="payroll-money text-danger">₱@balance.ToString("N2")</td>
@@ -165,7 +167,7 @@
                         @if (!Model.Entries.Any())
                         {
                             <tr>
-                                <td colspan="11" class="text-center text-muted py-4">No payroll entries found.</td>
+                                <td colspan="12" class="text-center text-muted py-4">No payroll entries found.</td>
                             </tr>
                         }
                     </tbody>

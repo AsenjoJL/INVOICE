@@ -195,15 +195,24 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var adjustment in Model.Adjustments)
+                            @foreach (var deduction in Model.AdvanceDeductions)
                             {
                                 <tr>
+                                    <td>@deduction.CashAdvance.Date.ToString("MMM dd")</td>
+                                    <td class="payroll-money">-₱@deduction.DeductAmount.ToString("N2")</td>
+                                    <td>Cash advance deduction</td>
+                                </tr>
+                            }
+                            @foreach (var adjustment in Model.Adjustments)
+                            {
+                                var signedPrefix = adjustment.Type == AdjustmentType.Deduction ? "-₱" : "+₱";
+                                <tr>
                                     <td>@adjustment.Date.ToString("MMM dd")</td>
-                                    <td class="payroll-money">₱@adjustment.Amount.ToString("+#,##0.00;-#,##0.00;0.00")</td>
+                                    <td class="payroll-money">@signedPrefix@adjustment.Amount.ToString("N2")</td>
                                     <td>@adjustment.Reason</td>
                                 </tr>
                             }
-                            @if (!Model.Adjustments.Any())
+                            @if (!Model.Adjustments.Any() && !Model.AdvanceDeductions.Any())
                             {
                                 <tr>
                                     <td colspan="3" class="text-center text-muted py-3">No adjustments yet.</td>

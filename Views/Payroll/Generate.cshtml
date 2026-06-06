@@ -4,6 +4,8 @@
     ViewData["Title"] = "Generate Payroll";
     var selectableCount = Model.Preview.Count;
     var totalWage = Model.Preview.Sum(r => r.GrossWage);
+    var totalDeductions = Model.Preview.Sum(r => r.PendingAdvanceDeductions);
+    var estimatedNetPay = Model.Preview.Sum(r => r.NetPay);
     var hasExistingRun = Model.HasExistingRun;
 }
 
@@ -28,8 +30,16 @@
             <div class="value">@Model.WeekStart.ToString("MMM dd") - @Model.WeekEnd.ToString("MMM dd")</div>
         </div>
         <div class="payroll-kpi warn">
-            <div class="label">Estimated Payroll</div>
+            <div class="label">Gross Payroll</div>
             <div class="value">₱@totalWage.ToString("N2")</div>
+        </div>
+        <div class="payroll-kpi danger">
+            <div class="label">Advance Deductions</div>
+            <div class="value">₱@totalDeductions.ToString("N2")</div>
+        </div>
+        <div class="payroll-kpi">
+            <div class="label">Estimated Net Pay</div>
+            <div class="value">₱@estimatedNetPay.ToString("N2")</div>
         </div>
     </div>
 
@@ -76,6 +86,8 @@
                                 <th>Laborer</th>
                                 <th>Total Days</th>
                                 <th>Gross Salary</th>
+                                <th>Advance Deductions</th>
+                                <th>Estimated Net Pay</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -89,12 +101,14 @@
                                     <td class="fw-bold">@row.LaborerName</td>
                                     <td>@row.TotalDays</td>
                                     <td class="payroll-money">₱@row.GrossWage.ToString("N2")</td>
+                                    <td class="payroll-money">₱@row.PendingAdvanceDeductions.ToString("N2")</td>
+                                    <td class="payroll-money">₱@row.NetPay.ToString("N2")</td>
                                 </tr>
                             }
                             @if (!Model.Preview.Any())
                             {
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">No attendance records available for payroll generation.</td>
+                                    <td colspan="6" class="text-center text-muted py-4">No attendance records available for payroll generation.</td>
                                 </tr>
                             }
                         </tbody>
