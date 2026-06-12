@@ -1,4 +1,5 @@
 @using HazelInvoice.Models
+@using HazelInvoice.Helpers
 @model HazelInvoice.ViewModels.PayrollIndexViewModel
 
 @{
@@ -10,6 +11,12 @@
     var totalEntries = Model.TotalEntries;
     var unpaidCount = Model.UnpaidCount;
     var totalBalance = Model.TotalBalance;
+    var historicalYear = BusinessDate.Today().Year;
+    var januaryStart = new DateTime(historicalYear, 1, 1);
+    var februaryEnd = new DateTime(historicalYear, 2, DateTime.DaysInMonth(historicalYear, 2));
+    var marchStart = new DateTime(historicalYear, 3, 1);
+    var paidThrough = new DateTime(historicalYear, 5, 16);
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
@@ -51,6 +58,41 @@
         <div class="payroll-kpi danger">
             <div class="label">Outstanding Balance</div>
             <div class="value">₱@totalBalance.ToString("N2")</div>
+        </div>
+    </div>
+
+    <div class="payroll-filter admin-filter-strip">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+                <div class="admin-section-kicker">Historical Records</div>
+                <div class="payroll-inline-note">Quick views for January through May 16 payroll history.</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a asp-action="Index"
+                   asp-route-startDate="@januaryStart.ToString("yyyy-MM-dd")"
+                   asp-route-endDate="@paidThrough.ToString("yyyy-MM-dd")"
+                   asp-route-pageSize="100"
+                   class="btn btn-outline-secondary">
+                    Jan - May 16
+                </a>
+                <a asp-action="Index"
+                   asp-route-startDate="@januaryStart.ToString("yyyy-MM-dd")"
+                   asp-route-endDate="@februaryEnd.ToString("yyyy-MM-dd")"
+                   asp-route-recordType="@PayrollEntryRecordType.RecordOnly"
+                   asp-route-pageSize="100"
+                   class="btn btn-outline-secondary">
+                    Jan - Feb Record Only
+                </a>
+                <a asp-action="Index"
+                   asp-route-startDate="@marchStart.ToString("yyyy-MM-dd")"
+                   asp-route-endDate="@paidThrough.ToString("yyyy-MM-dd")"
+                   asp-route-status="@PaymentStatus.Paid"
+                   asp-route-recordType="@PayrollEntryRecordType.Payable"
+                   asp-route-pageSize="100"
+                   class="btn btn-outline-secondary">
+                    Mar - May 16 Paid
+                </a>
+            </div>
         </div>
     </div>
 
@@ -121,7 +163,7 @@
                             <th>Paid</th>
                             <th>Balance</th>
                             <th>Status</th>
-                            <th class="text-end">Open</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -132,7 +174,7 @@
                             var balance = isRecordOnly ? 0m : entry.NetPay - entry.PaidAmount;
                             <tr data-row-link="@Url.Action("Details", new { id = entry.Id })">
                                 <td class="fw-bold">@entry.Laborer?.FullName</td>
-                                <td>@entry.PeriodStart.ToString("MMM dd, yyyy") - @entry.PeriodEnd.ToString("MMM dd, yyyy")</td>
+                                <td>@FormatPayrollPeriod(entry)</td>
                                 <td>
                                     @if (entry.PayrollRunId > 0)
                                     {
@@ -174,6 +216,24 @@
                                     }
                                 </td>
                                 <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                        @if (entry.Status != PaymentStatus.Paid)
+                                        {
+                                            <form asp-action="MarkPaid" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@entry.Id" />
+                                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                <button type="submit" class="btn btn-sm btn-dark">Mark Paid</button>
+                                            </form>
+                                        }
+                                        else if (!isRecordOnly && entry.Status == PaymentStatus.Paid)
+                                        {
+                                            <span class="payroll-status paid">Paid</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="payroll-status partial">History</span>
+                                        }
                                     <button type="button" class="btn btn-sm btn-outline-secondary"
                                             data-payroll-details-id="@entry.Id"
                                             data-bs-toggle="modal"
@@ -181,6 +241,7 @@
                                             aria-label="View payroll details">
                                         <i class="bi bi-eye"></i>
                                     </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -236,3 +297,24 @@
 </div>
 
 <script src="~/js/payroll.js" asp-append-version="true"></script>
+
+@functions {
+    private static string FormatPayrollPeriod(PayrollEntry entry)
+    {
+        if (entry.PeriodStart.Year == entry.PeriodEnd.Year &&
+            entry.PeriodStart.Month == entry.PeriodEnd.Month &&
+            entry.PeriodStart.Day == 1 &&
+            entry.PeriodEnd.Day == DateTime.DaysInMonth(entry.PeriodEnd.Year, entry.PeriodEnd.Month))
+        {
+            return entry.PeriodStart.ToString("MMMM yyyy");
+        }
+
+        if (entry.PeriodStart.Year == entry.PeriodEnd.Year &&
+            entry.PeriodStart.Month == entry.PeriodEnd.Month)
+        {
+            return $"{entry.PeriodStart:MMM dd} - {entry.PeriodEnd:MMM dd, yyyy}";
+        }
+
+        return $"{entry.PeriodStart:MMM dd, yyyy} - {entry.PeriodEnd:MMM dd, yyyy}";
+    }
+}

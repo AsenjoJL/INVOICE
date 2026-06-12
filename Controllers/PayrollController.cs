@@ -223,7 +223,12 @@ public class PayrollController : Controller
             var periodEnd = GetHistoricalPeriodEnd(periodStart, endDate, recordOnlyThrough, paidThrough, unpaidFrom);
             var policy = ResolveHistoricalPolicy(periodStart, periodEnd, recordOnlyThrough, paidThrough, unpaidFrom);
 
-            var result = await CreatePayrollRunForPeriodAsync(periodStart, periodEnd, policy, skipExistingPeriod: true);
+            var result = await CreatePayrollRunForPeriodAsync(
+                periodStart,
+                periodEnd,
+                policy,
+                skipExistingPeriod: true,
+                createEmptyLaborerEntries: true);
             if (result.CreatedEntries > 0)
             {
                 createdRuns++;
@@ -247,13 +252,15 @@ public class PayrollController : Controller
         DateTime periodStart,
         DateTime periodEnd,
         PayrollGenerationPolicy policy,
-        bool skipExistingPeriod = false)
+        bool skipExistingPeriod = false,
+        bool createEmptyLaborerEntries = false)
     {
         periodStart = periodStart.Date;
         periodEnd = periodEnd.Date;
 
-        var existingRun = await _context.PayrollRuns
-            .FirstOrDefaultAsync(r => r.WeekStart == periodStart && r.WeekEnd == periodEnd);
+        var existingRun = skipExistingPeriod
+            ? await _context.PayrollRuns.FirstOrDefaultAsync(r => r.WeekStart <= periodEnd && r.WeekEnd >= periodStart)
+            : await _context.PayrollRuns.FirstOrDefaultAsync(r => r.WeekStart == periodStart && r.WeekEnd == periodEnd);
 
         if (existingRun != null)
         {
@@ -267,13 +274,17 @@ public class PayrollController : Controller
             .Where(a => a.WorkDate >= periodStart && a.WorkDate <= periodEnd && a.PayrollEntryId == null)
             .ToListAsync();
 
-        if (attendance.Count == 0)
+        if (attendance.Count == 0 && !createEmptyLaborerEntries)
         {
             return PayrollGenerationResult.Skipped("No unassigned attendance records were found for this period.");
         }
 
-        var grouped = attendance.GroupBy(a => a.LaborerId).ToList();
-        if (grouped.Count == 0)
+        var attendanceByLaborer = attendance
+            .GroupBy(a => a.LaborerId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var eligibleLaborers = await BuildEligibleLaborerListAsync(periodStart, periodEnd, attendance, createEmptyLaborerEntries);
+        if (eligibleLaborers.Count == 0)
         {
             return PayrollGenerationResult.Skipped("No laborers were eligible for payroll generation.");
         }
@@ -299,17 +310,19 @@ public class PayrollController : Controller
         await _context.SaveChangesAsync();
 
         var entries = new List<PayrollEntry>();
-        foreach (var group in grouped)
+        foreach (var laborer in eligibleLaborers)
         {
-            var grossWage = group.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount);
+            attendanceByLaborer.TryGetValue(laborer.Id, out var laborerAttendance);
+            laborerAttendance ??= new List<AttendanceRecord>();
+            var grossWage = laborerAttendance.Where(x => x.Status != AttendanceStatus.Absent).Sum(x => x.WageAmount);
             entries.Add(new PayrollEntry
             {
                 PayrollRunId = run.Id,
-                LaborerId = group.Key,
-                Laborer = group.First().Laborer,
+                LaborerId = laborer.Id,
+                Laborer = laborer,
                 PeriodStart = periodStart,
                 PeriodEnd = periodEnd,
-                TotalDays = group.Count(x => x.Status != AttendanceStatus.Absent),
+                TotalDays = laborerAttendance.Count(x => x.Status != AttendanceStatus.Absent),
                 GrossWage = grossWage,
                 TotalAdditions = 0m,
                 TotalDeductions = 0m,
@@ -363,6 +376,37 @@ public class PayrollController : Controller
         }
 
         return PayrollGenerationResult.Created(entries.Count, "Payroll run created successfully.");
+    }
+
+    private async Task<List<Laborer>> BuildEligibleLaborerListAsync(
+        DateTime periodStart,
+        DateTime periodEnd,
+        List<AttendanceRecord> attendance,
+        bool includeEmptyLaborers)
+    {
+        var laborersFromAttendance = attendance
+            .Where(a => a.Laborer != null)
+            .Select(a => a.Laborer)
+            .GroupBy(l => l.Id)
+            .Select(g => g.First())
+            .ToDictionary(l => l.Id);
+
+        if (includeEmptyLaborers)
+        {
+            var laborers = await _context.Laborers
+                .Where(l => l.HiredDate <= periodEnd && (l.ArchivedAt == null || l.ArchivedAt >= periodStart))
+                .OrderBy(l => l.FullName)
+                .ToListAsync();
+
+            foreach (var laborer in laborers)
+            {
+                laborersFromAttendance[laborer.Id] = laborer;
+            }
+        }
+
+        return laborersFromAttendance.Values
+            .OrderBy(l => l.FullName)
+            .ToList();
     }
 
     private async Task ApplyAutomaticAdvanceDeductionsAsync(List<PayrollEntry> entries)
@@ -472,7 +516,9 @@ public class PayrollController : Controller
         DateTime paidThrough,
         DateTime unpaidFrom)
     {
-        var naturalWeekEnd = GetWeekStart(periodStart).AddDays(6);
+        var naturalWeekEnd = periodStart.Month <= 4
+            ? new DateTime(periodStart.Year, periodStart.Month, DateTime.DaysInMonth(periodStart.Year, periodStart.Month))
+            : GetWeekStart(periodStart).AddDays(6);
         var periodEnd = naturalWeekEnd > requestedEnd ? requestedEnd : naturalWeekEnd;
 
         // Keep each generated run inside one business meaning: record-only, paid, or unpaid.
@@ -639,6 +685,73 @@ public class PayrollController : Controller
 
         var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(sb.ToString());
         return File(bytes, "text/csv", $"payroll-run-{run.Id}.csv");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkPaid(int id, string? returnUrl = null)
+    {
+        var entry = await _context.PayrollEntries
+            .Include(e => e.PayrollRun)
+            .Include(e => e.Laborer)
+            .FirstOrDefaultAsync(e => e.Id == id);
+
+        if (entry == null)
+        {
+            return NotFound();
+        }
+
+        if (entry.PayrollRun?.Status == PayrollRunStatus.Closed &&
+            entry.Status != PaymentStatus.Paid &&
+            entry.RecordType != PayrollEntryRecordType.RecordOnly)
+        {
+            TempData["PayrollError"] = "This payroll run is closed. Payment changes are locked.";
+            return SafePayrollRedirect(returnUrl);
+        }
+
+        if (entry.RecordType == PayrollEntryRecordType.RecordOnly)
+        {
+            entry.RecordType = PayrollEntryRecordType.Payable;
+            entry.Notes = AppendNote(entry.Notes, "Converted from record-only when marked paid.");
+        }
+
+        var balance = entry.NetPay - entry.PaidAmount;
+        if (balance > 0m)
+        {
+            var payment = new PayrollPayment
+            {
+                PayrollEntryId = entry.Id,
+                Date = BusinessDate.Today(),
+                Amount = balance,
+                PaymentMethod = PaymentMethod.Cash,
+                ReferenceNo = "Marked paid",
+                RecordedById = User.Identity?.Name
+            };
+
+            _context.PayrollPayments.Add(payment);
+            _context.Expenses.Add(new Expense
+            {
+                Date = payment.Date,
+                Category = "Payroll",
+                Vendor = entry.Laborer?.FullName,
+                Amount = payment.Amount,
+                PaymentMethod = payment.PaymentMethod,
+                ReferenceNo = payment.ReferenceNo,
+                Description = $"Payroll: {entry.Laborer?.FullName} ({entry.PeriodStart:MMM dd, yyyy} - {entry.PeriodEnd:MMM dd, yyyy})",
+                RecordedById = payment.RecordedById
+            });
+
+            entry.PaidAmount += balance;
+        }
+
+        ApplyEntryStatus(entry);
+        await _context.SaveChangesAsync();
+        await TryCloseRun(entry.PayrollRunId);
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
+
+        TempData["PayrollSuccess"] = "Payroll marked as paid.";
+        return SafePayrollRedirect(returnUrl);
     }
 
     [HttpPost]
@@ -965,6 +1078,23 @@ public class PayrollController : Controller
     {
         value ??= string.Empty;
         return $"\"{value.Replace("\"", "\"\"")}\"";
+    }
+
+    private static string AppendNote(string? existing, string note)
+    {
+        return string.IsNullOrWhiteSpace(existing)
+            ? note
+            : $"{existing.Trim()} {note}";
+    }
+
+    private IActionResult SafePayrollRedirect(string? returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     private static DateTime GetWeekStart(DateTime date)
