@@ -112,7 +112,7 @@ public class AttendanceController : Controller
         var workDate = model.WorkDate.Date;
         if (IsRegularDayOff(workDate))
         {
-            TempData["AttendanceError"] = "Sunday is the regular day off. Attendance is not created for Sunday.";
+            TempData["AttendanceError"] = "Saturday is the regular day off. Attendance is not created for Saturday.";
             return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
         }
 
@@ -236,7 +236,7 @@ public class AttendanceController : Controller
 
     private static bool IsRegularDayOff(DateTime workDate)
     {
-        return workDate.DayOfWeek == DayOfWeek.Sunday;
+        return workDate.DayOfWeek == DayOfWeek.Saturday;
     }
 
     private static void ApplyEntryStatus(PayrollEntry entry)

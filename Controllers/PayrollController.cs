@@ -114,7 +114,7 @@ public class PayrollController : Controller
     public async Task<IActionResult> Generate(DateTime? weekStart)
     {
         var start = GetWeekStart(weekStart ?? BusinessDate.Today());
-        var end = start.AddDays(6);
+        var end = GetWorkPeriodEnd(start);
 
         var attendance = await _context.AttendanceRecords
             .AsNoTracking()
@@ -177,7 +177,7 @@ public class PayrollController : Controller
     public async Task<IActionResult> CreateRun(DateTime weekStart)
     {
         var start = GetWeekStart(weekStart);
-        var end = start.AddDays(6);
+        var end = GetWorkPeriodEnd(start);
 
         var existingRun = await _context.PayrollRuns
             .FirstOrDefaultAsync(r => r.WeekStart == start && r.WeekEnd == end);
@@ -774,7 +774,7 @@ public class PayrollController : Controller
     {
         var naturalWeekEnd = periodStart.Month <= 4
             ? new DateTime(periodStart.Year, periodStart.Month, DateTime.DaysInMonth(periodStart.Year, periodStart.Month))
-            : GetWeekStart(periodStart).AddDays(6);
+            : GetWorkPeriodEnd(GetWeekStart(periodStart));
         var periodEnd = naturalWeekEnd > requestedEnd ? requestedEnd : naturalWeekEnd;
 
         // Keep each generated run inside one business meaning: record-only, paid, or unpaid.
@@ -1355,8 +1355,12 @@ public class PayrollController : Controller
 
     private static DateTime GetWeekStart(DateTime date)
     {
-        var delta = date.DayOfWeek == DayOfWeek.Sunday ? -6 : DayOfWeek.Monday - date.DayOfWeek;
-        return date.AddDays(delta).Date;
+        return date.AddDays(-(int)date.DayOfWeek).Date;
+    }
+
+    private static DateTime GetWorkPeriodEnd(DateTime periodStart)
+    {
+        return periodStart.Date.AddDays(5);
     }
 
     private static DateTime GetDefaultUnpaidPayrollStart()
@@ -1366,7 +1370,7 @@ public class PayrollController : Controller
 
     private static bool IsRegularDayOff(DateTime date)
     {
-        return date.DayOfWeek == DayOfWeek.Sunday;
+        return date.DayOfWeek == DayOfWeek.Saturday;
     }
 
     private static int CountWorkingDays(DateTime startDate, DateTime endDate)

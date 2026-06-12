@@ -51,7 +51,7 @@ public class LaborerSchedule
     public Laborer Laborer { get; set; } = null!;
 
     [StringLength(100)]
-    public string WorkDays { get; set; } = "Mon,Tue,Wed,Thu,Fri,Sat";
+    public string WorkDays { get; set; } = "Sun,Mon,Tue,Wed,Thu,Fri";
 
     public DateTime EffectiveDate { get; set; } = BusinessDate.Today();
     public bool IsActive { get; set; } = true;
