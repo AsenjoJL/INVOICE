@@ -123,6 +123,49 @@
             </div>
         </div>
     </form>
+
+    <div class="payroll-table-card mt-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Historical Payroll Backfill</h2>
+                    <div class="payroll-inline-note">
+                        Creates missing payroll from attendance only. Existing generated periods are skipped safely.
+                    </div>
+                </div>
+                <span class="badge bg-light text-dark">Jan-Feb record only · Mar-May 16 paid · May 18+ unpaid</span>
+            </div>
+
+            <form asp-action="CreateHistoricalRuns" method="post" class="row g-3 align-items-end">
+                @Html.AntiForgeryToken()
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Start Date</label>
+                    <input type="date" name="startDate" class="form-control" value="@Model.HistoricalStartDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">End Date</label>
+                    <input type="date" name="endDate" class="form-control" value="@Model.HistoricalEndDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Record Only Through</label>
+                    <input type="date" name="recordOnlyThrough" class="form-control" value="@Model.RecordOnlyThrough.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Paid Through</label>
+                    <input type="date" name="paidThrough" class="form-control" value="@Model.PaidThrough.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Unpaid From</label>
+                    <input type="date" name="unpaidFrom" class="form-control" value="@Model.UnpaidFrom.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-dark w-100">
+                        Create Historical Payroll
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script src="~/js/payroll.js" asp-append-version="true"></script>

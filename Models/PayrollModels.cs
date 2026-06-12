@@ -150,6 +150,7 @@ public class PayrollEntry
     [Column(TypeName = "decimal(18,2)")]
     public decimal PaidAmount { get; set; }
 
+    public PayrollEntryRecordType RecordType { get; set; } = PayrollEntryRecordType.Payable;
     public PaymentStatus Status { get; set; } = PaymentStatus.Unpaid;
     public DateTime GeneratedAt { get; set; } = BusinessDate.Now();
 

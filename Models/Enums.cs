@@ -41,6 +41,12 @@ public enum PayrollRunStatus
     Closed
 }
 
+public enum PayrollEntryRecordType
+{
+    Payable,
+    RecordOnly
+}
+
 public enum AdjustmentType
 {
     Addition,

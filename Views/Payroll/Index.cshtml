@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "Payroll";
     var statusValue = Model.Status?.ToString() ?? "";
+    var recordTypeValue = Model.RecordType?.ToString() ?? "";
     var startDate = Model.StartDate;
     var endDate = Model.EndDate;
     var totalEntries = Model.TotalEntries;
@@ -73,6 +74,16 @@
             </select>
         </div>
         <div class="col-md-2">
+            <label class="form-label small fw-bold">Record Type</label>
+            <select name="recordType" class="form-select">
+                <option value="">All</option>
+                @foreach (PayrollEntryRecordType type in Enum.GetValues(typeof(PayrollEntryRecordType)))
+                {
+                    <option value="@type" selected="@(recordTypeValue == type.ToString())">@((type == PayrollEntryRecordType.RecordOnly) ? "Record Only" : "Payable")</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
             <label class="form-label small fw-bold">Page Size</label>
             <select name="pageSize" class="form-select">
                 <option value="10" selected="@(Model.PageSize == 10 ? "selected" : null)">10</option>
@@ -82,7 +93,7 @@
             </select>
         </div>
         <div class="col-md-3 d-flex align-items-end">
-            @if (startDate.HasValue || endDate.HasValue || !string.IsNullOrWhiteSpace(statusValue) || Model.PageSize != 25)
+            @if (startDate.HasValue || endDate.HasValue || !string.IsNullOrWhiteSpace(statusValue) || !string.IsNullOrWhiteSpace(recordTypeValue) || Model.PageSize != 25)
             {
                 <a asp-action="Index" class="btn btn-outline-secondary w-100">Reset Filters</a>
             }
@@ -117,7 +128,8 @@
                         @foreach (var entry in Model.Entries)
                         {
                             var payable = entry.NetPay;
-                            var balance = entry.NetPay - entry.PaidAmount;
+                            var isRecordOnly = entry.RecordType == PayrollEntryRecordType.RecordOnly;
+                            var balance = isRecordOnly ? 0m : entry.NetPay - entry.PaidAmount;
                             <tr data-row-link="@Url.Action("Details", new { id = entry.Id })">
                                 <td class="fw-bold">@entry.Laborer?.FullName</td>
                                 <td>@entry.PeriodStart.ToString("MMM dd, yyyy") - @entry.PeriodEnd.ToString("MMM dd, yyyy")</td>
@@ -126,6 +138,10 @@
                                     {
                                         <span class="badge bg-dark">#@entry.PayrollRunId</span>
                                         <span class="small text-muted ms-1">(@entry.PayrollRun?.Status)</span>
+                                        @if (isRecordOnly)
+                                        {
+                                            <span class="badge bg-secondary ms-1">Record Only</span>
+                                        }
                                     }
                                     else
                                     {
@@ -140,7 +156,11 @@
                                 <td class="payroll-money text-success">₱@entry.PaidAmount.ToString("N2")</td>
                                 <td class="payroll-money text-danger">₱@balance.ToString("N2")</td>
                                 <td>
-                                    @if (entry.Status == PaymentStatus.Paid)
+                                    @if (isRecordOnly)
+                                    {
+                                        <span class="payroll-status partial">Record Only</span>
+                                    }
+                                    else if (entry.Status == PaymentStatus.Paid)
                                     {
                                         <span class="payroll-status paid">Paid</span>
                                     }
@@ -185,6 +205,7 @@
                    asp-route-startDate="@(startDate?.ToString("yyyy-MM-dd"))"
                    asp-route-endDate="@(endDate?.ToString("yyyy-MM-dd"))"
                    asp-route-status="@statusValue"
+                   asp-route-recordType="@recordTypeValue"
                    asp-route-page="@(Math.Max(1, Model.CurrentPage - 1))"
                    asp-route-pageSize="@Model.PageSize">Prev</a>
                 <a class="btn btn-sm btn-outline-secondary @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")"
@@ -192,6 +213,7 @@
                    asp-route-startDate="@(startDate?.ToString("yyyy-MM-dd"))"
                    asp-route-endDate="@(endDate?.ToString("yyyy-MM-dd"))"
                    asp-route-status="@statusValue"
+                   asp-route-recordType="@recordTypeValue"
                    asp-route-page="@(Math.Min(Model.TotalPages, Model.CurrentPage + 1))"
                    asp-route-pageSize="@Model.PageSize">Next</a>
             </div>

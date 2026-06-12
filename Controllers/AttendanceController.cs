@@ -223,6 +223,13 @@ public class AttendanceController : Controller
 
     private static void ApplyEntryStatus(PayrollEntry entry)
     {
+        if (entry.RecordType == PayrollEntryRecordType.RecordOnly)
+        {
+            entry.Status = PaymentStatus.Unpaid;
+            entry.PaidAmount = 0m;
+            return;
+        }
+
         var remaining = entry.NetPay - entry.PaidAmount;
         if (remaining <= 0)
         {

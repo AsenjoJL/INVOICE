@@ -22,7 +22,7 @@ public class PayrollReportsController : Controller
         var query = _context.PayrollEntries
             .AsNoTracking()
             .Include(e => e.Laborer)
-            .Where(e => e.Status != PaymentStatus.Paid);
+            .Where(e => e.RecordType == PayrollEntryRecordType.Payable && e.Status != PaymentStatus.Paid);
 
         if (startDate.HasValue)
         {

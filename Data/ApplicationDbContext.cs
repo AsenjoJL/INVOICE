@@ -96,6 +96,7 @@ public class ApplicationDbContext : IdentityDbContext
         builder.Entity<PayrollEntry>().HasIndex(e => e.LaborerId);
         builder.Entity<PayrollEntry>().HasIndex(e => e.PeriodStart);
         builder.Entity<PayrollEntry>().HasIndex(e => e.Status);
+        builder.Entity<PayrollEntry>().HasIndex(e => e.RecordType);
         builder.Entity<PayrollEntry>().HasIndex(e => e.PayrollRunId);
         builder.Entity<PayrollRun>().HasIndex(r => new { r.WeekStart, r.WeekEnd });
         builder.Entity<PayrollRun>().HasIndex(r => r.Status);

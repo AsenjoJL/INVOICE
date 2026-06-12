@@ -5,13 +5,16 @@
 @{
     var balance = Model.RemainingBalance;
     var isRunClosed = Model.Entry.PayrollRun?.Status == PayrollRunStatus.Closed;
+    var isRecordOnly = Model.Entry.RecordType == PayrollEntryRecordType.RecordOnly;
+    var isPaid = Model.Entry.Status == PaymentStatus.Paid && Model.Entry.PaidAmount > 0;
+    var displayStatus = isRecordOnly ? "Record Only" : Model.Entry.Status.ToString();
 }
 
 <div class="payroll-header payroll-modal-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
     <div>
         <h1>Payroll Details</h1>
         <div class="sub">@Model.Entry.Laborer?.FullName · @Model.Entry.PeriodStart.ToString("MMM dd, yyyy") - @Model.Entry.PeriodEnd.ToString("MMM dd, yyyy")</div>
-        <div class="sub">Run: #@Model.Entry.PayrollRunId · @Model.Entry.PayrollRun?.Status</div>
+        <div class="sub">Run: #@Model.Entry.PayrollRunId · @Model.Entry.PayrollRun?.Status · @displayStatus</div>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         <a asp-action="ExportPayslipCsv" asp-route-id="@Model.Entry.Id" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Export CSV</a>
@@ -59,7 +62,7 @@
     </div>
     <div class="payroll-kpi">
         <div class="label">Status</div>
-        <div class="value">@Model.Entry.Status</div>
+        <div class="value">@displayStatus</div>
     </div>
 </div>
 
@@ -143,9 +146,13 @@
                         <input type="text" name="ReferenceNo" class="form-control" placeholder="Optional" />
                     </div>
                     <div class="payroll-form-actions">
-                        <button type="submit" class="btn btn-primary w-100" @(isRunClosed ? "disabled" : null)>Save Payment</button>
+                        <button type="submit" class="btn btn-primary w-100" @(isRunClosed || isRecordOnly || isPaid ? "disabled" : null)>Save Payment</button>
                     </div>
                 </form>
+                @if (isRecordOnly)
+                {
+                    <div class="small text-muted mt-2">This is historical record-only payroll, so payment is intentionally disabled.</div>
+                }
                 @if (isRunClosed)
                 {
                     <div class="small text-muted mt-2">This run is closed. Payment editing is disabled.</div>
@@ -181,9 +188,13 @@
                         <input type="text" name="note" class="form-control" placeholder="Optional note" />
                     </div>
                     <div class="payroll-form-actions">
-                        <button type="submit" class="btn btn-outline-primary w-100" @(isRunClosed ? "disabled" : null)>Save Entry</button>
+                        <button type="submit" class="btn btn-outline-primary w-100" @(isRunClosed || isRecordOnly || isPaid ? "disabled" : null)>Save Entry</button>
                     </div>
                 </form>
+                @if (isPaid)
+                {
+                    <div class="small text-muted mb-2">This payroll is already paid. Add deductions before recording payment.</div>
+                }
 
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle mb-0 payroll-table">

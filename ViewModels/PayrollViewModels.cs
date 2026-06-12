@@ -52,6 +52,7 @@ public class PayrollIndexViewModel
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public PaymentStatus? Status { get; set; }
+    public PayrollEntryRecordType? RecordType { get; set; }
     public int CurrentPage { get; set; } = 1;
     public int PageSize { get; set; } = 25;
     public int TotalPages { get; set; }
@@ -68,6 +69,11 @@ public class CreatePayrollRunViewModel
     public DateTime WeekEnd { get; set; }
     public List<PayrollRunPreviewRow> Preview { get; set; } = new();
     public bool HasExistingRun { get; set; }
+    public DateTime HistoricalStartDate { get; set; }
+    public DateTime HistoricalEndDate { get; set; }
+    public DateTime RecordOnlyThrough { get; set; }
+    public DateTime PaidThrough { get; set; }
+    public DateTime UnpaidFrom { get; set; }
 }
 
 public class PayrollRunPreviewRow
@@ -117,6 +123,7 @@ public class PayslipViewModel
     public decimal PaidAmount { get; set; }
     public decimal Balance { get; set; }
     public PaymentStatus Status { get; set; }
+    public string DisplayStatus { get; set; } = string.Empty;
 }
 
 public class CashAdvanceViewModel

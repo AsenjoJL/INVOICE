@@ -3,6 +3,7 @@ using System;
 using HazelInvoice.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HazelInvoice.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612023742_AddPayrollEntryRecordType")]
+    partial class AddPayrollEntryRecordType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -58,7 +61,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("PayrollEntryId");
 
-                    b.ToTable("Adjustments", (string)null);
+                    b.ToTable("Adjustments");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.AdvanceDeduction", b =>
@@ -84,7 +87,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("PayrollEntryId");
 
-                    b.ToTable("AdvanceDeductions", (string)null);
+                    b.ToTable("AdvanceDeductions");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.AppSetting", b =>
@@ -102,7 +105,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Key");
 
-                    b.ToTable("AppSettings", (string)null);
+                    b.ToTable("AppSettings");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.AttendanceRecord", b =>
@@ -150,7 +153,7 @@ namespace HazelInvoice.Migrations
                     b.HasIndex("LaborerId", "WorkDate")
                         .IsUnique();
 
-                    b.ToTable("AttendanceRecords", (string)null);
+                    b.ToTable("AttendanceRecords");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.CashAdvance", b =>
@@ -184,7 +187,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("LaborerId");
 
-                    b.ToTable("CashAdvances", (string)null);
+                    b.ToTable("CashAdvances");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.CollectionReceivedOverride", b =>
@@ -209,7 +212,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CollectionReceivedOverrides", (string)null);
+                    b.ToTable("CollectionReceivedOverrides");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Customer", b =>
@@ -253,7 +256,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.ToTable("Customers", (string)null);
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Deduction", b =>
@@ -285,7 +288,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Deductions", (string)null);
+                    b.ToTable("Deductions");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Expense", b =>
@@ -327,7 +330,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Expenses", (string)null);
+                    b.ToTable("Expenses");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.ExpenseCategoryDefinition", b =>
@@ -354,7 +357,7 @@ namespace HazelInvoice.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("ExpenseCategoryDefinitions", (string)null);
+                    b.ToTable("ExpenseCategoryDefinitions");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Goal", b =>
@@ -382,7 +385,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Goals", (string)null);
+                    b.ToTable("Goals");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Laborer", b =>
@@ -432,7 +435,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Laborers", (string)null);
+                    b.ToTable("Laborers");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.LaborerSchedule", b =>
@@ -461,7 +464,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("LaborerId");
 
-                    b.ToTable("LaborerSchedules", (string)null);
+                    b.ToTable("LaborerSchedules");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PartnerBalanceConfig", b =>
@@ -485,7 +488,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PartnerBalanceConfigs", (string)null);
+                    b.ToTable("PartnerBalanceConfigs");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PartnerCapital", b =>
@@ -513,7 +516,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PartnerCapitals", (string)null);
+                    b.ToTable("PartnerCapitals");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PartnerPurchase", b =>
@@ -541,7 +544,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PartnerPurchases", (string)null);
+                    b.ToTable("PartnerPurchases");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Payment", b =>
@@ -575,7 +578,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("ReceiptId");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PayrollCutoff", b =>
@@ -612,7 +615,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("StartDate", "EndDate");
 
-                    b.ToTable("PayrollCutoffs", (string)null);
+                    b.ToTable("PayrollCutoffs");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PayrollEntry", b =>
@@ -678,7 +681,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("PayrollEntries", (string)null);
+                    b.ToTable("PayrollEntries");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PayrollPayment", b =>
@@ -712,7 +715,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("PayrollEntryId");
 
-                    b.ToTable("PayrollPayments", (string)null);
+                    b.ToTable("PayrollPayments");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PayrollRun", b =>
@@ -755,7 +758,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("WeekStart", "WeekEnd");
 
-                    b.ToTable("PayrollRuns", (string)null);
+                    b.ToTable("PayrollRuns");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Product", b =>
@@ -811,7 +814,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.ProductStockMovement", b =>
@@ -847,7 +850,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductStockMovements", (string)null);
+                    b.ToTable("ProductStockMovements");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Purchase", b =>
@@ -910,7 +913,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("SupplierName");
 
-                    b.ToTable("Purchases", (string)null);
+                    b.ToTable("Purchases");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PurchaseLine", b =>
@@ -952,7 +955,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("PurchaseId");
 
-                    b.ToTable("PurchaseLines", (string)null);
+                    b.ToTable("PurchaseLines");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PurchasePayment", b =>
@@ -986,7 +989,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("PurchaseId");
 
-                    b.ToTable("PurchasePayments", (string)null);
+                    b.ToTable("PurchasePayments");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.PurchaseSequence", b =>
@@ -1007,7 +1010,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("Year");
 
-                    b.ToTable("PurchaseSequences", (string)null);
+                    b.ToTable("PurchaseSequences");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Receipt", b =>
@@ -1073,7 +1076,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Receipts", (string)null);
+                    b.ToTable("Receipts");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.ReceiptLine", b =>
@@ -1127,7 +1130,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("ReceiptLines", (string)null);
+                    b.ToTable("ReceiptLines");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.ReceiptSequence", b =>
@@ -1148,7 +1151,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("Year");
 
-                    b.ToTable("ReceiptSequences", (string)null);
+                    b.ToTable("ReceiptSequences");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Service", b =>
@@ -1175,7 +1178,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Services", (string)null);
+                    b.ToTable("Services");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Supplier", b =>
@@ -1210,7 +1213,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.ToTable("Suppliers", (string)null);
+                    b.ToTable("Suppliers");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Supply", b =>
@@ -1236,7 +1239,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Supplies", (string)null);
+                    b.ToTable("Supplies");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.SupplyStockMovement", b =>
@@ -1272,7 +1275,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("SupplyId");
 
-                    b.ToTable("SupplyStockMovements", (string)null);
+                    b.ToTable("SupplyStockMovements");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.WeeklyPrice", b =>
@@ -1311,7 +1314,7 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("ProductId", "EffectiveFrom", "EffectiveTo");
 
-                    b.ToTable("WeeklyPrices", (string)null);
+                    b.ToTable("WeeklyPrices");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
