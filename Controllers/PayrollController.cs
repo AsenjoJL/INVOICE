@@ -84,6 +84,9 @@ public class PayrollController : Controller
             .ToListAsync();
 
         var pageTotalBalance = entries.Sum(e => e.NetPay - e.PaidAmount);
+        var pendingStart = GetDefaultUnpaidPayrollStart();
+        var pendingEnd = BusinessDate.Today();
+        var pendingRows = await BuildPendingPayrollRowsAsync(pendingStart, pendingEnd);
 
         var model = new PayrollIndexViewModel
         {
@@ -98,7 +101,10 @@ public class PayrollController : Controller
             UnpaidCount = unpaidCount,
             TotalBalance = totalBalance,
             PageTotalBalance = pageTotalBalance,
-            Entries = entries
+            Entries = entries,
+            PendingStartDate = pendingStart,
+            PendingEndDate = pendingEnd,
+            PendingRows = pendingRows
         };
 
         return View(model);
@@ -246,6 +252,118 @@ public class PayrollController : Controller
         _cacheInvalidator.InvalidateProfitReports();
         TempData["PayrollSuccess"] = $"Historical payroll finished: {createdRuns} run(s), {createdEntries} entry/entries created, {skippedPeriods} period(s) skipped.";
         return RedirectToAction(nameof(Index), new { startDate = startDate.ToString("yyyy-MM-dd"), endDate = endDate.ToString("yyyy-MM-dd") });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GeneratePendingPayroll(DateTime startDate, DateTime endDate)
+    {
+        startDate = startDate.Date;
+        endDate = endDate.Date;
+
+        if (startDate > endDate)
+        {
+            TempData["PayrollError"] = "Pending payroll start date cannot be after the end date.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var pendingRows = await BuildPendingPayrollRowsAsync(startDate, endDate);
+        if (pendingRows.Count == 0)
+        {
+            TempData["PayrollError"] = "No pending duty days were found to generate payroll.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        await using var tx = await _context.Database.BeginTransactionAsync();
+
+        var run = new PayrollRun
+        {
+            WeekStart = pendingRows.Min(r => r.PeriodStart),
+            WeekEnd = pendingRows.Max(r => r.PeriodEnd),
+            Status = PayrollRunStatus.Draft,
+            CreatedAt = BusinessDate.Now(),
+            CreatedBy = User.Identity?.Name,
+            Notes = "Pending payroll generated from unpaid duty days."
+        };
+
+        _context.PayrollRuns.Add(run);
+        await _context.SaveChangesAsync();
+
+        var laborerIds = pendingRows.Select(r => r.LaborerId).ToList();
+        var laborers = await _context.Laborers
+            .Where(l => laborerIds.Contains(l.Id))
+            .ToDictionaryAsync(l => l.Id);
+
+        var entries = new List<PayrollEntry>();
+        var recordsToLink = new List<(AttendanceRecord Record, int LaborerId)>();
+
+        foreach (var row in pendingRows)
+        {
+            if (!laborers.TryGetValue(row.LaborerId, out var laborer))
+            {
+                continue;
+            }
+
+            var attendanceRecords = await EnsureAttendanceRecordsForPendingPayrollAsync(laborer, row.PeriodStart, row.PeriodEnd);
+            var payableAttendance = attendanceRecords
+                .Where(a => !IsRegularDayOff(a.WorkDate) && a.Status != AttendanceStatus.Absent)
+                .ToList();
+
+            var grossWage = payableAttendance.Sum(a => a.WageAmount);
+            var entry = new PayrollEntry
+            {
+                PayrollRunId = run.Id,
+                LaborerId = laborer.Id,
+                Laborer = laborer,
+                PeriodStart = row.PeriodStart,
+                PeriodEnd = row.PeriodEnd,
+                TotalDays = payableAttendance.Count,
+                GrossWage = grossWage,
+                TotalAdditions = 0m,
+                TotalDeductions = 0m,
+                NetPay = grossWage,
+                PaidAmount = 0m,
+                RecordType = PayrollEntryRecordType.Payable,
+                Status = PaymentStatus.Unpaid,
+                GeneratedAt = BusinessDate.Now(),
+                Notes = "Generated from pending duty days."
+            };
+
+            entries.Add(entry);
+            recordsToLink.AddRange(attendanceRecords.Select(record => (record, laborer.Id)));
+        }
+
+        if (entries.Count == 0)
+        {
+            await tx.RollbackAsync();
+            TempData["PayrollError"] = "No pending payroll entries could be generated.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        _context.PayrollEntries.AddRange(entries);
+        await _context.SaveChangesAsync();
+
+        await ApplyAutomaticAdvanceDeductionsAsync(entries);
+
+        var entryMap = entries.ToDictionary(e => e.LaborerId, e => e.Id);
+        foreach (var item in recordsToLink)
+        {
+            if (entryMap.TryGetValue(item.LaborerId, out var entryId))
+            {
+                item.Record.PayrollEntryId = entryId;
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            ApplyEntryStatus(entry);
+        }
+
+        await _context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        TempData["PayrollSuccess"] = $"Pending payroll generated for {entries.Count} laborer(s). You can now mark each row as paid.";
+        return RedirectToAction(nameof(Index));
     }
 
     private async Task<PayrollGenerationResult> CreatePayrollRunForPeriodAsync(
@@ -409,6 +527,144 @@ public class PayrollController : Controller
             .ToList();
     }
 
+    private async Task<List<PendingPayrollRow>> BuildPendingPayrollRowsAsync(DateTime startDate, DateTime endDate)
+    {
+        startDate = startDate.Date;
+        endDate = endDate.Date;
+        if (startDate > endDate)
+        {
+            return new List<PendingPayrollRow>();
+        }
+
+        var laborers = await _context.Laborers
+            .AsNoTracking()
+            .Where(l => l.HiredDate <= endDate && (l.ArchivedAt == null || l.ArchivedAt >= startDate))
+            .OrderBy(l => l.FullName)
+            .ToListAsync();
+
+        if (laborers.Count == 0)
+        {
+            return new List<PendingPayrollRow>();
+        }
+
+        var laborerIds = laborers.Select(l => l.Id).ToList();
+        var latestPayrollEnd = await _context.PayrollEntries
+            .AsNoTracking()
+            .Where(e => laborerIds.Contains(e.LaborerId) && e.PeriodEnd >= startDate)
+            .GroupBy(e => e.LaborerId)
+            .Select(g => new { LaborerId = g.Key, LastEnd = g.Max(e => e.PeriodEnd) })
+            .ToDictionaryAsync(x => x.LaborerId, x => x.LastEnd.Date);
+
+        var attendance = await _context.AttendanceRecords
+            .AsNoTracking()
+            .Where(a => laborerIds.Contains(a.LaborerId) && a.WorkDate >= startDate && a.WorkDate <= endDate)
+            .ToListAsync();
+
+        var attendanceByLaborer = attendance
+            .Where(a => !IsRegularDayOff(a.WorkDate))
+            .GroupBy(a => a.LaborerId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var advanceBalanceMap = await _context.CashAdvances
+            .AsNoTracking()
+            .Where(c => laborerIds.Contains(c.LaborerId) && c.RemainingBalance > 0)
+            .GroupBy(c => c.LaborerId)
+            .Select(g => new { LaborerId = g.Key, Balance = g.Sum(c => c.RemainingBalance) })
+            .ToDictionaryAsync(x => x.LaborerId, x => x.Balance);
+
+        var rows = new List<PendingPayrollRow>();
+        foreach (var laborer in laborers)
+        {
+            var periodStart = MaxDate(startDate, laborer.HiredDate.Date);
+            if (latestPayrollEnd.TryGetValue(laborer.Id, out var lastEnd))
+            {
+                periodStart = MaxDate(periodStart, lastEnd.AddDays(1));
+            }
+
+            if (periodStart > endDate)
+            {
+                continue;
+            }
+
+            attendanceByLaborer.TryGetValue(laborer.Id, out var laborerAttendance);
+            laborerAttendance ??= new List<AttendanceRecord>();
+
+            var absenceDays = laborerAttendance
+                .Count(a => a.WorkDate >= periodStart && a.WorkDate <= endDate && a.Status == AttendanceStatus.Absent);
+            var totalDutyDays = CountWorkingDays(periodStart, endDate) - absenceDays;
+            if (totalDutyDays <= 0)
+            {
+                continue;
+            }
+
+            var grossWage = totalDutyDays * laborer.DailyRate;
+            var pendingDeductions = Math.Min(grossWage, advanceBalanceMap.GetValueOrDefault(laborer.Id));
+
+            rows.Add(new PendingPayrollRow
+            {
+                LaborerId = laborer.Id,
+                LaborerName = laborer.FullName,
+                PeriodStart = periodStart,
+                PeriodEnd = endDate,
+                DailyRate = laborer.DailyRate,
+                TotalDays = totalDutyDays,
+                AbsenceDays = absenceDays,
+                GrossWage = grossWage,
+                PendingAdvanceDeductions = pendingDeductions,
+                NetPay = grossWage - pendingDeductions
+            });
+        }
+
+        return rows;
+    }
+
+    private async Task<List<AttendanceRecord>> EnsureAttendanceRecordsForPendingPayrollAsync(
+        Laborer laborer,
+        DateTime periodStart,
+        DateTime periodEnd)
+    {
+        var existingRecords = await _context.AttendanceRecords
+            .Where(a => a.LaborerId == laborer.Id && a.WorkDate >= periodStart && a.WorkDate <= periodEnd)
+            .ToListAsync();
+
+        var existingMap = existingRecords.ToDictionary(a => a.WorkDate.Date, a => a);
+        var payrollRecords = new List<AttendanceRecord>();
+
+        for (var date = periodStart.Date; date <= periodEnd.Date; date = date.AddDays(1))
+        {
+            if (IsRegularDayOff(date))
+            {
+                continue;
+            }
+
+            if (existingMap.TryGetValue(date, out var existing))
+            {
+                if (existing.PayrollEntryId == null)
+                {
+                    payrollRecords.Add(existing);
+                }
+                continue;
+            }
+
+            var record = new AttendanceRecord
+            {
+                LaborerId = laborer.Id,
+                WorkDate = date,
+                Status = AttendanceStatus.Present,
+                Source = AttendanceSource.Auto,
+                RateSnapshot = laborer.DailyRate,
+                WageAmount = laborer.DailyRate,
+                Notes = "Auto-created from pending payroll generation.",
+                RecordedById = User.Identity?.Name
+            };
+
+            _context.AttendanceRecords.Add(record);
+            payrollRecords.Add(record);
+        }
+
+        return payrollRecords;
+    }
+
     private async Task ApplyAutomaticAdvanceDeductionsAsync(List<PayrollEntry> entries)
     {
         var advanceDeductions = new List<AdvanceDeduction>();
@@ -453,7 +709,7 @@ public class PayrollController : Controller
         foreach (var entry in entries)
         {
             entry.PaidAmount = Math.Max(0m, entry.NetPay);
-            ApplyEntryStatus(entry);
+            entry.Status = PaymentStatus.Paid;
 
             if (entry.PaidAmount <= 0m)
             {
@@ -1101,6 +1357,35 @@ public class PayrollController : Controller
     {
         var delta = date.DayOfWeek == DayOfWeek.Sunday ? -6 : DayOfWeek.Monday - date.DayOfWeek;
         return date.AddDays(delta).Date;
+    }
+
+    private static DateTime GetDefaultUnpaidPayrollStart()
+    {
+        return new DateTime(BusinessDate.Today().Year, 5, 18);
+    }
+
+    private static bool IsRegularDayOff(DateTime date)
+    {
+        return date.DayOfWeek == DayOfWeek.Sunday;
+    }
+
+    private static int CountWorkingDays(DateTime startDate, DateTime endDate)
+    {
+        var count = 0;
+        for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
+        {
+            if (!IsRegularDayOff(date))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static DateTime MaxDate(params DateTime[] dates)
+    {
+        return dates.Max();
     }
 
     private enum PayrollGenerationPolicy

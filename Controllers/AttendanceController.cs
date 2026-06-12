@@ -25,6 +25,7 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Daily(DateTime? date)
     {
         var workDate = (date ?? BusinessDate.Today()).Date;
+        var isRegularDayOff = IsRegularDayOff(workDate);
         var laborers = await _lookupCache.GetActiveLaborersAsync(HttpContext.RequestAborted);
 
         var laborerIds = laborers.Select(l => l.Id).ToList();
@@ -50,7 +51,8 @@ public class AttendanceController : Controller
         var existingMap = existing.ToDictionary(a => a.LaborerId, a => a);
         var model = new AttendanceDailyViewModel
         {
-            WorkDate = workDate
+            WorkDate = workDate,
+            IsRegularDayOff = isRegularDayOff
         };
 
         foreach (var laborer in laborers)
@@ -76,6 +78,11 @@ public class AttendanceController : Controller
             }
             else
             {
+                if (isRegularDayOff)
+                {
+                    continue;
+                }
+
                 historyMap.TryGetValue(laborer.Id, out var summary);
                 var multiplier = GetMultiplier(AttendanceStatus.Present);
                 var wage = laborer.DailyRate * multiplier;
@@ -103,6 +110,12 @@ public class AttendanceController : Controller
     public async Task<IActionResult> Daily(AttendanceDailyViewModel model)
     {
         var workDate = model.WorkDate.Date;
+        if (IsRegularDayOff(workDate))
+        {
+            TempData["AttendanceError"] = "Sunday is the regular day off. Attendance is not created for Sunday.";
+            return RedirectToAction(nameof(Daily), new { date = workDate.ToString("yyyy-MM-dd") });
+        }
+
         var laborerIds = model.Entries.Select(e => e.LaborerId).ToList();
         var laborers = await _context.Laborers
             .Where(l => laborerIds.Contains(l.Id))
@@ -219,6 +232,11 @@ public class AttendanceController : Controller
     private static decimal GetMultiplier(AttendanceStatus status)
     {
         return status == AttendanceStatus.Absent ? 0.0m : 1.0m;
+    }
+
+    private static bool IsRegularDayOff(DateTime workDate)
+    {
+        return workDate.DayOfWeek == DayOfWeek.Sunday;
     }
 
     private static void ApplyEntryStatus(PayrollEntry entry)

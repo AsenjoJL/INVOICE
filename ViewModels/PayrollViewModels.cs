@@ -29,6 +29,7 @@ public class AttendanceDailyViewModel
     public DateTime WorkDate { get; set; }
     public List<AttendanceEntryViewModel> Entries { get; set; } = new();
     public decimal TotalWage { get; set; }
+    public bool IsRegularDayOff { get; set; }
 }
 
 public class AttendanceEntryViewModel
@@ -61,6 +62,26 @@ public class PayrollIndexViewModel
     public decimal TotalBalance { get; set; }
     public decimal PageTotalBalance { get; set; }
     public List<PayrollEntry> Entries { get; set; } = new();
+    public DateTime PendingStartDate { get; set; }
+    public DateTime PendingEndDate { get; set; }
+    public List<PendingPayrollRow> PendingRows { get; set; } = new();
+    public int PendingDutyDays => PendingRows.Sum(r => r.TotalDays);
+    public decimal PendingGrossWage => PendingRows.Sum(r => r.GrossWage);
+    public decimal PendingNetPay => PendingRows.Sum(r => r.NetPay);
+}
+
+public class PendingPayrollRow
+{
+    public int LaborerId { get; set; }
+    public string LaborerName { get; set; } = string.Empty;
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+    public decimal DailyRate { get; set; }
+    public int TotalDays { get; set; }
+    public int AbsenceDays { get; set; }
+    public decimal GrossWage { get; set; }
+    public decimal PendingAdvanceDeductions { get; set; }
+    public decimal NetPay { get; set; }
 }
 
 public class CreatePayrollRunViewModel

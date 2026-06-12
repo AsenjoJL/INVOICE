@@ -29,6 +29,12 @@
     {
         <div class="alert alert-success">@attendanceSuccess</div>
     }
+    @if (Model.IsRegularDayOff)
+    {
+        <div class="alert alert-info">
+            Sunday is the regular day off. Attendance is not created for this date.
+        </div>
+    }
 
     <form method="get" class="workforce-filter admin-filter-strip">
         <div class="col-md-3">
@@ -125,7 +131,9 @@
                             @if (!Model.Entries.Any())
                             {
                                 <tr>
-                                    <td colspan="10" class="text-center text-muted py-4">No active laborers found.</td>
+                                    <td colspan="10" class="text-center text-muted py-4">
+                                        @(Model.IsRegularDayOff ? "Sunday is the regular day off." : "No active laborers found.")
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -137,7 +145,7 @@
                     <div class="fw-bold">Total Salary: <span data-workforce-total>₱@Model.TotalWage.ToString("N2")</span></div>
                     <div class="small text-muted">Duty days are counted from the first recorded work date per laborer.</div>
                 </div>
-                <button type="submit" class="btn workforce-btn workforce-btn-primary">Save Attendance</button>
+                <button type="submit" class="btn workforce-btn workforce-btn-primary" @(Model.IsRegularDayOff ? "disabled" : null)>Save Attendance</button>
             </div>
         </div>
     </form>

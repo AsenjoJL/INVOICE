@@ -61,6 +61,73 @@
         </div>
     </div>
 
+    <div class="payroll-table-card admin-surface-card mb-3">
+        <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div class="admin-section-kicker">Pending Payroll</div>
+                <div class="payroll-inline-note">
+                    May 18 onward duty days continue counting until payroll is generated. Sundays are excluded.
+                </div>
+                <div class="small text-muted">
+                    @Model.PendingStartDate.ToString("MMM dd, yyyy") - @Model.PendingEndDate.ToString("MMM dd, yyyy")
+                    · @Model.PendingDutyDays duty day(s)
+                    · ₱@Model.PendingNetPay.ToString("N2") estimated net
+                </div>
+            </div>
+            <form asp-action="GeneratePendingPayroll" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="startDate" value="@Model.PendingStartDate.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="endDate" value="@Model.PendingEndDate.ToString("yyyy-MM-dd")" />
+                <button type="submit" class="btn btn-dark" @(Model.PendingRows.Any() ? null : "disabled")>
+                    Generate Payroll
+                </button>
+            </form>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 payroll-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Laborer</th>
+                            <th>Pending Period</th>
+                            <th>Daily Rate</th>
+                            <th>Duty Days</th>
+                            <th>Absences</th>
+                            <th>Gross Salary</th>
+                            <th>Advance Deduction</th>
+                            <th>Estimated Net</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pending in Model.PendingRows)
+                        {
+                            <tr>
+                                <td class="fw-bold">@pending.LaborerName</td>
+                                <td>@pending.PeriodStart.ToString("MMM dd, yyyy") - @pending.PeriodEnd.ToString("MMM dd, yyyy")</td>
+                                <td class="payroll-money">₱@pending.DailyRate.ToString("N2")</td>
+                                <td>@pending.TotalDays</td>
+                                <td>@pending.AbsenceDays</td>
+                                <td class="payroll-money">₱@pending.GrossWage.ToString("N2")</td>
+                                <td class="payroll-money">₱@pending.PendingAdvanceDeductions.ToString("N2")</td>
+                                <td class="payroll-money">₱@pending.NetPay.ToString("N2")</td>
+                                <td><span class="payroll-status unpaid">Not Generated</span></td>
+                            </tr>
+                        }
+                        @if (!Model.PendingRows.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    No pending duty days found from May 18 onward.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div class="payroll-filter admin-filter-strip">
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
             <div>
