@@ -5,6 +5,7 @@ using HazelInvoice.Services.Printing;
 using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using HazelInvoice.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,7 @@ public class ReceiptsController : Controller
     private readonly IAppSettingStore _appSettings;
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly IProductPricingService _productPricing;
 
     public ReceiptsController(
         ApplicationDbContext context,
@@ -31,7 +33,8 @@ public class ReceiptsController : Controller
         IReceiptQueryService receiptQuery,
         IAppSettingStore appSettings,
         ILookupCacheService lookupCache,
-        IAppCacheInvalidator cacheInvalidator)
+        IAppCacheInvalidator cacheInvalidator,
+        IProductPricingService productPricing)
     {
         _context = context;
         _receiptService = receiptService;
@@ -40,6 +43,7 @@ public class ReceiptsController : Controller
         _appSettings = appSettings;
         _lookupCache = lookupCache;
         _cacheInvalidator = cacheInvalidator;
+        _productPricing = productPricing;
     }
 
     // GET: Receipts
@@ -188,25 +192,14 @@ public class ReceiptsController : Controller
                 .ToDictionaryAsync(x => x.Id, x => x);
 
             var day = receipt.Date.Date;
-            var endExclusive = day.AddDays(1);
-            var weeklyCostOverrides = (await _context.WeeklyPrices
-                    .AsNoTracking()
-                    .Where(w => productIds.Contains(w.ProductId) &&
-                                w.EffectiveFrom <= day && w.EffectiveTo >= day &&
-                                w.CostOverride != null)
-                    .Select(w => new { w.ProductId, w.CostOverride, w.EffectiveFrom, w.Id })
-                    .ToListAsync())
-                .GroupBy(w => w.ProductId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.OrderByDescending(x => x.EffectiveFrom)
-                          .ThenByDescending(x => x.Id)
-                          .First()
-                          .CostOverride!.Value);
+            var priceMap = await _productPricing.GetEffectivePricesAsync(
+                productIds,
+                day,
+                HttpContext.RequestAborted);
 
             decimal GetEffectiveCost(int pid)
             {
-                if (weeklyCostOverrides.TryGetValue(pid, out var c)) return c;
+                if (priceMap.TryGetValue(pid, out var price)) return price.Cost;
                 return products.TryGetValue(pid, out var p) ? p.UnitCost : 0m;
             }
 

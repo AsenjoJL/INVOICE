@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using HazelInvoice.Configuration;
@@ -25,13 +26,16 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
     private readonly int _targetPrintSheets;
     private readonly int _minPrintRowsPerSheet;
     private readonly decimal _detailPercentFeeDefault;
+    private readonly IProductPricingService _productPricing;
 
     public VegetableMatrixService(
         ApplicationDbContext context,
+        IProductPricingService productPricing,
         IOptions<FeaturesOptions> features,
         IOptions<OperationsOptions> operations)
     {
         _context = context;
+        _productPricing = productPricing;
         _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
         _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -47,8 +51,6 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         var targetDate = options.Date.Date;
         var dayStart = targetDate;
         var dayEnd = targetDate.AddDays(1);
-        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate);
-        var isResetDay = WeeklyPriceCalendar.IsResetDay(targetDate);
 
         var print = options.Print;
         var showDetails = options.Details && !print;
@@ -259,27 +261,10 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             .Distinct()
             .ToList();
 
-        var productsData = await _context.Products
-            .AsNoTracking()
-            .Where(p => priceProductIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.UnitCost, p.Markup, p.DeliveryFee })
-            .ToDictionaryAsync(x => x.Id, x => x, cancellationToken);
-
-        var weeklyPrices = applicableDay.HasValue
-            ? await _context.WeeklyPrices
-                .AsNoTracking()
-                .Where(w => w.EffectiveFrom <= applicableDay.Value && w.EffectiveTo >= applicableDay.Value)
-                .Where(w => priceProductIds.Contains(w.ProductId))
-                .ToListAsync(cancellationToken)
-            : new List<WeeklyPrice>();
-
-        var weeklyPriceMap = weeklyPrices
-            .GroupBy(x => x.ProductId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(x => x.EffectiveFrom)
-                      .ThenByDescending(x => x.Id)
-                      .First());
+        var priceMap = await _productPricing.GetEffectivePricesAsync(
+            priceProductIds,
+            targetDate,
+            cancellationToken);
 
         var productPrices = new Dictionary<int, decimal>(priceProductIds.Count);
         var productCosts = new Dictionary<int, decimal>(priceProductIds.Count);
@@ -287,49 +272,10 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
 
         foreach (var pid in priceProductIds)
         {
-            decimal cost = 0m;
-            decimal markup = 0m;
-            decimal deliveryFee = 0m;
-
-            if (!isResetDay && productsData.TryGetValue(pid, out var pData))
-            {
-                cost = pData.UnitCost;
-                markup = pData.Markup;
-                deliveryFee = pData.DeliveryFee;
-            }
-
-            if (!isResetDay && weeklyPriceMap.TryGetValue(pid, out var wp))
-            {
-                if (wp.CostOverride.HasValue)
-                    cost = wp.CostOverride.Value;
-
-                // Override with WeeklyPrice logic if present
-                if (wp.Markup != 0)
-                {
-                    markup = wp.Markup;
-                }
-                else if (wp.BasePrice > 0 && cost > 0)
-                {
-                    // Fallback for legacy records without stored Markup
-                    markup = wp.BasePrice - cost;
-                }
-
-                if (wp.DeliveryFee.HasValue)
-                    deliveryFee = wp.DeliveryFee.Value;
-
-                // Prefer stored delivery price when available
-                if (wp.DeliveryPrice > 0)
-                    productPrices[pid] = wp.DeliveryPrice;
-                else
-                    productPrices[pid] = cost + markup + deliveryFee;
-            }
-            else
-            {
-                productPrices[pid] = isResetDay ? 0m : cost + markup + deliveryFee;
-            }
-
-            productCosts[pid] = cost;
-            productMarkups[pid] = markup;
+            var price = priceMap.GetValueOrDefault(pid);
+            productPrices[pid] = price?.DeliveryPrice ?? 0m;
+            productCosts[pid] = price?.Cost ?? 0m;
+            productMarkups[pid] = price?.Markup ?? 0m;
         }
 
         var visibleNameToId = visibleOutlets

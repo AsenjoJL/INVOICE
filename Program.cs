@@ -3,6 +3,7 @@ using HazelInvoice.Services;
 using HazelInvoice.Services.Dashboard;
 using HazelInvoice.Services.Orders;
 using HazelInvoice.Services.Printing;
+using HazelInvoice.Services.Pricing;
 using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Reports;
 using HazelInvoice.Services.Settings;
@@ -122,6 +123,7 @@ builder.Services.AddScoped<IReceiptQueryService, ReceiptQueryService>();
 builder.Services.AddSingleton<IAppCacheInvalidator, AppCacheInvalidator>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
 builder.Services.AddScoped<IExpenseCategoryCatalogService, ExpenseCategoryCatalogService>();
+builder.Services.AddScoped<IProductPricingService, ProductPricingService>();
 
 // Dashboard metrics (keep controllers thin / scalable)
 builder.Services.AddScoped<IDashboardMetricsService, DashboardMetricsService>();

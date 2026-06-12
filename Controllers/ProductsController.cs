@@ -2,6 +2,7 @@ using HazelInvoice.Data;
 using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,12 +22,18 @@ public class ProductsController : Controller
     private readonly ApplicationDbContext _context;
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly IProductPricingService _productPricing;
 
-    public ProductsController(ApplicationDbContext context, ILookupCacheService lookupCache, IAppCacheInvalidator cacheInvalidator)
+    public ProductsController(
+        ApplicationDbContext context,
+        ILookupCacheService lookupCache,
+        IAppCacheInvalidator cacheInvalidator,
+        IProductPricingService productPricing)
     {
         _context = context;
         _lookupCache = lookupCache;
         _cacheInvalidator = cacheInvalidator;
+        _productPricing = productPricing;
     }
 
     // GET: Products
@@ -34,8 +41,6 @@ public class ProductsController : Controller
     {
         var businessMoment = date ?? BusinessDate.Now();
         var businessDate = businessMoment.Date;
-        var applicableBusinessDate = WeeklyPriceCalendar.GetApplicablePriceDate(businessMoment);
-        var isResetDay = WeeklyPriceCalendar.IsResetDay(businessMoment);
         var normalizedScope = NormalizeScope(scope);
         var summary = await _context.Products
             .AsNoTracking()
@@ -74,42 +79,14 @@ public class ProductsController : Controller
             .ToListAsync();
 
         var productIds = products.Select(p => p.Id).ToList();
-        var weeklyPrices = applicableBusinessDate.HasValue
-            ? await _context.WeeklyPrices
-                .AsNoTracking()
-                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableBusinessDate.Value && w.EffectiveTo >= applicableBusinessDate.Value)
-                .ToListAsync()
-            : new List<WeeklyPrice>();
-
-        var weeklyMap = weeklyPrices
-            .GroupBy(w => w.ProductId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(w => w.EffectiveFrom)
-                      .ThenByDescending(w => w.Id)
-                      .First());
+        var priceMap = await _productPricing.GetEffectivePricesAsync(
+            productIds,
+            businessMoment,
+            HttpContext.RequestAborted);
 
         var viewModel = products.Select(product =>
         {
-            var weeklyPrice = !isResetDay && weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
-            var effectiveCost = isResetDay ? 0m : weeklyPrice?.CostOverride ?? product.UnitCost;
-            var effectiveDeliveryFee = isResetDay ? 0m : weeklyPrice?.DeliveryFee ?? product.DeliveryFee;
-
-            decimal effectiveMarkup = isResetDay ? 0m : product.Markup;
-            if (!isResetDay && weeklyPrice != null)
-            {
-                if (weeklyPrice.Markup != 0)
-                {
-                    effectiveMarkup = weeklyPrice.Markup;
-                }
-                else if (weeklyPrice.BasePrice > 0)
-                {
-                    effectiveMarkup = weeklyPrice.BasePrice - effectiveCost;
-                }
-            }
-
-            var effectiveBasePrice = effectiveCost + effectiveMarkup;
-            var effectiveDeliveryPrice = isResetDay ? 0m : weeklyPrice?.DeliveryPrice ?? (effectiveBasePrice + effectiveDeliveryFee);
+            var price = priceMap.GetValueOrDefault(product.Id);
 
             return new ProductListItemViewModel
             {
@@ -119,11 +96,11 @@ public class ProductsController : Controller
                 Category = product.Category,
                 Unit = product.Unit,
                 UnitCost = product.UnitCost,
-                EffectiveCost = effectiveCost,
-                EffectiveBasePrice = effectiveBasePrice,
-                EffectiveDeliveryFee = effectiveDeliveryFee,
-                EffectiveDeliveryPrice = effectiveDeliveryPrice,
-                HasWeeklyPrice = weeklyPrice != null,
+                EffectiveCost = price?.Cost ?? product.UnitCost,
+                EffectiveBasePrice = price?.BasePrice ?? product.UnitCost + product.Markup,
+                EffectiveDeliveryFee = price?.DeliveryFee ?? product.DeliveryFee,
+                EffectiveDeliveryPrice = price?.DeliveryPrice ?? product.UnitCost + product.Markup + product.DeliveryFee,
+                HasWeeklyPrice = price?.HasWeeklyPrice == true,
                 IsActive = product.IsActive
             };
         }).ToList();

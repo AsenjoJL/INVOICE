@@ -1,8 +1,7 @@
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
-using HazelInvoice.Helpers;
-using HazelInvoice.Models;
 using HazelInvoice.Services;
+using HazelInvoice.Services.Pricing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -11,13 +10,18 @@ namespace HazelInvoice.Services.Orders;
 public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IProductPricingService _productPricing;
     private readonly HashSet<string> _outletGroups;
     private readonly string _productHeader;
     private readonly string _priceHeader;
 
-    public VegetableMatrixTemplateService(ApplicationDbContext context, IOptions<OperationsOptions> operations)
+    public VegetableMatrixTemplateService(
+        ApplicationDbContext context,
+        IProductPricingService productPricing,
+        IOptions<OperationsOptions> operations)
     {
         _context = context;
+        _productPricing = productPricing;
         _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         _productHeader = string.IsNullOrWhiteSpace(operations.Value.VegetableTemplateProductHeader)
@@ -41,9 +45,6 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
             .Select(c => c.Name)
             .ToListAsync(cancellationToken);
 
-        var day = date.Date;
-        var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(day);
-
         var products = await _context.Products
             .AsNoTracking()
             .Where(p => p.IsActive)
@@ -51,28 +52,15 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
             .Select(p => new
             {
                 p.Id,
-                p.Name,
-                p.UnitCost,
-                p.Markup,
-                p.DeliveryFee
+                p.Name
             })
             .ToListAsync(cancellationToken);
 
         var productIds = products.Select(p => p.Id).ToList();
-        var weeklyPrices = applicableDay.HasValue
-            ? await _context.WeeklyPrices
-                .AsNoTracking()
-                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableDay.Value && w.EffectiveTo >= applicableDay.Value)
-                .ToListAsync(cancellationToken)
-            : new List<WeeklyPrice>();
-
-        var weeklyPriceMap = weeklyPrices
-            .GroupBy(w => w.ProductId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(w => w.EffectiveFrom)
-                      .ThenByDescending(w => w.Id)
-                      .First());
+        var priceMap = await _productPricing.GetEffectivePricesAsync(
+            productIds,
+            date,
+            cancellationToken);
 
         // Rows: title row, header row, product rows.
         var rows = new List<IReadOnlyList<string>>(capacity: 2 + products.Count);
@@ -93,11 +81,9 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
 
         foreach (var product in products)
         {
-            var effectivePrice = WeeklyPriceCalendar.IsResetDay(day)
-                ? 0m
-                : weeklyPriceMap.TryGetValue(product.Id, out var weeklyPrice) && weeklyPrice.DeliveryPrice > 0
-                    ? weeklyPrice.DeliveryPrice
-                    : product.UnitCost + product.Markup + product.DeliveryFee;
+            var effectivePrice = priceMap.TryGetValue(product.Id, out var price)
+                ? price.DeliveryPrice
+                : 0m;
 
             // Keep columns A/B only; outlet qty cells intentionally blank.
             rows.Add(new[]

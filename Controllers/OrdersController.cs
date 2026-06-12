@@ -5,6 +5,7 @@ using HazelInvoice.Services.Orders;
 using HazelInvoice.Services.Printing;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using HazelInvoice.Helpers;
 using HazelInvoice.Configuration;
@@ -28,6 +29,7 @@ public class OrdersController : Controller
     private readonly IAppSettingStore _appSettings;
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly IProductPricingService _productPricing;
     private readonly HashSet<string> _outletGroups;
     private readonly string[] _outletOrderTokens;
     private readonly Dictionary<string, string> _outletImportAliasMap;
@@ -44,6 +46,7 @@ public class OrdersController : Controller
         IAppSettingStore appSettings,
         ILookupCacheService lookupCache,
         IAppCacheInvalidator cacheInvalidator,
+        IProductPricingService productPricing,
         IOptions<OperationsOptions> operations)
     {
         _context = context;
@@ -54,6 +57,7 @@ public class OrdersController : Controller
         _appSettings = appSettings;
         _lookupCache = lookupCache;
         _cacheInvalidator = cacheInvalidator;
+        _productPricing = productPricing;
         _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
@@ -162,20 +166,24 @@ public class OrdersController : Controller
             .ToDictionaryAsync(x => x.Id, x => x);
         var activeProductIds = productMap.Keys.ToHashSet();
 
-        var weeklyCostOverrides = (await _context.WeeklyPrices
-                .AsNoTracking()
-                .Where(w => affectedProductIds.Contains(w.ProductId) &&
-                            w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart &&
-                            w.CostOverride != null)
-                .Select(w => new { w.ProductId, w.CostOverride, w.EffectiveFrom, w.Id })
-                .ToListAsync())
-            .GroupBy(w => w.ProductId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(x => x.EffectiveFrom)
-                      .ThenByDescending(x => x.Id)
-                      .First()
-                      .CostOverride!.Value);
+        var applicableCostDate = WeeklyPriceCalendar.GetApplicablePriceDate(dayStart);
+        var weeklyCostOverrides = applicableCostDate.HasValue
+            ? (await _context.WeeklyPrices
+                    .AsNoTracking()
+                    .Where(w => affectedProductIds.Contains(w.ProductId) &&
+                                w.EffectiveFrom <= applicableCostDate.Value &&
+                                w.EffectiveTo >= applicableCostDate.Value &&
+                                w.CostOverride != null)
+                    .Select(w => new { w.ProductId, w.CostOverride, w.EffectiveFrom, w.Id })
+                    .ToListAsync())
+                .GroupBy(w => w.ProductId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.EffectiveFrom)
+                          .ThenByDescending(x => x.Id)
+                          .First()
+                          .CostOverride!.Value)
+            : new Dictionary<int, decimal>();
 
         decimal GetEffectiveCost(int pid)
         {
@@ -308,6 +316,10 @@ public class OrdersController : Controller
                             if (wpSnap != null && wpSnap.DeliveryPrice > 0)
                             {
                                 price = wpSnap.DeliveryPrice;
+                            }
+                            else if (wpSnap != null && wpSnap.DeliveryPrice == 0m && wpSnap.BasePrice == 0m)
+                            {
+                                price = 0m;
                             }
                             else
                             {
@@ -643,26 +655,18 @@ public class OrdersController : Controller
         var products = (await _lookupCache.GetActiveProductsAsync(HttpContext.RequestAborted)).ToList();
 
         var productIds = products.Select(p => p.Id).ToList();
-
-        var weeklyPrices = await _context.WeeklyPrices
-            .AsNoTracking()
-            .Where(w => w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart)
-            .Where(w => productIds.Contains(w.ProductId))
-            .Select(w => new { w.ProductId, w.DeliveryPrice, w.EffectiveFrom, w.Id })
-            .ToListAsync();
-
-        var weeklyPriceMap = weeklyPrices
-            .GroupBy(x => x.ProductId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(x => x.EffectiveFrom)
-                      .ThenByDescending(x => x.Id)
-                      .First()
-                      .DeliveryPrice);
+        var priceMap = await _productPricing.GetEffectivePricesAsync(
+            productIds,
+            targetDate,
+            HttpContext.RequestAborted);
 
         var productPrices = new Dictionary<int, decimal>(products.Count);
         foreach (var p in products)
-            productPrices[p.Id] = weeklyPriceMap.TryGetValue(p.Id, out var dp) ? dp : (p.UnitCost + p.Markup + p.DeliveryFee);
+        {
+            productPrices[p.Id] = priceMap.TryGetValue(p.Id, out var price)
+                ? price.DeliveryPrice
+                : p.UnitCost + p.Markup + p.DeliveryFee;
+        }
 
         var quantities = new Dictionary<int, decimal>();
 
@@ -691,8 +695,13 @@ public class OrdersController : Controller
 
                         quantities[line.ProductId.Value] += line.Quantity;
 
-                        if (line.Price > 0 && !weeklyPriceMap.ContainsKey(line.ProductId.Value))
+                        if (line.Price > 0 &&
+                            priceMap.TryGetValue(line.ProductId.Value, out var linePrice) &&
+                            !linePrice.HasWeeklyPrice &&
+                            !linePrice.IsResetDay)
+                        {
                             productPrices[line.ProductId.Value] = line.Price;
+                        }
                     }
                 }
             }
@@ -722,8 +731,13 @@ public class OrdersController : Controller
                             
                             quantities[line.ProductId.Value] += line.Quantity;
 
-                            if (line.Price > 0 && !weeklyPriceMap.ContainsKey(line.ProductId.Value))
+                            if (line.Price > 0 &&
+                                priceMap.TryGetValue(line.ProductId.Value, out var linePrice) &&
+                                !linePrice.HasWeeklyPrice &&
+                                !linePrice.IsResetDay)
+                            {
                                 productPrices[line.ProductId.Value] = line.Price;
+                            }
                         }
                     }
                 }
@@ -871,26 +885,10 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                             .Select(p => new { p.Id, p.Name, p.Unit, p.UnitCost, p.Markup, p.DeliveryFee })
                             .ToDictionaryAsync(x => x.Id, x => x);
 
-                    var weeklyCostOverrides = (await _context.WeeklyPrices
-                            .AsNoTracking()
-                            .Where(w => usedProductIds.Contains(w.ProductId) &&
-                                        w.EffectiveFrom <= dayStart && w.EffectiveTo >= dayStart &&
-                                        w.CostOverride != null)
-                            .Select(w => new { w.ProductId, w.CostOverride, w.EffectiveFrom, w.Id })
-                            .ToListAsync())
-                        .GroupBy(w => w.ProductId)
-                        .ToDictionary(
-                            g => g.Key,
-                            g => g.OrderByDescending(x => x.EffectiveFrom)
-                                  .ThenByDescending(x => x.Id)
-                                  .First()
-                                  .CostOverride!.Value);
-
-                        decimal GetEffectiveCost(int pid)
-                        {
-                            if (weeklyCostOverrides.TryGetValue(pid, out var c)) return c;
-                            return prodMap.TryGetValue(pid, out var prod) ? prod.UnitCost : 0m;
-                        }
+                        var priceMap = await _productPricing.GetEffectivePricesAsync(
+                            usedProductIds,
+                            model.Date,
+                            HttpContext.RequestAborted);
 
                         foreach (var kvp in quantities)
                         {
@@ -906,10 +904,18 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                             decimal price = model.ProductPrices.TryGetValue(productId, out var pr) ? pr : 0m;
                             if (price <= 0)
                             {
-                                var markup = prodMap.TryGetValue(productId, out var prodFromMap) ? prodFromMap.Markup : 0m;
-                                var deliveryFee = prodMap.TryGetValue(productId, out var prodFromMap2) ? prodFromMap2.DeliveryFee : 0m;
-                                price = GetEffectiveCost(productId) + markup + deliveryFee;
+                                price = priceMap.TryGetValue(productId, out var effectivePrice)
+                                    ? effectivePrice.DeliveryPrice
+                                    : prodMap.TryGetValue(productId, out var prodFromMap)
+                                        ? prodFromMap.UnitCost + prodFromMap.Markup + prodFromMap.DeliveryFee
+                                        : 0m;
                             }
+
+                            var costSnapshot = priceMap.TryGetValue(productId, out var effectiveCost)
+                                ? effectiveCost.Cost
+                                : prodMap.TryGetValue(productId, out var fallbackProduct)
+                                    ? fallbackProduct.UnitCost
+                                    : 0m;
 
                             var existingLine = currentLines.FirstOrDefault(l => l.ProductId == productId);
                             if (existingLine != null)
@@ -926,7 +932,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                                         existingLine.Unit = existingProduct.Unit;
                                     }
                                     // Update snapshot
-                                    existingLine.CostPriceSnapshot = GetEffectiveCost(productId);
+                                    existingLine.CostPriceSnapshot = costSnapshot;
                                 }
                                 else
                                 {
@@ -952,7 +958,7 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
                                     Quantity = unpaidQty,
                                     Price = price,
                                     Amount = unpaidQty * price,
-                                    CostPriceSnapshot = GetEffectiveCost(productId)
+                                    CostPriceSnapshot = costSnapshot
                                 });
                             }
                         }
@@ -1407,6 +1413,8 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         }
 
         await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateWeeklyPrices();
+        _cacheInvalidator.InvalidateProducts();
     }
 
     private static Dictionary<int, Dictionary<int, decimal>> BuildMatrixInputsByCustomer(

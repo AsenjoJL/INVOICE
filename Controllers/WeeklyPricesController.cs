@@ -233,15 +233,31 @@ public class WeeklyPricesController : Controller
             return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
-        var saveResult = await SavePriceItemsAsync(targetDate, applyToMasterCost: false, importedItems);
+        var completeDeliveryPriceRefresh = requiresDeliveryPrice;
+        var saveResult = await SavePriceItemsAsync(
+            targetDate,
+            applyToMasterCost: false,
+            importedItems,
+            forceCreateWeeklyRecords: completeDeliveryPriceRefresh,
+            completeWeeklyRefresh: completeDeliveryPriceRefresh);
 
         var unmatchedNote = unmatchedProducts.Count > 0
             ? $" Unmatched products: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
             : string.Empty;
 
-        var successMessage = $"Imported {GetImportModeLabel(normalizedImportMode)} for {saveResult.Items.Count} product(s); updated {updatedUnits} unit value(s).{unmatchedNote}";
+        var zeroedNote = completeDeliveryPriceRefresh
+            ? $" Products without a new delivery price were set to zero for {targetDate:MMM dd, yyyy}."
+            : string.Empty;
+
+        var successMessage = $"Imported {GetImportModeLabel(normalizedImportMode)} for {matchedProducts} product(s); updated {updatedUnits} unit value(s).{zeroedNote}{unmatchedNote}";
         TempData["SuccessMessage"] = successMessage;
         TempData["Message"] = successMessage;
+
+        if (completeDeliveryPriceRefresh)
+        {
+            await UpdateUnpaidReceiptPricesForDateAsync(targetDate);
+        }
+
         return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
     }
 
@@ -554,7 +570,12 @@ public class WeeklyPricesController : Controller
                 if (wp.DeliveryFee.HasValue)
                     deliveryFee = wp.DeliveryFee.Value;
 
-                if (wp.Markup != 0)
+                if (wp.DeliveryPrice == 0m && wp.BasePrice == 0m)
+                {
+                    markup = -cost;
+                    deliveryFee = 0m;
+                }
+                else if (wp.Markup != 0)
                     markup = wp.Markup;
                 else if (wp.BasePrice > 0)
                     markup = wp.BasePrice - cost;
@@ -798,20 +819,119 @@ public class WeeklyPricesController : Controller
         return (cost, markup, basePrice, deliveryPrice, deliveryFee);
     }
 
+    private static PriceVersusItem BuildZeroPriceItem(Product product)
+        => new()
+        {
+            ProductId = product.Id,
+            ProductName = product.Name,
+            Unit = product.Unit,
+            Cost = product.UnitCost,
+            Markup = -product.UnitCost,
+            BasePrice = 0m,
+            DeliveryPrice = 0m,
+            DeliveryFee = 0m,
+            MasterCost = product.UnitCost,
+            MasterMarkup = product.Markup,
+            MasterDeliveryFee = product.DeliveryFee,
+            HasWeeklyRecord = true
+        };
+
+    private async Task UpdateUnpaidReceiptPricesForDateAsync(DateTime targetDate)
+    {
+        var day = targetDate.Date;
+        var dayEnd = day.AddDays(1);
+
+        var receipts = await _context.Receipts
+            .Include(r => r.Lines)
+            .Where(r => r.Date >= day &&
+                        r.Date < dayEnd &&
+                        r.Status == PaymentStatus.Unpaid)
+            .ToListAsync();
+
+        var productIds = receipts
+            .SelectMany(r => r.Lines)
+            .Where(l => l.ProductId.HasValue)
+            .Select(l => l.ProductId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (receipts.Count == 0 || productIds.Count == 0)
+            return;
+
+        var applicableDate = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate)
+            ?? WeeklyPriceCalendar.GetWeekRange(targetDate).WeekStart;
+
+        var products = await _context.Products
+            .AsNoTracking()
+            .Where(p => productIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.UnitCost })
+            .ToDictionaryAsync(p => p.Id, p => p.UnitCost);
+
+        var weeklyPrices = await _context.WeeklyPrices
+            .AsNoTracking()
+            .Where(w => productIds.Contains(w.ProductId) &&
+                        w.EffectiveFrom <= applicableDate &&
+                        w.EffectiveTo >= applicableDate)
+            .ToListAsync();
+
+        var weeklyPriceMap = weeklyPrices
+            .GroupBy(w => w.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
+
+        foreach (var receipt in receipts)
+        {
+            foreach (var line in receipt.Lines.Where(l => l.ProductId.HasValue))
+            {
+                var productId = line.ProductId!.Value;
+                var weeklyPrice = weeklyPriceMap.GetValueOrDefault(productId);
+                var price = weeklyPrice?.DeliveryPrice ?? 0m;
+                var cost = weeklyPrice?.CostOverride
+                    ?? (products.TryGetValue(productId, out var productCost) ? productCost : 0m);
+
+                line.Price = price;
+                line.Amount = Math.Round(line.Quantity * price, 2, MidpointRounding.AwayFromZero);
+                line.CostPriceSnapshot = cost;
+            }
+
+            receipt.TotalAmount = receipt.Lines.Sum(l => l.Amount);
+            receipt.PaidAmount = 0m;
+            receipt.Status = PaymentStatus.Unpaid;
+        }
+
+        await _context.SaveChangesAsync();
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
+    }
+
     private async Task<(int SavedChanges, List<PriceVersusItem> Items)> SavePriceItemsAsync(
         DateTime targetDate,
         bool applyToMasterCost,
-        List<PriceVersusItem> itemsToSave)
+        List<PriceVersusItem> itemsToSave,
+        bool forceCreateWeeklyRecords = false,
+        bool completeWeeklyRefresh = false)
     {
         var (weekStart, weekEnd) = WeeklyPriceCalendar.GetWeekRange(targetDate);
 
-        var pids = itemsToSave.Select(i => i.ProductId).Distinct().ToList();
+        var postedMap = itemsToSave
+            .Where(i => i.ProductId > 0)
+            .GroupBy(i => i.ProductId)
+            .ToDictionary(g => g.Key, g => g.Last());
+
+        var postedProductIds = postedMap.Keys.ToList();
 
         var applicableTargetDate = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate) ?? weekStart;
 
-        var productMap = await _context.Products
-            .Where(p => pids.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, p => p);
+        var productQuery = _context.Products.AsQueryable();
+        productQuery = completeWeeklyRefresh
+            ? productQuery.Where(p => p.IsActive || postedProductIds.Contains(p.Id))
+            : productQuery.Where(p => postedProductIds.Contains(p.Id));
+
+        var productMap = await productQuery.ToDictionaryAsync(p => p.Id, p => p);
+        var pids = productMap.Keys.ToList();
 
         var existing = await _context.WeeklyPrices
             .Where(w => pids.Contains(w.ProductId) &&
@@ -838,22 +958,24 @@ public class WeeklyPricesController : Controller
         }
 
         var savedChanges = 0;
-        var savedItems = new List<PriceVersusItem>(itemsToSave.Count);
+        var savedItems = new List<PriceVersusItem>(productMap.Count);
 
-        foreach (var item in itemsToSave)
+        foreach (var prod in productMap.Values.OrderBy(p => p.Name).ThenBy(p => p.Id))
         {
-            if (!productMap.TryGetValue(item.ProductId, out var prod))
-            {
-                continue;
-            }
+            var hasPostedPrice = postedMap.TryGetValue(prod.Id, out var postedItem);
+            var item = hasPostedPrice
+                ? postedItem!
+                : BuildZeroPriceItem(prod);
+
+            var forceZeroPrice = completeWeeklyRefresh && (!hasPostedPrice || item.DeliveryPrice <= 0m);
 
             var normalized = NormalizePostedPricing(item, prod);
             var masterCost = prod.UnitCost;
             var masterMarkup = prod.Markup;
             var masterDeliveryFee = prod.DeliveryFee;
-            var cost = normalized.Cost;
-            var markup = normalized.Markup;
-            var deliveryFee = normalized.DeliveryFee;
+            var cost = forceZeroPrice ? masterCost : normalized.Cost;
+            var markup = forceZeroPrice ? -cost : normalized.Markup;
+            var deliveryFee = forceZeroPrice ? 0m : normalized.DeliveryFee;
 
             if (applyToMasterCost && masterCost != cost)
             {
@@ -867,6 +989,12 @@ public class WeeklyPricesController : Controller
             {
                 costOverride = cost;
             }
+            else if (forceZeroPrice)
+            {
+                // Snapshot the current cost so an explicit zero price stays zero
+                // even if the master product cost changes before the week ends.
+                costOverride = cost;
+            }
 
             decimal? deliveryFeeOverride = null;
             if (deliveryFee != masterDeliveryFee)
@@ -878,7 +1006,16 @@ public class WeeklyPricesController : Controller
             var effectiveDeliveryFee = deliveryFeeOverride ?? masterDeliveryFee;
             var basePrice = effectiveCost + markup;
             var deliveryPrice = basePrice + effectiveDeliveryFee;
-            var shouldHaveWeekly = costOverride.HasValue || markup != masterMarkup || deliveryFeeOverride.HasValue;
+            if (forceZeroPrice)
+            {
+                basePrice = 0m;
+                deliveryPrice = 0m;
+            }
+
+            var shouldHaveWeekly = forceCreateWeeklyRecords ||
+                                   costOverride.HasValue ||
+                                   markup != masterMarkup ||
+                                   deliveryFeeOverride.HasValue;
 
             if (existingMap.TryGetValue(item.ProductId, out var wp))
             {
