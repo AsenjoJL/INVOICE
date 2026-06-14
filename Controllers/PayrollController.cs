@@ -362,8 +362,22 @@ public class PayrollController : Controller
         await _context.SaveChangesAsync();
         await tx.CommitAsync();
 
-        TempData["PayrollSuccess"] = $"Pending payroll generated for {entries.Count} laborer(s). You can now mark each row as paid.";
-        return RedirectToAction(nameof(Index));
+        var firstEntryId = entries
+            .OrderBy(e => e.Laborer?.FullName)
+            .Select(e => e.Id)
+            .First();
+
+        TempData["PayrollSuccess"] = $"Pending payroll generated for {entries.Count} laborer(s). Add deductions first, then mark each row as paid.";
+        return RedirectToAction(nameof(Index), new
+        {
+            startDate = run.WeekStart.ToString("yyyy-MM-dd"),
+            endDate = run.WeekEnd.ToString("yyyy-MM-dd"),
+            status = PaymentStatus.Unpaid,
+            recordType = PayrollEntryRecordType.Payable,
+            pageSize = 100,
+            openPayrollId = firstEntryId,
+            focus = "adjustments"
+        });
     }
 
     private async Task<PayrollGenerationResult> CreatePayrollRunForPeriodAsync(

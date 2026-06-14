@@ -160,9 +160,10 @@
             </div>
         </div>
 
-        <div class="payroll-panel mb-3">
+        <div class="payroll-panel mb-3" data-payroll-adjustments-panel>
             <div class="card-header bg-light fw-bold">Deductions &amp; Additions</div>
             <div class="card-body">
+                <div class="small text-muted mb-3">Add cash advances, loans, or other deductions here before recording payment.</div>
                 <form asp-action="AddAdjustment" method="post" class="payroll-modal-form payroll-form-grid mb-3" data-ajax="true">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="payrollEntryId" value="@Model.Entry.Id" />

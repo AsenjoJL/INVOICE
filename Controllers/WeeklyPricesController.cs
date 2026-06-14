@@ -246,7 +246,7 @@ public class WeeklyPricesController : Controller
             : string.Empty;
 
         var zeroedNote = completeDeliveryPriceRefresh
-            ? $" Products without a new delivery price were set to zero for {targetDate:MMM dd, yyyy}."
+            ? $" Products without a changed new delivery price were set to zero for {targetDate:MMM dd, yyyy}; prices matching last week remain zero."
             : string.Empty;
 
         var successMessage = $"Imported {GetImportModeLabel(normalizedImportMode)} for {matchedProducts} product(s); updated {updatedUnits} unit value(s).{zeroedNote}{unmatchedNote}";
@@ -759,6 +759,9 @@ public class WeeklyPricesController : Controller
         return (markup, basePrice, deliveryFee);
     }
 
+    private static bool PricesMatch(decimal left, decimal right)
+        => Math.Abs(left - right) < 0.005m;
+
     private void ValidateWeeklyPriceInput(WeeklyPrice weeklyPrice, Product? product)
     {
         if (product == null)
@@ -948,6 +951,25 @@ public class WeeklyPricesController : Controller
                   .ThenByDescending(w => w.Id)
                   .First());
 
+        var previousWeekStart = weekStart.AddDays(-7);
+        var previousWeekEnd = weekEnd.AddDays(-7);
+        var previousWeekPrices = completeWeeklyRefresh
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => pids.Contains(w.ProductId) &&
+                            w.EffectiveFrom <= previousWeekEnd &&
+                            w.EffectiveTo >= previousWeekStart)
+                .ToListAsync()
+            : new List<WeeklyPrice>();
+
+        var previousWeekMap = previousWeekPrices
+            .GroupBy(w => w.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
+
         var duplicateWeeklyPrices = existingGroups
             .SelectMany(g => g.OrderByDescending(w => w.EffectiveFrom).ThenByDescending(w => w.Id).Skip(1))
             .ToList();
@@ -967,7 +989,14 @@ public class WeeklyPricesController : Controller
                 ? postedItem!
                 : BuildZeroPriceItem(prod);
 
-            var forceZeroPrice = completeWeeklyRefresh && (!hasPostedPrice || item.DeliveryPrice <= 0m);
+            // A repeated price is not considered a fresh update. Keep it zero
+            // until the supplier/import file gives a changed delivery price.
+            var matchesPreviousWeekPrice = completeWeeklyRefresh &&
+                                           hasPostedPrice &&
+                                           previousWeekMap.TryGetValue(prod.Id, out var previousWeekPrice) &&
+                                           PricesMatch(item.DeliveryPrice, previousWeekPrice.DeliveryPrice);
+
+            var forceZeroPrice = completeWeeklyRefresh && (!hasPostedPrice || item.DeliveryPrice <= 0m || matchesPreviousWeekPrice);
 
             var normalized = NormalizePostedPricing(item, prod);
             var masterCost = prod.UnitCost;

@@ -17,6 +17,8 @@
     var marchStart = new DateTime(historicalYear, 3, 1);
     var paidThrough = new DateTime(historicalYear, 5, 16);
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+    var openPayrollId = Context.Request.Query["openPayrollId"].ToString();
+    var payrollFocus = Context.Request.Query["focus"].ToString();
 }
 
 <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
@@ -284,6 +286,16 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                        @if (!isRecordOnly && entry.Status != PaymentStatus.Paid)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-dark"
+                                                    data-payroll-details-id="@entry.Id"
+                                                    data-payroll-focus="adjustments"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#payrollDetailsModal">
+                                                Deductions
+                                            </button>
+                                        }
                                         @if (entry.Status != PaymentStatus.Paid)
                                         {
                                             <form asp-action="MarkPaid" method="post" class="d-inline">
@@ -349,7 +361,13 @@
     }
 </div>
 
-<div class="modal fade" id="payrollDetailsModal" tabindex="-1" aria-labelledby="payrollDetailsModalLabel" aria-hidden="true">
+<div class="modal fade"
+     id="payrollDetailsModal"
+     tabindex="-1"
+     aria-labelledby="payrollDetailsModalLabel"
+     aria-hidden="true"
+     data-open-payroll-id="@openPayrollId"
+     data-open-payroll-focus="@payrollFocus">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">

@@ -95,6 +95,25 @@
         });
     }
 
+    function focusPayrollModalSection(root, focusKey) {
+        if (!focusKey) return;
+
+        const targets = {
+            adjustments: '[data-payroll-adjustments-panel]'
+        };
+        const selector = targets[focusKey];
+        if (!selector) return;
+
+        const panel = root.querySelector(selector);
+        if (!panel) return;
+
+        panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        const firstInput = panel.querySelector('input, select, textarea, button');
+        if (firstInput instanceof HTMLElement) {
+            firstInput.focus({ preventScroll: true });
+        }
+    }
+
     function initPayrollDetailsModal() {
         const modal = document.getElementById('payrollDetailsModal');
         if (!modal) return;
@@ -104,6 +123,7 @@
             if (!(trigger instanceof HTMLElement)) return;
 
             const payrollId = trigger.getAttribute('data-payroll-details-id');
+            const focusKey = trigger.getAttribute('data-payroll-focus') || modal.getAttribute('data-open-payroll-focus');
             const body = modal.querySelector('.modal-body');
             if (!body || !payrollId) return;
 
@@ -123,11 +143,22 @@
                 body.innerHTML = html;
                 initFillBalance(body);
                 initAjaxPayrollModalForms(body);
+                focusPayrollModalSection(body, focusKey);
             } catch (error) {
                 body.innerHTML = `<div class="text-danger text-center py-5">Unable to load details. Please refresh the page and try again.</div>`;
                 console.error(error);
             }
         });
+
+        const openPayrollId = modal.getAttribute('data-open-payroll-id');
+        if (openPayrollId && window.bootstrap?.Modal) {
+            modal.removeAttribute('data-open-payroll-id');
+            const trigger = document.createElement('button');
+            trigger.setAttribute('type', 'button');
+            trigger.setAttribute('data-payroll-details-id', openPayrollId);
+            trigger.setAttribute('data-payroll-focus', modal.getAttribute('data-open-payroll-focus') || 'adjustments');
+            window.bootstrap.Modal.getOrCreateInstance(modal).show(trigger);
+        }
     }
 
     initAutoSubmitFilters();
