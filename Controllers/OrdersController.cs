@@ -535,6 +535,11 @@ public class OrdersController : Controller
         // Map by normalized Name and SKU to improve matching coverage.
         var activeProductMap = OrderImportHelpers.BuildProductLookup(activeProducts);
         var inactiveProductMap = OrderImportHelpers.BuildProductLookup(inactiveProducts);
+        var activeProductIds = activeProducts.Select(p => p.Id).ToList();
+        var currentPriceMap = await _productPricing.GetEffectivePricesAsync(
+            activeProductIds,
+            targetDate,
+            HttpContext.RequestAborted);
 
         var matrix = new Dictionary<string, decimal>();
         var prices = new Dictionary<int, decimal>();
@@ -594,6 +599,7 @@ public class OrdersController : Controller
             if (priceCol > 0 &&
                 SimpleXlsxReader.TryParseDecimal(sheet.GetCell(r, priceCol), out var price) &&
                 price >= 0 &&
+                ShouldCaptureVegetableTemplatePrice(product.Id, price, rowHasPositiveQuantity, currentPriceMap) &&
                 (!prices.ContainsKey(product.Id) || rowHasPositiveQuantity))
             {
                 prices[product.Id] = price;
@@ -1415,6 +1421,26 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateWeeklyPrices();
         _cacheInvalidator.InvalidateProducts();
+    }
+
+    private static bool ShouldCaptureVegetableTemplatePrice(
+        int productId,
+        decimal templatePrice,
+        bool rowHasPositiveQuantity,
+        IReadOnlyDictionary<int, EffectiveProductPrice> currentPriceMap)
+    {
+        if (templatePrice <= 0m)
+            return false;
+
+        if (rowHasPositiveQuantity)
+            return true;
+
+        // The Vegetable template is also allowed to fill products that are
+        // currently zero in Price Setup/Products. Avoid capturing every
+        // prefilled non-zero row when the product was not ordered.
+        return currentPriceMap.TryGetValue(productId, out var currentPrice) &&
+               currentPrice.DeliveryPrice <= 0m &&
+               !currentPrice.IsResetDay;
     }
 
     private static Dictionary<int, Dictionary<int, decimal>> BuildMatrixInputsByCustomer(
