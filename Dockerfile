@@ -15,9 +15,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/out .
 
-# Render sets a PORT environment variable, but .NET 8 container listens on 8080 by default.
-# We configure ASP.NET to listen on all interfaces at port 8080.
-ENV ASPNETCORE_URLS=http://+:8080
+# Render provides a PORT environment variable at runtime. Use it when present,
+# and keep 8080 as the local/container fallback.
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "HazelInvoice.dll"]
+ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080} dotnet HazelInvoice.dll"]
