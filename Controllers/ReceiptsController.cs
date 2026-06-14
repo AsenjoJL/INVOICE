@@ -423,10 +423,43 @@ public class ReceiptsController : Controller
         await _context.SaveChangesAsync(HttpContext.RequestAborted);
         _cacheInvalidator.InvalidateProfitReports();
 
-        if (!string.IsNullOrWhiteSpace(returnUrl))
-            return Redirect(returnUrl);
+        return RedirectToReceiptDetails(receiptId, returnUrl);
+    }
 
-        return RedirectToAction(nameof(Details), new { id = receiptId });
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateLinePrice(int receiptId, int lineId, decimal price, string? returnUrl = null)
+    {
+        if (price <= 0m)
+        {
+            TempData["ErrorMessage"] = "Manual price must be greater than zero.";
+            return RedirectToReceiptDetails(receiptId, returnUrl);
+        }
+
+        var receipt = await _context.Receipts
+            .Include(r => r.Lines)
+            .FirstOrDefaultAsync(r => r.Id == receiptId, HttpContext.RequestAborted);
+
+        if (receipt == null) return NotFound();
+
+        if (receipt.Status is PaymentStatus.Paid or PaymentStatus.Void)
+        {
+            TempData["ErrorMessage"] = "Paid or void receipts cannot be edited. Return the receipt to unpaid first if you need to change prices.";
+            return RedirectToReceiptDetails(receiptId, returnUrl);
+        }
+
+        var line = receipt.Lines.FirstOrDefault(l => l.Id == lineId);
+        if (line == null) return NotFound();
+
+        line.Price = price;
+        RecalculateReceiptTotals(receipt);
+
+        await _context.SaveChangesAsync(HttpContext.RequestAborted);
+        _cacheInvalidator.InvalidateDashboard();
+        _cacheInvalidator.InvalidateProfitReports();
+
+        TempData["Message"] = $"Updated {line.ItemName} price to ₱{line.Price:N2}.";
+        return RedirectToReceiptDetails(receiptId, returnUrl);
     }
 
     private static decimal NormalizePaidAmount(decimal paidAmount, decimal totalAmount)
@@ -439,6 +472,44 @@ public class ReceiptsController : Controller
 
         return Math.Min(paidAmount, totalAmount);
     }
+
+    private static void RecalculateReceiptTotals(Receipt receipt)
+    {
+        foreach (var line in receipt.Lines)
+        {
+            line.Amount = Math.Round(line.Quantity * line.Price, 2, MidpointRounding.AwayFromZero);
+        }
+
+        receipt.TotalAmount = receipt.Lines.Sum(l => l.Amount);
+        receipt.PaidAmount = NormalizePaidAmount(receipt.PaidAmount, receipt.TotalAmount);
+        ApplyReceiptStatus(receipt);
+    }
+
+    private static void ApplyReceiptStatus(Receipt receipt)
+    {
+        if (receipt.Status == PaymentStatus.Void)
+            return;
+
+        if (receipt.TotalAmount <= 0m || receipt.PaidAmount <= 0m)
+        {
+            receipt.Status = PaymentStatus.Unpaid;
+        }
+        else if (receipt.PaidAmount >= receipt.TotalAmount)
+        {
+            receipt.Status = PaymentStatus.Paid;
+        }
+        else
+        {
+            receipt.Status = PaymentStatus.Partial;
+        }
+    }
+
+    private IActionResult RedirectToReceiptDetails(int receiptId, string? returnUrl)
+        => RedirectToAction(nameof(Details), new
+        {
+            id = receiptId,
+            returnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : null
+        });
 
     private static List<string> FindDuplicateLineNamesInRequest(Receipt receipt)
     {
