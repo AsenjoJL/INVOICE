@@ -94,25 +94,40 @@ public class WeeklyPricesController : Controller
             return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
+        var requiresDeliveryPrice = normalizedImportMode is "both" or "delivery-only";
+        var requiresPurchasePrice = normalizedImportMode is "both" or "original-only";
+
         var headerRow = FindPriceTemplateHeaderRow(sheet);
-        if (headerRow <= 0)
+        var firstDataRow = headerRow + 1;
+        int itemCol;
+        int sellingPriceCol;
+        int unitCol;
+        int purchasePriceCol;
+
+        if (headerRow > 0)
+        {
+            itemCol = FindColumnByHeaders(sheet, headerRow, "items", "item", "product", "productname");
+            sellingPriceCol = FindColumnByHeaders(sheet, headerRow, "deliveryprice", "sellingprice", "price");
+            unitCol = FindColumnByHeaders(sheet, headerRow, "uom", "unit");
+            purchasePriceCol = FindColumnByHeaders(sheet, headerRow, "originalprice", "purchaseprice", "costprice");
+        }
+        else if (TryFindHeaderlessDeliveryPriceTemplate(sheet, out firstDataRow, out itemCol, out sellingPriceCol, out unitCol))
+        {
+            normalizedImportMode = "delivery-only";
+            requiresDeliveryPrice = true;
+            requiresPurchasePrice = false;
+            purchasePriceCol = 0;
+        }
+        else
         {
             TempData["ErrorMessage"] = "Could not find the price template header row.";
             return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
-        var itemCol = FindColumnByHeaders(sheet, headerRow, "items", "item", "product", "productname");
-        var sellingPriceCol = FindColumnByHeaders(sheet, headerRow, "deliveryprice", "sellingprice", "price");
-        var unitCol = FindColumnByHeaders(sheet, headerRow, "uom", "unit");
-        var purchasePriceCol = FindColumnByHeaders(sheet, headerRow, "originalprice", "purchaseprice", "costprice");
-
         if (purchasePriceCol <= 0)
         {
             purchasePriceCol = FindNextPriceColumn(sheet, headerRow, sellingPriceCol);
         }
-
-        var requiresDeliveryPrice = normalizedImportMode is "both" or "delivery-only";
-        var requiresPurchasePrice = normalizedImportMode is "both" or "original-only";
 
         if (itemCol <= 0 || unitCol <= 0 || (requiresDeliveryPrice && sellingPriceCol <= 0) || (requiresPurchasePrice && purchasePriceCol <= 0))
         {
@@ -144,7 +159,7 @@ public class WeeklyPricesController : Controller
         var updatedUnits = 0;
         var unmatchedProducts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        for (var row = headerRow + 1; row <= sheet.MaxRow; row++)
+        for (var row = firstDataRow; row <= sheet.MaxRow; row++)
         {
             var productNameRaw = sheet.GetCell(row, itemCol);
             if (string.IsNullOrWhiteSpace(productNameRaw))
@@ -670,6 +685,50 @@ public class WeeklyPricesController : Controller
         }
 
         return 0;
+    }
+
+    private static bool TryFindHeaderlessDeliveryPriceTemplate(
+        SimpleXlsxSheet sheet,
+        out int firstDataRow,
+        out int itemCol,
+        out int deliveryPriceCol,
+        out int unitCol)
+    {
+        firstDataRow = 0;
+        itemCol = 0;
+        deliveryPriceCol = 0;
+        unitCol = 0;
+
+        var title = OrderImportHelpers.NormalizeKey(sheet.GetCell(1, 1));
+        if (title != "weeklypricetemplate")
+            return false;
+
+        const int candidateFirstDataRow = 2;
+        const int candidateItemCol = 1;
+        const int candidateDeliveryPriceCol = 2;
+        const int candidateUnitCol = 3;
+
+        var sampleRowsWithPrices = 0;
+        for (var row = candidateFirstDataRow; row <= Math.Min(sheet.MaxRow, candidateFirstDataRow + 8); row++)
+        {
+            var productName = sheet.GetCell(row, candidateItemCol);
+            var rawPrice = sheet.GetCell(row, candidateDeliveryPriceCol);
+            if (!string.IsNullOrWhiteSpace(productName) &&
+                SimpleXlsxReader.TryParseDecimal(rawPrice, out var price) &&
+                price >= 0m)
+            {
+                sampleRowsWithPrices++;
+            }
+        }
+
+        if (sampleRowsWithPrices < 2)
+            return false;
+
+        firstDataRow = candidateFirstDataRow;
+        itemCol = candidateItemCol;
+        deliveryPriceCol = candidateDeliveryPriceCol;
+        unitCol = candidateUnitCol;
+        return true;
     }
 
     private static int FindColumnByHeader(SimpleXlsxSheet sheet, int headerRow, string expectedKey)
