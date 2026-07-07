@@ -329,10 +329,7 @@ public class ReceiptsController : Controller
 
         if (receipt == null) return NotFound();
 
-        receipt.Lines = receipt.Lines
-            .OrderBy(l => l.ItemName)
-            .ThenBy(l => l.Id)
-            .ToList();
+        receipt.Lines = ReceiptLineOrdering.ByParticulars(receipt.Lines);
 
         ViewBag.Partners = await _context.PartnerBalanceConfigs
             .AsNoTracking()

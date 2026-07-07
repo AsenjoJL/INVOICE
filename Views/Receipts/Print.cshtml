@@ -1,4 +1,5 @@
 @model HazelInvoice.Models.Receipt
+@using HazelInvoice.Helpers
 
 @{
     Layout = null;
@@ -18,10 +19,7 @@
     // Keep the per-sheet item cap in one place so print pagination stays consistent
     // if the business rule changes again later.
     const int maxItemsPerPrintedPage = 30;
-    // Preserve saved line order to keep printed output consistent with the original receipt.
-    var allLines = (Model.Lines ?? Enumerable.Empty<HazelInvoice.Models.ReceiptLine>())
-        .OrderBy(l => l.Id)
-        .ToList();
+    var allLines = ReceiptLineOrdering.ByParticulars(Model.Lines);
     var pages = allLines
         .Select((line, idx) => new { line, idx })
         .GroupBy(x => x.idx / maxItemsPerPrintedPage)
