@@ -139,62 +139,35 @@
             if (!sidebar) return;
 
             const storageKey = 'hazelinvoice.sidebar.scrollTop';
-            const desktopQuery = window.matchMedia('(min-width: 992px)');
-
-            function isDesktop() {
-                return desktopQuery.matches;
-            }
 
             function restoreSidebarPosition() {
-                if (isDesktop()) {
-                    const active = sidebar.querySelector('.sidebar-link.active');
-                    if (active && active.scrollIntoView) {
-                        active.scrollIntoView({ block: 'nearest' });
+                const saved = sessionStorage.getItem(storageKey);
+                if (saved !== null) {
+                    const top = parseInt(saved, 10);
+                    if (!Number.isNaN(top)) {
+                        sidebar.scrollTop = top;
                     }
                     return;
                 }
 
-                const saved = sessionStorage.getItem(storageKey);
-                if (saved === null) {
-                    return;
-                }
-
-                const top = parseInt(saved, 10);
-                if (!Number.isNaN(top)) {
-                    sidebar.scrollTop = top;
+                const active = sidebar.querySelector('.sidebar-link.active');
+                if (active && active.scrollIntoView) {
+                    active.scrollIntoView({ block: 'nearest' });
                 }
             }
 
             restoreSidebarPosition();
 
             sidebar.addEventListener('scroll', () => {
-                if (!isDesktop()) {
-                    sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
-                }
+                sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
             }, { passive: true });
 
             const links = sidebar.querySelectorAll('.sidebar-link');
             links.forEach(link => {
                 link.addEventListener('click', () => {
-                    if (!isDesktop()) {
-                        sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
-                    }
+                    sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
                 });
             });
-
-            const handleViewportChange = () => {
-                if (isDesktop()) {
-                    sessionStorage.removeItem(storageKey);
-                    sidebar.scrollTop = 0;
-                    restoreSidebarPosition();
-                }
-            };
-
-            if (desktopQuery.addEventListener) {
-                desktopQuery.addEventListener('change', handleViewportChange);
-            } else if (desktopQuery.addListener) {
-                desktopQuery.addListener(handleViewportChange);
-            }
         })();
     </script>
     @await RenderSectionAsync("Scripts", required: false)
