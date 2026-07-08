@@ -4,6 +4,15 @@
     ViewData["Title"] = "Daily Purchase Cost";
 }
 
+@section Styles {
+    <style>
+        .daily-cost-table tr:target {
+            background: #fff8db;
+            scroll-margin-top: 120px;
+        }
+    </style>
+}
+
 <div class="container-fluid p-4">
     <section class="admin-page-hero admin-page-flow mb-4">
         <div class="eyebrow">Cost of Goods</div>
@@ -14,6 +23,10 @@
     @if (TempData["Message"] != null)
     {
         <div class="alert alert-success">@TempData["Message"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
     }
     @if (!ViewData.ModelState.IsValid)
     {
@@ -56,50 +69,46 @@
         </div>
     </section>
 
-    <form asp-action="Save" method="post" class="admin-surface-card">
-        @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="TargetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
-        <input type="hidden" asp-for="SearchTerm" />
-
+    <section class="admin-surface-card">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center p-3 border-bottom">
             <div>
                 <div class="small text-uppercase text-muted fw-semibold">Excel-style cost table</div>
                 <strong>@Model.TargetDate.ToString("dddd, MMMM dd, yyyy")</strong>
             </div>
-            <button type="submit" class="btn btn-dark px-4">Save Daily Costs</button>
+            <div class="small text-muted">Save one item at a time to stay in your current row.</div>
         </div>
 
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table align-middle mb-0 daily-cost-table">
                 <thead>
                     <tr>
                         <th>LIST OF ITEMS</th>
                         <th style="min-width: 220px;">PRICE</th>
                         <th>UOM</th>
+                        <th class="text-end" style="min-width: 130px;">ACTION</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Items.Any())
                     {
                         <tr>
-                            <td colspan="3" class="text-center text-muted py-4">No active products found.</td>
+                            <td colspan="4" class="text-center text-muted py-4">No active products found.</td>
                         </tr>
                     }
                     @for (var i = 0; i < Model.Items.Count; i++)
                     {
                         var item = Model.Items[i];
-                        <tr>
+                        var formId = $"save-cost-{item.ProductId}";
+                        var rowId = $"cost-row-{item.ProductId}";
+                        <tr id="@rowId">
                             <td>
-                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
-                                <input type="hidden" name="Items[@i].SKU" value="@item.SKU" />
-                                <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
-                                <input type="hidden" name="Items[@i].Unit" value="@item.Unit" />
                                 <div class="fw-semibold">@item.ProductName</div>
                                 <div class="small text-muted">@item.SKU</div>
                             </td>
                             <td>
                                 <input type="number"
-                                       name="Items[@i].PurchaseCostPerUnit"
+                                       form="@formId"
+                                       name="purchaseCostPerUnit"
                                        value="@(item.PurchaseCostPerUnit?.ToString("0.##"))"
                                        min="0.01"
                                        step="0.01"
@@ -126,10 +135,19 @@
                                 }
                             </td>
                             <td class="fw-semibold">@item.Unit</td>
+                            <td class="text-end">
+                                <form id="@formId" asp-action="SaveItem" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="targetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
+                                    <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <button type="submit" class="btn btn-dark btn-sm px-3">Save</button>
+                                </form>
+                            </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
-    </form>
+    </section>
 </div>

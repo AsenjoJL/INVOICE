@@ -292,7 +292,7 @@
 .dashboard-refresh .dashboard-kpi-label {
     color: var(--dash-muted);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
@@ -301,7 +301,7 @@
 
 .dashboard-refresh .dashboard-kpi-number {
     color: var(--dash-text);
-    font-size: clamp(1.15rem, 1.6vw, 1.55rem);
+    font-size: clamp(1.05rem, 1.35vw, 1.4rem);
     font-weight: 500;
     line-height: 1.2;
     display: block;
@@ -409,7 +409,7 @@
 .dashboard-refresh .metric-label {
     color: var(--dash-muted);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
@@ -417,10 +417,11 @@
 
 .dashboard-refresh .metric-value {
     color: var(--dash-text);
-    font-size: clamp(1.5rem, 2.5vw, 2rem);
-    font-weight: 700;
+    font-size: clamp(1.25rem, 1.9vw, 1.65rem);
+    font-weight: 500;
     line-height: 1.2;
     margin-bottom: 0.3rem;
+    overflow-wrap: anywhere;
 }
 
 .dashboard-refresh .metric-unit {

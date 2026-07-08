@@ -332,7 +332,8 @@ public class OrdersController : Controller
                             }
                             else
                             {
-                                var cost = GetEffectiveCost(pid);
+                                var sellingCostBasis = wpSnap?.CostOverride
+                                    ?? (productMap.TryGetValue(pid, out var prodFromMap1) ? prodFromMap1.UnitCost : 0m);
                                 var deliveryFee = wpSnap?.DeliveryFee
                                     ?? (productMap.TryGetValue(pid, out var prodFromMap2) ? prodFromMap2.DeliveryFee : 0m);
 
@@ -341,8 +342,8 @@ public class OrdersController : Controller
                                 {
                                     if (wpSnap.Markup != 0)
                                         markup = wpSnap.Markup;
-                                    else if (wpSnap.BasePrice > 0 && cost > 0)
-                                        markup = wpSnap.BasePrice - cost;
+                                    else if (wpSnap.BasePrice > 0)
+                                        markup = wpSnap.BasePrice - sellingCostBasis;
                                     else if (productMap.TryGetValue(pid, out var prodFromMap3))
                                         markup = prodFromMap3.Markup;
                                 }
@@ -351,7 +352,7 @@ public class OrdersController : Controller
                                     markup = prodFromMap4.Markup;
                                 }
 
-                                price = cost + markup + deliveryFee;
+                                price = sellingCostBasis + markup + deliveryFee;
                             }
                         }
 

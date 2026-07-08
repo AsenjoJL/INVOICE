@@ -211,11 +211,30 @@
                     <div class="metric-label">Cost of Goods Today</div>
                 </div>
                 <div class="metric-value">₱@Model.CostOfGoodsToday.ToString("N0")</div>
-                <div class="metric-state">Based on receipt item cost snapshots</div>
+                <div class="metric-state">Daily purchase cost applied to today's receipt items</div>
                 <div class="unpaid-cta">
                     <span class="unpaid-count">@Model.DailyPurchaseCostsUpdatedToday updated · @Model.DailyPurchaseCostsUsingPrevious previous</span>
                     <a class="unpaid-link" href="@Url.Action("Index", "DailyPurchaseCosts", new { date = businessDate.ToString("yyyy-MM-dd") })">Open</a>
                 </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-warning">
+                <div class="metric-head">
+                    <div class="metric-label">Cost of Goods Month</div>
+                </div>
+                <div class="metric-value">₱@Model.CostOfGoodsMonth.ToString("N0")</div>
+                <div class="metric-state">Current month item cost from receipt snapshots</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-success">
+                <div class="metric-head">
+                    <div class="metric-label">Gross Profit Today</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.GrossProfitTodayTrendPercent)"><i class="bi @TrendIcon(Model.GrossProfitTodayTrendPercent)"></i> @TrendText(Model.GrossProfitTodayTrendPercent)</span>
+                </div>
+                <div class="metric-value">₱@Model.GrossProfitToday.ToString("N0")</div>
+                <div class="metric-state">Today's sales minus today's item cost</div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
@@ -239,13 +258,41 @@
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-danger-soft">
+                <div class="metric-head">
+                    <div class="metric-label">@Model.ProfitFeePercent.ToString("0.##")% Sales Fee Today</div>
+                </div>
+                <div class="metric-value">₱@Model.ProfitFeeToday.ToString("N0")</div>
+                <div class="metric-state">Deducted from gross profit for net profit</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-danger-soft">
+                <div class="metric-head">
+                    <div class="metric-label">@Model.ProfitFeePercent.ToString("0.##")% Sales Fee Month</div>
+                </div>
+                <div class="metric-value">₱@Model.ProfitFeeMonth.ToString("N0")</div>
+                <div class="metric-state">Current month sales fee/tax deduction</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-success">
+                <div class="metric-head">
+                    <div class="metric-label">Net Profit Today</div>
+                    <span class="kpi-trend @TrendBadgeClass(Model.NetProfitTodayTrendPercent)"><i class="bi @TrendIcon(Model.NetProfitTodayTrendPercent)"></i> @TrendText(Model.NetProfitTodayTrendPercent)</span>
+                </div>
+                <div class="metric-value">₱@Model.NetProfitToday.ToString("N0")</div>
+                <div class="metric-state">Gross profit today less expenses and @Model.ProfitFeePercent.ToString("0.##")% fee</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
             <div class="metric-card h-100 is-success">
                 <div class="metric-head">
                     <div class="metric-label">Net Profit Month</div>
-                    <span class="kpi-trend @TrendBadgeClass(Model.GrossProfitTrendPercent)"><i class="bi @TrendIcon(Model.GrossProfitTrendPercent)"></i> @TrendText(Model.GrossProfitTrendPercent)</span>
+                    <span class="kpi-trend @TrendBadgeClass(Model.NetProfitMonthTrendPercent)"><i class="bi @TrendIcon(Model.NetProfitMonthTrendPercent)"></i> @TrendText(Model.NetProfitMonthTrendPercent)</span>
                 </div>
                 <div class="metric-value">₱@Model.NetProfitMonth.ToString("N0")</div>
-                <div class="metric-state">@(Model.NetProfitMonth == 0 ? "Gross profit less this month's expenses" : "Current month net result")</div>
+                <div class="metric-state">@(Model.NetProfitMonth == 0 ? $"Gross profit less expenses and {Model.ProfitFeePercent:0.##}% fee" : "Current month net result after expenses and fee")</div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">

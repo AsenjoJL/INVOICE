@@ -72,6 +72,59 @@ public class DailyPurchaseCostsController : Controller
             return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm });
         }
 
+        var saved = await SavePurchaseCostsAsync(targetDate, postedItems, cancellationToken);
+
+        TempData["Message"] = saved == 0
+            ? "Daily purchase costs were already up to date."
+            : $"Saved {saved} daily purchase cost update{(saved == 1 ? "" : "s")}.";
+
+        return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveItem(
+        DateTime targetDate,
+        string? searchTerm,
+        int productId,
+        decimal? purchaseCostPerUnit,
+        CancellationToken cancellationToken)
+    {
+        targetDate = targetDate.Date;
+        var anchor = $"cost-row-{productId}";
+        var returnUrl = BuildIndexReturnUrl(targetDate, searchTerm, anchor);
+
+        if (productId <= 0)
+        {
+            TempData["ErrorMessage"] = "Could not identify the product to update.";
+            return LocalRedirect(returnUrl);
+        }
+
+        if (!purchaseCostPerUnit.HasValue || purchaseCostPerUnit <= 0m)
+        {
+            TempData["ErrorMessage"] = "Purchase cost must be greater than zero.";
+            return LocalRedirect(returnUrl);
+        }
+
+        var item = new DailyPurchaseCostItemViewModel
+        {
+            ProductId = productId,
+            PurchaseCostPerUnit = purchaseCostPerUnit
+        };
+
+        var saved = await SavePurchaseCostsAsync(targetDate, new List<DailyPurchaseCostItemViewModel> { item }, cancellationToken);
+        TempData["Message"] = saved == 0
+            ? "This purchase cost was already up to date."
+            : "Saved purchase cost for this item.";
+
+        return LocalRedirect(returnUrl);
+    }
+
+    private async Task<int> SavePurchaseCostsAsync(
+        DateTime targetDate,
+        List<DailyPurchaseCostItemViewModel> postedItems,
+        CancellationToken cancellationToken)
+    {
         var productIds = postedItems.Select(i => i.ProductId).Distinct().ToList();
         var activeProductIds = (await _context.Products
             .Where(p => productIds.Contains(p.Id) && p.IsActive)
@@ -126,11 +179,13 @@ public class DailyPurchaseCostsController : Controller
         _cacheInvalidator.InvalidateProfitReports();
         _cacheInvalidator.InvalidateWeeklyPrices();
 
-        TempData["Message"] = saved == 0
-            ? "Daily purchase costs were already up to date."
-            : $"Saved {saved} daily purchase cost update{(saved == 1 ? "" : "s")}.";
+        return saved;
+    }
 
-        return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm });
+    private string BuildIndexReturnUrl(DateTime targetDate, string? searchTerm, string anchor)
+    {
+        var url = Url.Action(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm }) ?? "/DailyPurchaseCosts";
+        return $"{url}#{anchor}";
     }
 
     private async Task RefreshSameDayReceiptCostsAsync(

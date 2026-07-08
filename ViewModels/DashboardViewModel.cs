@@ -19,6 +19,7 @@ public class DashboardViewModel
     public decimal ItemsSoldToday { get; set; }
     public List<CategoryValuePoint> ItemsSoldTodayByUnit { get; set; } = new();
     public decimal CostOfGoodsToday { get; set; }
+    public decimal CostOfGoodsMonth { get; set; }
     public int DailyPurchaseCostsUpdatedToday { get; set; }
     public int DailyPurchaseCostsUsingPrevious { get; set; }
     public decimal ExpenseToday { get; set; }
@@ -26,8 +27,13 @@ public class DashboardViewModel
     public decimal TotalSalesAllTime { get; set; }
     public decimal GrossProfit { get; set; }
     public decimal NetProfit { get; set; }
+    public decimal GrossProfitToday { get; set; }
+    public decimal NetProfitToday { get; set; }
     public decimal GrossProfitMonth { get; set; }
     public decimal NetProfitMonth { get; set; }
+    public decimal ProfitFeePercent { get; set; } = 1.0m;
+    public decimal ProfitFeeToday { get; set; }
+    public decimal ProfitFeeMonth { get; set; }
     public decimal CashBalance { get; set; }
     public decimal UnpaidAmount { get; set; }
     public int UnpaidInvoiceCount { get; set; }
@@ -35,7 +41,10 @@ public class DashboardViewModel
     // KPI trend percentages (current vs previous period)
     public decimal SalesTodayTrendPercent { get; set; }
     public decimal SalesMonthlyTrendPercent { get; set; }
+    public decimal GrossProfitTodayTrendPercent { get; set; }
     public decimal GrossProfitTrendPercent { get; set; }
+    public decimal NetProfitTodayTrendPercent { get; set; }
+    public decimal NetProfitMonthTrendPercent { get; set; }
     public decimal UnpaidTrendPercent { get; set; }
     public decimal ExpenseTodayTrendPercent { get; set; }
     public decimal ExpenseMonthlyTrendPercent { get; set; }

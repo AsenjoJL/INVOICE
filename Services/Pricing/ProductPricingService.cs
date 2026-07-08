@@ -93,6 +93,8 @@ public sealed class ProductPricingService : IProductPricingService
                 IsResetDay: true);
         }
 
+        // Daily purchase cost is the buying/profit cost only. Keep selling prices
+        // anchored to weekly delivery price or the product master cost formula.
         var profitCost = dailyCost?.UnitCost ?? weeklyPrice?.CostOverride ?? product.UnitCost;
         var sellingCostBasis = weeklyPrice?.CostOverride ?? product.UnitCost;
         if (weeklyPrice is { DeliveryPrice: 0m, BasePrice: 0m })

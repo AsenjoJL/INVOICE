@@ -1,3 +1,4 @@
+using HazelInvoice.Configuration;
 using HazelInvoice.Data;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
@@ -6,6 +7,7 @@ using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace HazelInvoice.Services.Dashboard;
 
@@ -16,19 +18,24 @@ public class DashboardMetricsService : IDashboardMetricsService
     private readonly IMemoryCache _cache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
     private readonly IExpenseCategoryCatalogService _expenseCategoryCatalog;
+    private readonly decimal _profitFeePercent;
 
     public DashboardMetricsService(
         ApplicationDbContext db,
         ILogger<DashboardMetricsService> logger,
         IMemoryCache cache,
         IAppCacheInvalidator cacheInvalidator,
-        IExpenseCategoryCatalogService expenseCategoryCatalog)
+        IExpenseCategoryCatalogService expenseCategoryCatalog,
+        IOptions<OperationsOptions> operations)
     {
         _db = db;
         _logger = logger;
         _cache = cache;
         _cacheInvalidator = cacheInvalidator;
         _expenseCategoryCatalog = expenseCategoryCatalog;
+        _profitFeePercent = operations.Value.VegetableDetailPercentFeeDefault > 0m
+            ? operations.Value.VegetableDetailPercentFeeDefault
+            : 1.0m;
     }
 
     public async Task<DashboardViewModel> BuildAsync(DateTime today, CancellationToken ct = default)
@@ -94,9 +101,21 @@ public class DashboardMetricsService : IDashboardMetricsService
             return ((current - previous) / Math.Abs(previous)) * 100m;
         }
 
+        var grossProfitToday = profits.RevenueToday - profits.CostToday;
+        var grossProfitYesterday = profits.RevenueYesterday - profits.CostYesterday;
         var grossProfitMonth = profits.RevenueMonth - profits.CostMonth;
         var grossProfitPrevMonth = profits.RevenuePrevMonth - profits.CostPrevMonth;
         var grossProfitAllTime = profits.RevenueAllTime - profits.CostAllTime;
+        var feeRate = _profitFeePercent / 100m;
+        var profitFeeToday = profits.RevenueToday * feeRate;
+        var profitFeeYesterday = profits.RevenueYesterday * feeRate;
+        var profitFeeMonth = profits.RevenueMonth * feeRate;
+        var profitFeePrevMonth = profits.RevenuePrevMonth * feeRate;
+        var profitFeeAllTime = profits.RevenueAllTime * feeRate;
+        var netProfitToday = grossProfitToday - expenses.ExpenseToday - profitFeeToday;
+        var netProfitYesterday = grossProfitYesterday - expenses.ExpenseYesterday - profitFeeYesterday;
+        var netProfitMonth = grossProfitMonth - expenses.ExpenseMonthly - profitFeeMonth;
+        var netProfitPrevMonth = grossProfitPrevMonth - expenses.ExpensePrevMonth - profitFeePrevMonth;
 
         var cashBalance = ComputeCashBalance(payments.PaymentsAllTime, expenses.ExpenseAllTime);
         var previousCashBalance = ComputeCashBalance(payments.PaymentsBeforeToday, expenses.ExpenseBeforeToday);
@@ -129,21 +148,30 @@ public class DashboardMetricsService : IDashboardMetricsService
             TotalExpenseAllTime = expenses.ExpenseAllTime,
 
             GrossProfit = grossProfitAllTime,
+            GrossProfitToday = grossProfitToday,
             GrossProfitMonth = grossProfitMonth,
-            NetProfit = grossProfitAllTime - expenses.ExpenseAllTime,
-            NetProfitMonth = grossProfitMonth - expenses.ExpenseMonthly,
+            NetProfit = grossProfitAllTime - expenses.ExpenseAllTime - profitFeeAllTime,
+            NetProfitToday = netProfitToday,
+            NetProfitMonth = netProfitMonth,
+            ProfitFeePercent = _profitFeePercent,
+            ProfitFeeToday = profitFeeToday,
+            ProfitFeeMonth = profitFeeMonth,
 
             CashBalance = cashBalance,
 
             ItemsSoldToday = items.ItemsToday,
             ItemsSoldTodayByUnit = items.ItemsTodayByUnit,
             CostOfGoodsToday = profits.CostToday,
+            CostOfGoodsMonth = profits.CostMonth,
             DailyPurchaseCostsUpdatedToday = dailyCosts.UpdatedToday,
             DailyPurchaseCostsUsingPrevious = dailyCosts.UsingPrevious,
 
             SalesTodayTrendPercent = TrendPercent(receipts.SalesToday, receipts.SalesYesterday),
             SalesMonthlyTrendPercent = TrendPercent(receipts.SalesMonthly, receipts.SalesPrevMonth),
+            GrossProfitTodayTrendPercent = TrendPercent(grossProfitToday, grossProfitYesterday),
             GrossProfitTrendPercent = TrendPercent(grossProfitMonth, grossProfitPrevMonth),
+            NetProfitTodayTrendPercent = TrendPercent(netProfitToday, netProfitYesterday),
+            NetProfitMonthTrendPercent = TrendPercent(netProfitMonth, netProfitPrevMonth),
             UnpaidTrendPercent = TrendPercent(receivables.Today, receivables.Yesterday),
             ExpenseTodayTrendPercent = TrendPercent(expenses.ExpenseToday, expenses.ExpenseYesterday),
             ExpenseMonthlyTrendPercent = TrendPercent(expenses.ExpenseMonthly, expenses.ExpensePrevMonth),
@@ -246,19 +274,36 @@ public class DashboardMetricsService : IDashboardMetricsService
 
     private async Task<ProfitMetrics> GetProfitMetricsAsync(DashboardPeriods periods, CancellationToken ct)
     {
-        var metrics = await _db.ReceiptLines
-            .AsNoTracking()
-            .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void)
+        var metrics = await (
+            from line in _db.ReceiptLines.AsNoTracking()
+            join receipt in _db.Receipts.AsNoTracking() on line.ReceiptId equals receipt.Id
+            join product in _db.Products.AsNoTracking() on line.ProductId equals (int?)product.Id into productJoin
+            from product in productJoin.DefaultIfEmpty()
+            where receipt.Status != PaymentStatus.Void
+            select new
+            {
+                ReceiptDate = receipt.Date,
+                line.Amount,
+                line.Quantity,
+                UnitCost = line.CostPriceSnapshot != 0m
+                    ? line.CostPriceSnapshot
+                    : product != null
+                        ? product.UnitCost
+                        : 0m
+            })
             .GroupBy(_ => 1)
             .Select(g => new ProfitMetrics
             {
                 RevenueAllTime = g.Sum(l => (decimal?)l.Amount) ?? 0m,
-                CostAllTime = g.Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
-                CostToday = g.Where(l => l.Receipt!.Date >= periods.DayStart && l.Receipt.Date < periods.DayEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
-                RevenueMonth = g.Where(l => l.Receipt!.Date >= periods.MonthStart && l.Receipt.Date < periods.MonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
-                CostMonth = g.Where(l => l.Receipt!.Date >= periods.MonthStart && l.Receipt.Date < periods.MonthEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
-                RevenuePrevMonth = g.Where(l => l.Receipt!.Date >= periods.PrevMonthStart && l.Receipt.Date < periods.PrevMonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
-                CostPrevMonth = g.Where(l => l.Receipt!.Date >= periods.PrevMonthStart && l.Receipt.Date < periods.PrevMonthEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m
+                CostAllTime = g.Sum(l => (decimal?)(l.UnitCost * l.Quantity)) ?? 0m,
+                RevenueToday = g.Where(l => l.ReceiptDate >= periods.DayStart && l.ReceiptDate < periods.DayEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
+                CostToday = g.Where(l => l.ReceiptDate >= periods.DayStart && l.ReceiptDate < periods.DayEnd).Sum(l => (decimal?)(l.UnitCost * l.Quantity)) ?? 0m,
+                RevenueYesterday = g.Where(l => l.ReceiptDate >= periods.YesterdayStart && l.ReceiptDate < periods.YesterdayEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
+                CostYesterday = g.Where(l => l.ReceiptDate >= periods.YesterdayStart && l.ReceiptDate < periods.YesterdayEnd).Sum(l => (decimal?)(l.UnitCost * l.Quantity)) ?? 0m,
+                RevenueMonth = g.Where(l => l.ReceiptDate >= periods.MonthStart && l.ReceiptDate < periods.MonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
+                CostMonth = g.Where(l => l.ReceiptDate >= periods.MonthStart && l.ReceiptDate < periods.MonthEnd).Sum(l => (decimal?)(l.UnitCost * l.Quantity)) ?? 0m,
+                RevenuePrevMonth = g.Where(l => l.ReceiptDate >= periods.PrevMonthStart && l.ReceiptDate < periods.PrevMonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
+                CostPrevMonth = g.Where(l => l.ReceiptDate >= periods.PrevMonthStart && l.ReceiptDate < periods.PrevMonthEnd).Sum(l => (decimal?)(l.UnitCost * l.Quantity)) ?? 0m
             })
             .SingleOrDefaultAsync(ct);
 
@@ -473,7 +518,10 @@ public class DashboardMetricsService : IDashboardMetricsService
     {
         public decimal RevenueAllTime { get; init; }
         public decimal CostAllTime { get; init; }
+        public decimal RevenueToday { get; init; }
         public decimal CostToday { get; init; }
+        public decimal RevenueYesterday { get; init; }
+        public decimal CostYesterday { get; init; }
         public decimal RevenueMonth { get; init; }
         public decimal CostMonth { get; init; }
         public decimal RevenuePrevMonth { get; init; }
