@@ -217,7 +217,7 @@ public class WeeklyPricesController : Controller
                 ? dailyCost.UnitCost
                 : currentWeekly?.CostOverride ?? product.UnitCost;
             var currentDeliveryFee = currentWeekly?.DeliveryFee ?? product.DeliveryFee;
-            var currentDeliveryPrice = currentWeekly?.DeliveryPrice ?? (currentCost + product.Markup + product.DeliveryFee);
+            var currentDeliveryPrice = currentWeekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
 
             var cost = normalizedImportMode switch
             {
@@ -228,7 +228,7 @@ public class WeeklyPricesController : Controller
 
             var deliveryPrice = normalizedImportMode switch
             {
-                "original-only" => Math.Max(currentDeliveryPrice, cost),
+                "original-only" => currentDeliveryPrice,
                 "delivery-only" => importedDeliveryPrice!.Value,
                 _ => importedDeliveryPrice ?? Math.Max(currentDeliveryPrice, cost)
             };
@@ -339,7 +339,7 @@ public class WeeklyPricesController : Controller
                     ? dailyCost.UnitCost
                     : weekly?.CostOverride ?? product.UnitCost
                 : 0m;
-            var currentDelivery = applicableDay.HasValue ? weekly?.DeliveryPrice ?? (currentCost + product.Markup + product.DeliveryFee) : 0m;
+            var currentDelivery = applicableDay.HasValue ? weekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee) : 0m;
 
             rows.Add(BuildTemplateRow(product.Name, product.Unit, currentDelivery, currentCost, normalizedImportMode));
         }
@@ -594,28 +594,45 @@ public class WeeklyPricesController : Controller
             decimal masterMarkup = p.Markup;
             decimal masterDeliveryFee = p.DeliveryFee;
             decimal cost = isResetDay ? 0m : dateCost;
-            decimal markup = isResetDay ? 0m : masterMarkup;
+            decimal basePrice = isResetDay ? 0m : masterCost + masterMarkup;
+            decimal markup = isResetDay ? 0m : basePrice - cost;
             decimal deliveryFee = isResetDay ? 0m : masterDeliveryFee;
+            decimal deliveryPrice = isResetDay ? 0m : basePrice + deliveryFee;
             bool hasRec = false;
 
             if (!isResetDay && weeklyMap.TryGetValue(p.Id, out var wp))
             {
                 hasRec = true;
-                if (wp.CostOverride.HasValue && !dailyCostMap.ContainsKey(p.Id))
-                    cost = wp.CostOverride.Value;
+                var sellingCostBasis = wp.CostOverride ?? masterCost;
+                cost = dailyCostMap.ContainsKey(p.Id)
+                    ? cost
+                    : sellingCostBasis;
 
                 if (wp.DeliveryFee.HasValue)
                     deliveryFee = wp.DeliveryFee.Value;
 
                 if (wp.DeliveryPrice == 0m && wp.BasePrice == 0m)
                 {
+                    basePrice = 0m;
                     markup = -cost;
                     deliveryFee = 0m;
+                    deliveryPrice = 0m;
                 }
-                else if (wp.Markup != 0)
-                    markup = wp.Markup;
-                else if (wp.BasePrice > 0)
-                    markup = wp.BasePrice - cost;
+                else
+                {
+                    if (wp.BasePrice > 0)
+                        basePrice = wp.BasePrice;
+                    else if (wp.Markup != 0)
+                        basePrice = sellingCostBasis + wp.Markup;
+                    else
+                        basePrice = sellingCostBasis + masterMarkup;
+
+                    deliveryPrice = wp.DeliveryPrice > 0
+                        ? wp.DeliveryPrice
+                        : basePrice + deliveryFee;
+                    deliveryFee = deliveryPrice - basePrice;
+                    markup = basePrice - cost;
+                }
             }
 
             if (postedMap.TryGetValue(p.Id, out var posted))
@@ -624,9 +641,11 @@ public class WeeklyPricesController : Controller
                 markup = posted.Markup;
                 if (posted.DeliveryPrice > 0)
                     deliveryFee = posted.DeliveryPrice - (posted.Cost + posted.Markup);
+
+                basePrice = cost + markup;
+                deliveryPrice = basePrice + deliveryFee;
             }
 
-            var basePrice = cost + markup;
             items.Add(new PriceVersusItem
             {
                 ProductId = p.Id,
@@ -635,7 +654,7 @@ public class WeeklyPricesController : Controller
                 Cost = cost,
                 Markup = markup,
                 BasePrice = basePrice,
-                DeliveryPrice = basePrice + deliveryFee,
+                DeliveryPrice = deliveryPrice,
                 DeliveryFee = deliveryFee,
                 MasterCost = masterCost,
                 MasterMarkup = masterMarkup,

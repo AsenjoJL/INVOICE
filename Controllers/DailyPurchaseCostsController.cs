@@ -73,27 +73,22 @@ public class DailyPurchaseCostsController : Controller
         }
 
         var productIds = postedItems.Select(i => i.ProductId).Distinct().ToList();
-        var products = await _context.Products
+        var activeProductIds = (await _context.Products
             .Where(p => productIds.Contains(p.Id) && p.IsActive)
-            .ToDictionaryAsync(p => p.Id, cancellationToken);
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken))
+            .ToHashSet();
 
         var existingCosts = await _context.DailyPurchaseCosts
             .Where(c => productIds.Contains(c.ProductId) && c.CostDate == targetDate)
             .ToDictionaryAsync(c => c.ProductId, cancellationToken);
-
-        var latestCostDates = await _context.DailyPurchaseCosts
-            .AsNoTracking()
-            .Where(c => productIds.Contains(c.ProductId))
-            .GroupBy(c => c.ProductId)
-            .Select(g => new { ProductId = g.Key, LatestDate = g.Max(c => c.CostDate) })
-            .ToDictionaryAsync(x => x.ProductId, x => x.LatestDate, cancellationToken);
 
         var now = DateTime.Now;
         var saved = 0;
         var postedCostByProduct = new Dictionary<int, decimal>();
         foreach (var item in postedItems)
         {
-            if (!products.TryGetValue(item.ProductId, out var product) || !item.PurchaseCostPerUnit.HasValue)
+            if (!activeProductIds.Contains(item.ProductId) || !item.PurchaseCostPerUnit.HasValue)
                 continue;
 
             var unitCost = Math.Round(item.PurchaseCostPerUnit.Value, 2, MidpointRounding.AwayFromZero);
@@ -122,10 +117,6 @@ public class DailyPurchaseCostsController : Controller
                 saved++;
             }
 
-            if (!latestCostDates.TryGetValue(item.ProductId, out var latestDate) || targetDate >= latestDate)
-            {
-                product.UnitCost = unitCost;
-            }
         }
 
         await RefreshSameDayReceiptCostsAsync(targetDate, postedCostByProduct, cancellationToken);

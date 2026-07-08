@@ -93,13 +93,14 @@ public sealed class ProductPricingService : IProductPricingService
                 IsResetDay: true);
         }
 
-        var cost = dailyCost?.UnitCost ?? weeklyPrice?.CostOverride ?? product.UnitCost;
+        var profitCost = dailyCost?.UnitCost ?? weeklyPrice?.CostOverride ?? product.UnitCost;
+        var sellingCostBasis = weeklyPrice?.CostOverride ?? product.UnitCost;
         if (weeklyPrice is { DeliveryPrice: 0m, BasePrice: 0m })
         {
             return new EffectiveProductPrice(
                 product.Id,
-                cost,
-                Markup: -cost,
+                profitCost,
+                Markup: -profitCost,
                 BasePrice: 0m,
                 DeliveryFee: 0m,
                 DeliveryPrice: 0m,
@@ -107,35 +108,29 @@ public sealed class ProductPricingService : IProductPricingService
                 IsResetDay: false);
         }
 
-        var markup = product.Markup;
         var deliveryFee = weeklyPrice?.DeliveryFee ?? product.DeliveryFee;
+        var basePrice = sellingCostBasis + product.Markup;
+        var deliveryPrice = basePrice + deliveryFee;
 
         if (weeklyPrice != null)
         {
             if (weeklyPrice.Markup != 0m)
             {
-                markup = weeklyPrice.Markup;
+                basePrice = sellingCostBasis + weeklyPrice.Markup;
             }
             else if (weeklyPrice.BasePrice > 0m)
             {
-                markup = weeklyPrice.BasePrice - cost;
+                basePrice = weeklyPrice.BasePrice;
             }
-        }
 
-        var basePrice = cost + markup;
-        var deliveryPrice = weeklyPrice != null
-            ? Math.Max(weeklyPrice.DeliveryPrice, 0m)
-            : basePrice + deliveryFee;
-
-        if (weeklyPrice != null)
-        {
+            deliveryPrice = Math.Max(weeklyPrice.DeliveryPrice, 0m);
             deliveryFee = deliveryPrice - basePrice;
         }
 
         return new EffectiveProductPrice(
             product.Id,
-            cost,
-            markup,
+            profitCost,
+            basePrice - profitCost,
             basePrice,
             deliveryFee,
             deliveryPrice,
