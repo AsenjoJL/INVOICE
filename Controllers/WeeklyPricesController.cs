@@ -10,6 +10,7 @@ using HazelInvoice.ViewModels;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.Services;
 using HazelInvoice.Services.Orders;
+using HazelInvoice.Services.Pricing;
 using HazelInvoice.Helpers;
 
 namespace HazelInvoice.Controllers;
@@ -20,12 +21,18 @@ public class WeeklyPricesController : Controller
     private readonly ApplicationDbContext _context;
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly IDailyPurchaseCostService _dailyPurchaseCosts;
 
-    public WeeklyPricesController(ApplicationDbContext context, ILookupCacheService lookupCache, IAppCacheInvalidator cacheInvalidator)
+    public WeeklyPricesController(
+        ApplicationDbContext context,
+        ILookupCacheService lookupCache,
+        IAppCacheInvalidator cacheInvalidator,
+        IDailyPurchaseCostService dailyPurchaseCosts)
     {
         _context = context;
         _lookupCache = lookupCache;
         _cacheInvalidator = cacheInvalidator;
+        _dailyPurchaseCosts = dailyPurchaseCosts;
     }
 
     // GET: WeeklyPrices/PriceVersus
@@ -154,6 +161,8 @@ public class WeeklyPricesController : Controller
                       .ThenByDescending(w => w.Id)
                       .First());
 
+        var dailyCostMap = await _dailyPurchaseCosts.GetEffectiveCostsAsync(productIds, targetDate, HttpContext.RequestAborted);
+
         var importedItems = new List<PriceVersusItem>();
         var matchedProducts = 0;
         var updatedUnits = 0;
@@ -204,9 +213,11 @@ public class WeeklyPricesController : Controller
             }
 
             var currentWeekly = weeklyPriceMap.TryGetValue(product.Id, out var wp) ? wp : null;
-            var currentCost = currentWeekly?.CostOverride ?? product.UnitCost;
+            var currentCost = dailyCostMap.TryGetValue(product.Id, out var dailyCost)
+                ? dailyCost.UnitCost
+                : currentWeekly?.CostOverride ?? product.UnitCost;
             var currentDeliveryFee = currentWeekly?.DeliveryFee ?? product.DeliveryFee;
-            var currentDeliveryPrice = currentWeekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee);
+            var currentDeliveryPrice = currentWeekly?.DeliveryPrice ?? (currentCost + product.Markup + product.DeliveryFee);
 
             var cost = normalizedImportMode switch
             {
@@ -307,6 +318,8 @@ public class WeeklyPricesController : Controller
                       .ThenByDescending(w => w.Id)
                       .First());
 
+        var dailyCostMap = await _dailyPurchaseCosts.GetEffectiveCostsAsync(productIds, day, HttpContext.RequestAborted);
+
         var rows = new List<IReadOnlyList<string>>(capacity: products.Count + 2)
         {
             new[]
@@ -321,8 +334,12 @@ public class WeeklyPricesController : Controller
         foreach (var product in products)
         {
             var weekly = weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
-            var currentCost = applicableDay.HasValue ? weekly?.CostOverride ?? product.UnitCost : 0m;
-            var currentDelivery = applicableDay.HasValue ? weekly?.DeliveryPrice ?? (product.UnitCost + product.Markup + product.DeliveryFee) : 0m;
+            var currentCost = applicableDay.HasValue
+                ? dailyCostMap.TryGetValue(product.Id, out var dailyCost)
+                    ? dailyCost.UnitCost
+                    : weekly?.CostOverride ?? product.UnitCost
+                : 0m;
+            var currentDelivery = applicableDay.HasValue ? weekly?.DeliveryPrice ?? (currentCost + product.Markup + product.DeliveryFee) : 0m;
 
             rows.Add(BuildTemplateRow(product.Name, product.Unit, currentDelivery, currentCost, normalizedImportMode));
         }
@@ -559,6 +576,8 @@ public class WeeklyPricesController : Controller
                       .ThenByDescending(w => w.Id)
                       .First());
 
+        var dailyCostMap = await _dailyPurchaseCosts.GetEffectiveCostsAsync(productIds, targetDate, HttpContext.RequestAborted);
+
         var postedMap = postedItems?
             .Where(i => i.ProductId > 0)
             .GroupBy(i => i.ProductId)
@@ -569,9 +588,12 @@ public class WeeklyPricesController : Controller
         foreach (var p in products)
         {
             decimal masterCost = p.UnitCost;
+            var dateCost = dailyCostMap.TryGetValue(p.Id, out var dailyCost)
+                ? dailyCost.UnitCost
+                : masterCost;
             decimal masterMarkup = p.Markup;
             decimal masterDeliveryFee = p.DeliveryFee;
-            decimal cost = isResetDay ? 0m : masterCost;
+            decimal cost = isResetDay ? 0m : dateCost;
             decimal markup = isResetDay ? 0m : masterMarkup;
             decimal deliveryFee = isResetDay ? 0m : masterDeliveryFee;
             bool hasRec = false;
@@ -579,7 +601,7 @@ public class WeeklyPricesController : Controller
             if (!isResetDay && weeklyMap.TryGetValue(p.Id, out var wp))
             {
                 hasRec = true;
-                if (wp.CostOverride.HasValue)
+                if (wp.CostOverride.HasValue && !dailyCostMap.ContainsKey(p.Id))
                     cost = wp.CostOverride.Value;
 
                 if (wp.DeliveryFee.HasValue)
@@ -944,6 +966,8 @@ public class WeeklyPricesController : Controller
                       .ThenByDescending(w => w.Id)
                       .First());
 
+        var dailyCostMap = await _dailyPurchaseCosts.GetEffectiveCostsAsync(productIds, targetDate, HttpContext.RequestAborted);
+
         foreach (var receipt in receipts)
         {
             foreach (var line in receipt.Lines.Where(l => l.ProductId.HasValue))
@@ -951,7 +975,9 @@ public class WeeklyPricesController : Controller
                 var productId = line.ProductId!.Value;
                 var weeklyPrice = weeklyPriceMap.GetValueOrDefault(productId);
                 var price = weeklyPrice?.DeliveryPrice ?? 0m;
-                var cost = weeklyPrice?.CostOverride
+                var cost = dailyCostMap.TryGetValue(productId, out var dailyCost)
+                    ? dailyCost.UnitCost
+                    : weeklyPrice?.CostOverride
                     ?? (products.TryGetValue(productId, out var productCost) ? productCost : 0m);
 
                 line.Price = price;

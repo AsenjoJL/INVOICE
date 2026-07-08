@@ -81,3 +81,23 @@ public class WeeklyPrice
     [Column(TypeName = "decimal(18,2)")]
     public decimal? DeliveryFee { get; set; }
 }
+
+public class DailyPurchaseCost
+{
+    public int Id { get; set; }
+
+    public int ProductId { get; set; }
+    public Product? Product { get; set; }
+
+    public DateTime CostDate { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal UnitCost { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+    [StringLength(120)]
+    public string? RecordedById { get; set; }
+}

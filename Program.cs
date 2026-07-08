@@ -123,6 +123,7 @@ builder.Services.AddScoped<IReceiptQueryService, ReceiptQueryService>();
 builder.Services.AddSingleton<IAppCacheInvalidator, AppCacheInvalidator>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
 builder.Services.AddScoped<IExpenseCategoryCatalogService, ExpenseCategoryCatalogService>();
+builder.Services.AddScoped<IDailyPurchaseCostService, DailyPurchaseCostService>();
 builder.Services.AddScoped<IProductPricingService, ProductPricingService>();
 
 // Dashboard metrics (keep controllers thin / scalable)

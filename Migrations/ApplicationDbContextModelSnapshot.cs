@@ -256,6 +256,43 @@ namespace HazelInvoice.Migrations
                     b.ToTable("Customers", (string)null);
                 });
 
+            modelBuilder.Entity("HazelInvoice.Models.DailyPurchaseCost", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CostDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RecordedById")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CostDate");
+
+                    b.HasIndex("ProductId", "CostDate")
+                        .IsUnique();
+
+                    b.ToTable("DailyPurchaseCosts", (string)null);
+                });
+
             modelBuilder.Entity("HazelInvoice.Models.Deduction", b =>
                 {
                     b.Property<int>("Id")
@@ -1622,6 +1659,17 @@ namespace HazelInvoice.Migrations
                         .IsRequired();
 
                     b.Navigation("PayrollEntry");
+                });
+
+            modelBuilder.Entity("HazelInvoice.Models.DailyPurchaseCost", b =>
+                {
+                    b.HasOne("HazelInvoice.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("HazelInvoice.Models.Product", b =>

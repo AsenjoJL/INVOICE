@@ -1,0 +1,135 @@
+@model HazelInvoice.ViewModels.DailyPurchaseCostIndexViewModel
+
+@{
+    ViewData["Title"] = "Daily Purchase Cost";
+}
+
+<div class="container-fluid p-4">
+    <section class="admin-page-hero admin-page-flow mb-4">
+        <div class="eyebrow">Cost of Goods</div>
+        <h1>Daily Purchase Cost</h1>
+        <p class="text-muted mb-0">Enter the daily buying cost per product. This updates item cost snapshots for profit reports without changing receipt selling prices directly.</p>
+    </section>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">@TempData["Message"]</div>
+    }
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            Please check the entered purchase costs. Costs must be greater than zero.
+        </div>
+    }
+
+    <section class="admin-surface-card p-4 mb-4">
+        <form method="get" asp-action="Index" class="row g-3 align-items-end">
+            <div class="col-lg-3">
+                <label class="form-label small text-uppercase fw-semibold">Cost Date</label>
+                <input type="date" name="date" value="@Model.TargetDate.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-lg-6">
+                <label class="form-label small text-uppercase fw-semibold">Search Product</label>
+                <input type="text" name="q" value="@Model.SearchTerm" class="form-control" placeholder="Search name, SKU, unit, category..." />
+            </div>
+            <div class="col-lg-3 d-grid">
+                <button type="submit" class="btn btn-dark">Load Products</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="admin-summary-grid mb-4">
+        <div class="metric-card">
+            <div class="metric-label">Products</div>
+            <div class="metric-value">@Model.TotalProducts.ToString("N0")</div>
+            <div class="metric-chip">Visible active items</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Purchase Costs Updated</div>
+            <div class="metric-value text-success">@Model.UpdatedForDateCount.ToString("N0")</div>
+            <div class="metric-chip chip-soft">@Model.TargetDate.ToString("MMM dd, yyyy")</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Using Previous Cost</div>
+            <div class="metric-value text-warning">@Model.UsingPreviousCostCount.ToString("N0")</div>
+            <div class="metric-chip chip-warn">No cost entered for this date</div>
+        </div>
+    </section>
+
+    <form asp-action="Save" method="post" class="admin-surface-card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="TargetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
+        <input type="hidden" asp-for="SearchTerm" />
+
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center p-3 border-bottom">
+            <div>
+                <div class="small text-uppercase text-muted fw-semibold">Excel-style cost table</div>
+                <strong>@Model.TargetDate.ToString("dddd, MMMM dd, yyyy")</strong>
+            </div>
+            <button type="submit" class="btn btn-dark px-4">Save Daily Costs</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>LIST OF ITEMS</th>
+                        <th style="min-width: 220px;">PRICE</th>
+                        <th>UOM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">No active products found.</td>
+                        </tr>
+                    }
+                    @for (var i = 0; i < Model.Items.Count; i++)
+                    {
+                        var item = Model.Items[i];
+                        <tr>
+                            <td>
+                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
+                                <input type="hidden" name="Items[@i].SKU" value="@item.SKU" />
+                                <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
+                                <input type="hidden" name="Items[@i].Unit" value="@item.Unit" />
+                                <div class="fw-semibold">@item.ProductName</div>
+                                <div class="small text-muted">@item.SKU</div>
+                            </td>
+                            <td>
+                                <input type="number"
+                                       name="Items[@i].PurchaseCostPerUnit"
+                                       value="@(item.PurchaseCostPerUnit?.ToString("0.##"))"
+                                       min="0.01"
+                                       step="0.01"
+                                       class="form-control"
+                                       placeholder="@item.EffectiveUnitCost.ToString("0.00")" />
+                                <div class="small text-muted mt-1">
+                                    Active cost: ₱@item.EffectiveUnitCost.ToString("N2")
+                                    @if (item.SourceDate.HasValue)
+                                    {
+                                        <span>from @item.SourceDate.Value.ToString("MMM dd, yyyy")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>from default unit cost</span>
+                                    }
+                                </div>
+                                @if (item.IsUpdatedForDate)
+                                {
+                                    <span class="badge rounded-pill text-bg-success mt-1">Updated Today</span>
+                                }
+                                else
+                                {
+                                    <span class="badge rounded-pill text-bg-warning mt-1">Using Previous Cost</span>
+                                }
+                            </td>
+                            <td class="fw-semibold">@item.Unit</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>

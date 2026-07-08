@@ -30,6 +30,7 @@ public class OrdersController : Controller
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
     private readonly IProductPricingService _productPricing;
+    private readonly IDailyPurchaseCostService _dailyPurchaseCosts;
     private readonly HashSet<string> _outletGroups;
     private readonly string[] _outletOrderTokens;
     private readonly Dictionary<string, string> _outletImportAliasMap;
@@ -47,6 +48,7 @@ public class OrdersController : Controller
         ILookupCacheService lookupCache,
         IAppCacheInvalidator cacheInvalidator,
         IProductPricingService productPricing,
+        IDailyPurchaseCostService dailyPurchaseCosts,
         IOptions<OperationsOptions> operations)
     {
         _context = context;
@@ -58,6 +60,7 @@ public class OrdersController : Controller
         _lookupCache = lookupCache;
         _cacheInvalidator = cacheInvalidator;
         _productPricing = productPricing;
+        _dailyPurchaseCosts = dailyPurchaseCosts;
         _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
@@ -185,8 +188,14 @@ public class OrdersController : Controller
                           .CostOverride!.Value)
             : new Dictionary<int, decimal>();
 
+        var dailyCostMap = await _dailyPurchaseCosts.GetEffectiveCostsAsync(
+            affectedProductIds,
+            dayStart,
+            HttpContext.RequestAborted);
+
         decimal GetEffectiveCost(int pid)
         {
+            if (dailyCostMap.TryGetValue(pid, out var dailyCost)) return dailyCost.UnitCost;
             if (weeklyCostOverrides.TryGetValue(pid, out var c)) return c;
             return productMap.TryGetValue(pid, out var prod) ? prod.UnitCost : 0m;
         }

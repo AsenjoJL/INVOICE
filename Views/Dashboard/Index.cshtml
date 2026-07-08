@@ -96,6 +96,7 @@
         <a href="/Receipts" class="dashboard-module-pill"><i class="bi bi-receipt-cutoff"></i> Receipts</a>
         <a href="/Orders/VegetableMatrix" class="dashboard-module-pill"><i class="bi bi-table"></i> Vegetable Order</a>
         <a href="/Products" class="dashboard-module-pill"><i class="bi bi-box-seam"></i> Products</a>
+        <a href="/DailyPurchaseCosts" class="dashboard-module-pill"><i class="bi bi-coin"></i> Daily Purchase Cost</a>
         <a href="/Customers" class="dashboard-module-pill"><i class="bi bi-shop"></i> Outlets</a>
         <a href="/Purchases" class="dashboard-module-pill"><i class="bi bi-bag-check"></i> Purchases</a>
         <a href="/Payroll" class="dashboard-module-pill"><i class="bi bi-cash-coin"></i> Payroll</a>
@@ -109,6 +110,7 @@
         </div>
         <div class="dashboard-section-actions">
             <a href="/WeeklyPrices/PriceVersus" class="dashboard-inline-link"><i class="bi bi-sliders2"></i> Price Setup</a>
+            <a href="/DailyPurchaseCosts" class="dashboard-inline-link"><i class="bi bi-coin"></i> Daily Purchase Cost</a>
             <a href="@Url.Action("UnpaidOrders", "Orders")" class="dashboard-inline-link"><i class="bi bi-exclamation-circle"></i> Unpaid Orders</a>
         </div>
     </section>
@@ -201,6 +203,19 @@
                     <div class="metric-value">0</div>
                     <div class="metric-state">No item movement yet</div>
                 }
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="metric-card h-100 is-warning">
+                <div class="metric-head">
+                    <div class="metric-label">Cost of Goods Today</div>
+                </div>
+                <div class="metric-value">₱@Model.CostOfGoodsToday.ToString("N0")</div>
+                <div class="metric-state">Based on receipt item cost snapshots</div>
+                <div class="unpaid-cta">
+                    <span class="unpaid-count">@Model.DailyPurchaseCostsUpdatedToday updated · @Model.DailyPurchaseCostsUsingPrevious previous</span>
+                    <a class="unpaid-link" href="@Url.Action("Index", "DailyPurchaseCosts", new { date = businessDate.ToString("yyyy-MM-dd") })">Open</a>
+                </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">

@@ -8,10 +8,14 @@ namespace HazelInvoice.Services.Pricing;
 public sealed class ProductPricingService : IProductPricingService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IDailyPurchaseCostService _dailyPurchaseCosts;
 
-    public ProductPricingService(ApplicationDbContext context)
+    public ProductPricingService(
+        ApplicationDbContext context,
+        IDailyPurchaseCostService dailyPurchaseCosts)
     {
         _context = context;
+        _dailyPurchaseCosts = dailyPurchaseCosts;
     }
 
     public async Task<IReadOnlyDictionary<int, EffectiveProductPrice>> GetEffectivePricesAsync(
@@ -59,14 +63,21 @@ public sealed class ProductPricingService : IProductPricingService
                       .ThenByDescending(w => w.Id)
                       .First());
 
+        var dailyCostMap = await _dailyPurchaseCosts.GetEffectiveCostsAsync(ids, priceDate, cancellationToken);
+
         return products.ToDictionary(
             p => p.Id,
-            p => BuildEffectivePrice(p, weeklyPriceMap.GetValueOrDefault(p.Id), isResetDay));
+            p => BuildEffectivePrice(
+                p,
+                weeklyPriceMap.GetValueOrDefault(p.Id),
+                dailyCostMap.GetValueOrDefault(p.Id),
+                isResetDay));
     }
 
     private static EffectiveProductPrice BuildEffectivePrice(
         ProductPriceSnapshot product,
         WeeklyPrice? weeklyPrice,
+        DailyPurchaseCostSnapshot? dailyCost,
         bool isResetDay)
     {
         if (isResetDay)
@@ -82,7 +93,7 @@ public sealed class ProductPricingService : IProductPricingService
                 IsResetDay: true);
         }
 
-        var cost = weeklyPrice?.CostOverride ?? product.UnitCost;
+        var cost = dailyCost?.UnitCost ?? weeklyPrice?.CostOverride ?? product.UnitCost;
         if (weeklyPrice is { DeliveryPrice: 0m, BasePrice: 0m })
         {
             return new EffectiveProductPrice(

@@ -52,6 +52,7 @@ public class DashboardMetricsService : IDashboardMetricsService
             var paymentMetrics = await GetPaymentMetricsAsync(periods, ct);
             var profitMetrics = await GetProfitMetricsAsync(periods, ct);
             var itemMetrics = await GetItemMetricsAsync(periods, ct);
+            var dailyCostMetrics = await GetDailyPurchaseCostMetricsAsync(periods, ct);
 
             var vm = BuildViewModel(
                 periods,
@@ -59,7 +60,8 @@ public class DashboardMetricsService : IDashboardMetricsService
                 expenseMetrics,
                 paymentMetrics,
                 profitMetrics,
-                itemMetrics);
+                itemMetrics,
+                dailyCostMetrics);
 
             vm.DailySales = await GetDailySalesAsync(periods, ct);
             vm.TopItems = await GetTopItemsAsync(ct);
@@ -83,7 +85,8 @@ public class DashboardMetricsService : IDashboardMetricsService
         ExpenseMetrics expenses,
         PaymentMetrics payments,
         ProfitMetrics profits,
-        ItemMetrics items)
+        ItemMetrics items,
+        DailyPurchaseCostMetrics dailyCosts)
     {
         static decimal TrendPercent(decimal current, decimal previous)
         {
@@ -134,6 +137,9 @@ public class DashboardMetricsService : IDashboardMetricsService
 
             ItemsSoldToday = items.ItemsToday,
             ItemsSoldTodayByUnit = items.ItemsTodayByUnit,
+            CostOfGoodsToday = profits.CostToday,
+            DailyPurchaseCostsUpdatedToday = dailyCosts.UpdatedToday,
+            DailyPurchaseCostsUsingPrevious = dailyCosts.UsingPrevious,
 
             SalesTodayTrendPercent = TrendPercent(receipts.SalesToday, receipts.SalesYesterday),
             SalesMonthlyTrendPercent = TrendPercent(receipts.SalesMonthly, receipts.SalesPrevMonth),
@@ -248,6 +254,7 @@ public class DashboardMetricsService : IDashboardMetricsService
             {
                 RevenueAllTime = g.Sum(l => (decimal?)l.Amount) ?? 0m,
                 CostAllTime = g.Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
+                CostToday = g.Where(l => l.Receipt!.Date >= periods.DayStart && l.Receipt.Date < periods.DayEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
                 RevenueMonth = g.Where(l => l.Receipt!.Date >= periods.MonthStart && l.Receipt.Date < periods.MonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
                 CostMonth = g.Where(l => l.Receipt!.Date >= periods.MonthStart && l.Receipt.Date < periods.MonthEnd).Sum(l => (decimal?)(l.CostPriceSnapshot * l.Quantity)) ?? 0m,
                 RevenuePrevMonth = g.Where(l => l.Receipt!.Date >= periods.PrevMonthStart && l.Receipt.Date < periods.PrevMonthEnd).Sum(l => (decimal?)l.Amount) ?? 0m,
@@ -290,6 +297,30 @@ public class DashboardMetricsService : IDashboardMetricsService
             ItemsToday = itemVolume?.ItemsToday ?? 0m,
             ItemsYesterday = itemVolume?.ItemsYesterday ?? 0m,
             ItemsTodayByUnit = byUnit
+        };
+    }
+
+    private async Task<DailyPurchaseCostMetrics> GetDailyPurchaseCostMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    {
+        var activeProductIds = await _db.Products
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .Select(p => p.Id)
+            .ToListAsync(ct);
+
+        var updatedToday = await _db.DailyPurchaseCosts
+            .AsNoTracking()
+            .Where(c => activeProductIds.Contains(c.ProductId) &&
+                        c.CostDate >= periods.DayStart &&
+                        c.CostDate < periods.DayEnd)
+            .Select(c => c.ProductId)
+            .Distinct()
+            .CountAsync(ct);
+
+        return new DailyPurchaseCostMetrics
+        {
+            UpdatedToday = updatedToday,
+            UsingPrevious = Math.Max(0, activeProductIds.Count - updatedToday)
         };
     }
 
@@ -442,6 +473,7 @@ public class DashboardMetricsService : IDashboardMetricsService
     {
         public decimal RevenueAllTime { get; init; }
         public decimal CostAllTime { get; init; }
+        public decimal CostToday { get; init; }
         public decimal RevenueMonth { get; init; }
         public decimal CostMonth { get; init; }
         public decimal RevenuePrevMonth { get; init; }
@@ -453,6 +485,12 @@ public class DashboardMetricsService : IDashboardMetricsService
         public decimal ItemsToday { get; init; }
         public decimal ItemsYesterday { get; init; }
         public List<CategoryValuePoint> ItemsTodayByUnit { get; init; } = [];
+    }
+
+    private sealed record DailyPurchaseCostMetrics
+    {
+        public int UpdatedToday { get; init; }
+        public int UsingPrevious { get; init; }
     }
 
     private sealed record ReceivableMetrics

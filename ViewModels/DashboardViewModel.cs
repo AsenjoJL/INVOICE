@@ -18,6 +18,9 @@ public class DashboardViewModel
     public decimal OtherExpenseTotal { get; set; }
     public decimal ItemsSoldToday { get; set; }
     public List<CategoryValuePoint> ItemsSoldTodayByUnit { get; set; } = new();
+    public decimal CostOfGoodsToday { get; set; }
+    public int DailyPurchaseCostsUpdatedToday { get; set; }
+    public int DailyPurchaseCostsUsingPrevious { get; set; }
     public decimal ExpenseToday { get; set; }
     public decimal TotalExpenseAllTime { get; set; }
     public decimal TotalSalesAllTime { get; set; }

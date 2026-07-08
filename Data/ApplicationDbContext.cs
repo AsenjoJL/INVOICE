@@ -14,6 +14,7 @@ public class ApplicationDbContext : IdentityDbContext
     public DbSet<Product> Products { get; set; }
     public DbSet<Service> Services { get; set; }
     public DbSet<WeeklyPrice> WeeklyPrices { get; set; }
+    public DbSet<DailyPurchaseCost> DailyPurchaseCosts { get; set; }
     public DbSet<Receipt> Receipts { get; set; }
     public DbSet<ReceiptLine> ReceiptLines { get; set; }
     public DbSet<Payment> Payments { get; set; }
@@ -83,6 +84,10 @@ public class ApplicationDbContext : IdentityDbContext
         builder.Entity<Supplier>().HasIndex(s => s.IsActive);
 
         builder.Entity<WeeklyPrice>().HasIndex(w => new { w.ProductId, w.EffectiveFrom, w.EffectiveTo });
+        builder.Entity<DailyPurchaseCost>()
+            .HasIndex(c => new { c.ProductId, c.CostDate })
+            .IsUnique();
+        builder.Entity<DailyPurchaseCost>().HasIndex(c => c.CostDate);
         builder.Entity<ReceiptSequence>().HasIndex(s => s.Year);
         builder.Entity<PurchaseSequence>().HasIndex(s => s.Year);
         builder.Entity<ExpenseCategoryDefinition>().HasIndex(e => e.Name).IsUnique();
