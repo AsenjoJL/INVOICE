@@ -1,4 +1,6 @@
 using System;
+using HazelInvoice.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -7,6 +9,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HazelInvoice.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260708000000_AddDailyPurchaseCosts")]
     public partial class AddDailyPurchaseCosts : Migration
     {
         /// <inheritdoc />
