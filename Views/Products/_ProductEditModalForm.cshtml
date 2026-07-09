@@ -1,0 +1,127 @@
+@model HazelInvoice.Models.Product
+
+@{
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var supplierOptions = (ViewBag.SupplierOptions as List<HazelInvoice.Models.Supplier>) ?? new List<HazelInvoice.Models.Supplier>();
+    var categoryOptions = (ViewBag.CategoryOptions as List<string>) ?? new List<string>();
+    var defaultCategories = new[] { "Vegetables", "Fruits", "Meat", "Seafood", "Dry Goods", "Beverages", "Others" };
+    var currentCategory = Model?.Category ?? string.Empty;
+    var allCategories = categoryOptions
+        .Concat(defaultCategories)
+        .Where(c => !string.IsNullOrWhiteSpace(c))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    if (!string.IsNullOrWhiteSpace(currentCategory) &&
+        !allCategories.Contains(currentCategory, StringComparer.OrdinalIgnoreCase))
+    {
+        allCategories.Add(currentCategory);
+    }
+
+    allCategories.Sort(StringComparer.OrdinalIgnoreCase);
+    var unitOptions = new[] { "pc", "pcs", "kg", "liter", "liters", "gallon", "bottle", "pack", "bundle", "box", "bag", "sack", "tray" };
+}
+
+<form asp-action="EditModal"
+      asp-route-id="@Model.Id"
+      method="post"
+      id="productEditModalForm"
+      data-fallback-action="@Url.Action("Edit", "Products", new { id = Model.Id })"
+      data-product-edit-modal-form>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" name="returnUrl" value="@returnUrl" />
+    <input type="hidden" name="returnClientPage" class="return-client-page" value="1" />
+
+    <div asp-validation-summary="ModelOnly" class="text-danger product-form-alert"></div>
+
+    <div class="product-form-section">
+        <div class="section-title">Basics</div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="form-floating">
+                    <input asp-for="SKU" class="form-control" placeholder="SKU" />
+                    <label asp-for="SKU">SKU / Code</label>
+                    <span asp-validation-for="SKU" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="form-floating">
+                    <input asp-for="Name" class="form-control" placeholder="Product Name" />
+                    <label asp-for="Name">Product Name</label>
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-floating mt-3">
+            <select asp-for="SupplierId" class="form-select">
+                <option value="">-- Select Supplier (Owner) --</option>
+                @foreach (var supplier in supplierOptions)
+                {
+                    <option value="@supplier.Id">@supplier.Name</option>
+                }
+            </select>
+            <label asp-for="SupplierId">Supplier / Owner</label>
+            <span asp-validation-for="SupplierId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="product-form-section">
+        <div class="section-title">Classification</div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <select asp-for="Category" class="form-select">
+                        <option value="">-- Select Category --</option>
+                        @foreach (var category in allCategories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                    <label asp-for="Category">Category</label>
+                    <span asp-validation-for="Category" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <select asp-for="Unit" class="form-select">
+                        @foreach (var unit in unitOptions)
+                        {
+                            <option value="@unit">@unit</option>
+                        }
+                    </select>
+                    <label asp-for="Unit">Unit</label>
+                    <span asp-validation-for="Unit" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="product-form-section">
+        <div class="section-title">Pricing And Visibility</div>
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input asp-for="UnitCost" class="form-control" placeholder="Cost" />
+                    <label asp-for="UnitCost">Unit Cost</label>
+                    <span asp-validation-for="UnitCost" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check form-switch modal-product-active-switch">
+                    <input class="form-check-input" asp-for="IsActive" />
+                    <label class="form-check-label" asp-for="IsActive">Active in orders</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="product-form-section product-form-actions modal-product-actions">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-lg" data-product-edit-save>
+            <span class="save-label">Save Changes</span>
+            <span class="save-loading d-none">Saving...</span>
+        </button>
+    </div>
+</form>

@@ -54,6 +54,223 @@
 (function () {
     'use strict';
 
+    const modalElement = document.getElementById('productEditModal');
+    const modalBody = document.getElementById('productEditModalBody');
+    if (!modalElement || !modalBody || !window.bootstrap || typeof fetch !== 'function') return;
+
+    const SCROLL_KEY = 'products:index:scrollY';
+    const RESTORE_KEY = 'products:index:restore';
+    const STATE_KEY = 'products:index:viewState';
+    const modal = new window.bootstrap.Modal(modalElement);
+
+    function getSavedState() {
+        try {
+            return JSON.parse(sessionStorage.getItem(STATE_KEY) || 'null');
+        } catch {
+            return null;
+        }
+    }
+
+    function rememberListPosition() {
+        const state = getSavedState() || {};
+        const scrollY = window.scrollY || 0;
+        sessionStorage.setItem(SCROLL_KEY, String(scrollY));
+        sessionStorage.setItem(RESTORE_KEY, '1');
+        sessionStorage.setItem(STATE_KEY, JSON.stringify({
+            ...state,
+            scrollY
+        }));
+    }
+
+    function setLoading() {
+        modalBody.innerHTML = '<div class="product-edit-modal-loading">Loading product form...</div>';
+    }
+
+    function setSaveState(form, isSaving) {
+        const button = form.querySelector('[data-product-edit-save]');
+        if (!(button instanceof HTMLButtonElement)) return;
+
+        const label = button.querySelector('.save-label');
+        const loading = button.querySelector('.save-loading');
+        button.disabled = isSaving;
+        label?.classList.toggle('d-none', isSaving);
+        loading?.classList.toggle('d-none', !isSaving);
+    }
+
+    function showModalMessage(form, message) {
+        let alert = form.querySelector('.product-edit-modal-feedback');
+        if (!alert) {
+            alert = document.createElement('div');
+            alert.className = 'alert alert-success product-edit-modal-feedback';
+            alert.setAttribute('role', 'alert');
+            form.prepend(alert);
+        }
+
+        alert.textContent = message || 'Product saved.';
+    }
+
+    function syncReturnPage(form) {
+        const input = form.querySelector('.return-client-page');
+        if (!(input instanceof HTMLInputElement)) return;
+
+        const state = getSavedState() || {};
+        const currentPage = Number(state.currentPage || 1);
+        input.value = Number.isFinite(currentPage) && currentPage > 0
+            ? String(currentPage)
+            : '1';
+    }
+
+    function parseModalValidation(form) {
+        if (window.jQuery?.validator?.unobtrusive) {
+            window.jQuery.validator.unobtrusive.parse(form);
+        }
+    }
+
+    function updateProductRow(product) {
+        if (!product?.id) return;
+
+        const rows = Array.from(document.querySelectorAll('tr.product-row'));
+        const row = rows.find(item => item.dataset.id === String(product.id));
+        if (!(row instanceof HTMLTableRowElement)) return;
+
+        const category = product.category || 'Uncategorized';
+        const unit = product.unit || '';
+        const deliveryPrice = Number(product.effectiveDeliveryPrice || 0);
+        const costText = product.effectiveCostText || '0.00';
+        const baseText = product.effectiveBasePriceText || '0.00';
+        const deliveryText = product.effectiveDeliveryPriceText || deliveryPrice.toFixed(2);
+
+        row.dataset.sku = product.sku || '';
+        row.dataset.name = product.name || '';
+        row.dataset.category = category;
+        row.dataset.unit = unit;
+        row.dataset.cost = String(deliveryPrice);
+        row.dataset.status = product.status || (product.isActive ? 'active' : 'inactive');
+
+        const skuCell = row.querySelector('.product-sku');
+        if (skuCell) skuCell.textContent = product.sku || '';
+
+        const nameCell = row.querySelector('.product-name');
+        if (nameCell) nameCell.textContent = product.name || '';
+
+        const categoryMeta = row.querySelector('td:nth-child(3) .product-meta');
+        if (categoryMeta) categoryMeta.textContent = category;
+
+        const unitCell = row.children[3];
+        if (unitCell) unitCell.textContent = unit;
+
+        const pricePrimary = row.querySelector('.product-price-primary');
+        if (pricePrimary) {
+            pricePrimary.textContent = `P${deliveryText}`;
+            pricePrimary.classList.toggle('zero', deliveryPrice === 0);
+        }
+
+        const priceMeta = row.querySelector('td:nth-child(5) .product-meta');
+        if (priceMeta) {
+            priceMeta.textContent = `Cost P${costText} · Base P${baseText}`;
+            if (product.hasWeeklyPrice) {
+                const flag = document.createElement('span');
+                flag.className = 'product-weekly-flag';
+                flag.textContent = 'Weekly';
+                priceMeta.append(' ', flag);
+            }
+        }
+
+        const statusCell = row.children[5];
+        if (statusCell) {
+            statusCell.innerHTML = '';
+            const pill = document.createElement('span');
+            pill.className = `status-pill ${product.isActive ? 'status-active' : 'status-inactive'}`;
+            pill.textContent = product.isActive ? 'Active' : 'Inactive';
+            statusCell.appendChild(pill);
+        }
+
+        row.classList.add('product-row-highlight');
+        window.setTimeout(() => row.classList.remove('product-row-highlight'), 2200);
+    }
+
+    function bindModalForm() {
+        const form = modalBody.querySelector('form[data-product-edit-modal-form]');
+        if (!(form instanceof HTMLFormElement)) return;
+
+        parseModalValidation(form);
+        syncReturnPage(form);
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            rememberListPosition();
+            syncReturnPage(form);
+            setSaveState(form, true);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const result = await response.json();
+                    if (result?.ok) {
+                        updateProductRow(result.product);
+                        showModalMessage(form, result.message);
+                        return;
+                    }
+                }
+
+                const html = await response.text();
+                modalBody.innerHTML = html;
+                bindModalForm();
+            } catch {
+                if (form.dataset.fallbackAction) {
+                    form.action = form.dataset.fallbackAction;
+                }
+                form.submit();
+            } finally {
+                const currentForm = modalBody.querySelector('form[data-product-edit-modal-form]');
+                if (currentForm instanceof HTMLFormElement) {
+                    setSaveState(currentForm, false);
+                }
+            }
+        });
+    }
+
+    document.addEventListener('click', async (event) => {
+        const link = event.target instanceof Element
+            ? event.target.closest('.product-edit-link[data-edit-modal-url]')
+            : null;
+
+        if (!(link instanceof HTMLAnchorElement)) return;
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+        event.preventDefault();
+        rememberListPosition();
+        setLoading();
+        modal.show();
+
+        try {
+            const response = await fetch(link.dataset.editModalUrl || link.href, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) throw new Error('Unable to load product edit form.');
+
+            modalBody.innerHTML = await response.text();
+            bindModalForm();
+        } catch {
+            window.location.href = link.href;
+        }
+    });
+})();
+
+(function () {
+    'use strict';
+
     const url = new URL(window.location.href);
     const restorePageParam = parseInt(url.searchParams.get('restorePage') || '0', 10);
     const restoreScrollParam = parseInt(url.searchParams.get('restoreScrollY') || '0', 10);

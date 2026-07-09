@@ -362,7 +362,9 @@
                                                 <a class="dropdown-item product-edit-link"
                                                    asp-action="Edit"
                                                    asp-route-id="@item.Id"
-                                                   asp-route-returnUrl="@returnUrl">
+                                                   asp-route-returnUrl="@returnUrl"
+                                                   data-product-id="@item.Id"
+                                                   data-edit-modal-url="@Url.Action("EditModal", "Products", new { id = item.Id, returnUrl })">
                                                     <i class="bi bi-pencil-square me-2"></i>Edit
                                                 </a>
                                             </li>
@@ -430,6 +432,30 @@
         <button type="button" class="btn btn-outline-secondary btn-sm" title="UI toolbar ready (no bulk endpoint configured)">Deactivate</button>
         <button type="button" class="btn btn-outline-danger btn-sm" title="UI toolbar ready (no bulk endpoint configured)">Delete selected</button>
         <button type="button" id="clearSelectionBtn" class="btn btn-light btn-sm">Clear</button>
+    </div>
+</div>
+
+<div class="modal fade"
+     id="productEditModal"
+     tabindex="-1"
+     aria-labelledby="productEditModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable product-edit-modal-dialog">
+        <div class="modal-content product-edit-modal-content product-refresh product-form-page">
+            <div class="modal-header product-edit-modal-header">
+                <div>
+                    <div class="product-form-kicker">Product Setup</div>
+                    <h5 class="modal-title" id="productEditModalLabel">Edit Product</h5>
+                    <p class="subtitle mb-0">Update catalog details without leaving the products list.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body product-form-card product-edit-modal-body" id="productEditModalBody">
+                <div class="product-edit-modal-loading">
+                    Loading product form...
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
