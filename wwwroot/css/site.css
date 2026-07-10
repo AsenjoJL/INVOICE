@@ -3888,6 +3888,7 @@ textarea,
     border-radius: 0 !important;
     margin-left: 0 !important;
     overscroll-behavior: contain;
+    overflow-anchor: none;
     scroll-behavior: auto;
     scrollbar-gutter: stable;
 }
