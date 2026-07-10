@@ -10,232 +10,535 @@
 }
 
 @section Styles {
-    <style>
-        .daily-cost-table tr:target {
-            background: #fff8db;
-            scroll-margin-top: 120px;
-        }
+<style>
+    /* ─── Page ───────────────────────────────────────────── */
+    .dpc-page {
+        --dpc-ink:       #0f172a;
+        --dpc-muted:     #64748b;
+        --dpc-border:    #e2e8f0;
+        --dpc-bg:        #f8fafc;
+        --dpc-white:     #ffffff;
+        --dpc-green:     #16a34a;
+        --dpc-green-bg:  #f0fdf4;
+        --dpc-amber:     #d97706;
+        --dpc-amber-bg:  #fffbeb;
+        --dpc-radius:    12px;
+        font-family: 'Inter', sans-serif;
+        background: var(--dpc-bg);
+        min-height: 100vh;
+        padding-bottom: 60px;
+        color: var(--dpc-ink);
+    }
 
-        .daily-cost-hero-actions {
-            display: flex;
-            align-items: stretch;
-        }
+    /* ─── Hero ───────────────────────────────────────────── */
+    .dpc-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #fff;
+        padding: 48px 40px 40px;
+        position: relative;
+        overflow: hidden;
+    }
+    .dpc-hero::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 80% 50%, rgba(99,102,241,.18) 0%, transparent 65%);
+        pointer-events: none;
+    }
+    .dpc-hero-inner {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: space-between;
+        align-items: flex-start;
+        position: relative;
+        z-index: 1;
+    }
+    .dpc-hero-eyebrow {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.45);
+        margin-bottom: 8px;
+    }
+    .dpc-hero h1 {
+        margin: 0 0 8px;
+        font-size: clamp(22px,3vw,30px);
+        font-weight: 700;
+        letter-spacing: -.025em;
+        color: #fff;
+    }
+    .dpc-hero-sub {
+        font-size: 14px;
+        color: rgba(255,255,255,.55);
+        max-width: 520px;
+        line-height: 1.6;
+        margin: 0;
+    }
+    .dpc-btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.22);
+        background: rgba(255,255,255,.09);
+        color: rgba(255,255,255,.9);
+        font-size: 13.5px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background .15s, border-color .15s;
+        white-space: nowrap;
+        backdrop-filter: blur(4px);
+    }
+    .dpc-btn-ghost:hover {
+        background: rgba(255,255,255,.16);
+        border-color: rgba(255,255,255,.38);
+        color: #fff;
+    }
 
-        .daily-cost-expense-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            min-width: 150px;
-            min-height: 48px;
-            padding: 0.7rem 1.1rem;
-            border-radius: 16px;
-            border: 1px solid #d9e2ec;
-            background: #ffffff;
-            color: #0f172a;
-            font-weight: 700;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-            white-space: nowrap;
-        }
+    /* ─── Body ───────────────────────────────────────────── */
+    .dpc-body {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 32px 40px;
+    }
 
-        .daily-cost-expense-btn:hover,
-        .daily-cost-expense-btn:focus {
-            border-color: #0f172a;
-            background: #0f172a;
-            color: #ffffff;
-        }
+    /* ─── Alerts ─────────────────────────────────────────── */
+    .dpc-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 14px 18px;
+        border-radius: var(--dpc-radius);
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+    .dpc-alert-success { background: var(--dpc-green-bg); border: 1px solid #bbf7d0; color: #15803d; }
+    .dpc-alert-danger  { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
 
-        @@media (max-width: 575.98px) {
-            .daily-cost-hero-actions,
-            .daily-cost-expense-btn {
-                width: 100%;
-            }
-        }
-    </style>
+    /* ─── Metrics ────────────────────────────────────────── */
+    .dpc-metrics {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .dpc-metric {
+        background: var(--dpc-white);
+        border: 1px solid var(--dpc-border);
+        border-radius: var(--dpc-radius);
+        padding: 20px 22px;
+        position: relative;
+        overflow: hidden;
+    }
+    .dpc-metric::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+        background: #e2e8f0;
+    }
+    .dpc-metric.is-success::before { background: var(--dpc-green); }
+    .dpc-metric.is-warn::before    { background: var(--dpc-amber); }
+    .dpc-metric-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--dpc-muted);
+        margin-bottom: 8px;
+    }
+    .dpc-metric-value {
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -.04em;
+        line-height: 1;
+        color: var(--dpc-ink);
+        margin-bottom: 6px;
+    }
+    .dpc-metric.is-success .dpc-metric-value { color: var(--dpc-green); }
+    .dpc-metric.is-warn    .dpc-metric-value { color: var(--dpc-amber); }
+    .dpc-metric-hint { font-size: 12px; color: var(--dpc-muted); }
+
+    /* ─── Card ───────────────────────────────────────────── */
+    .dpc-card {
+        background: var(--dpc-white);
+        border: 1px solid var(--dpc-border);
+        border-radius: var(--dpc-radius);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .dpc-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--dpc-border);
+        background: #fdfdfd;
+    }
+    .dpc-card-title { font-size: 13.5px; font-weight: 600; color: var(--dpc-ink); letter-spacing: -.01em; }
+    .dpc-card-sub   { font-size: 12px; color: var(--dpc-muted); margin-top: 2px; }
+    .dpc-card-body  { padding: 20px; }
+
+    /* ─── Form controls ──────────────────────────────────── */
+    .dpc-filter { display: grid; grid-template-columns: 200px 1fr auto; gap: 12px; align-items: end; }
+    .dpc-import-strip { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+
+    .dpc-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--dpc-muted);
+        margin-bottom: 6px;
+    }
+    .dpc-input {
+        width: 100%;
+        height: 40px;
+        padding: 0 12px;
+        border: 1px solid var(--dpc-border);
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-family: 'Inter', sans-serif;
+        color: var(--dpc-ink);
+        background: var(--dpc-white);
+        transition: border-color .15s, box-shadow .15s;
+        appearance: none;
+        box-sizing: border-box;
+    }
+    .dpc-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+    }
+    .dpc-input[type="file"] { padding: 0 8px; line-height: 38px; cursor: pointer; }
+
+    /* ─── Buttons ────────────────────────────────────────── */
+    .dpc-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 40px;
+        padding: 0 18px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 500;
+        font-family: 'Inter', sans-serif;
+        white-space: nowrap;
+        cursor: pointer;
+        border: 1px solid transparent;
+        text-decoration: none;
+        transition: background .15s, color .15s, border-color .15s;
+        box-sizing: border-box;
+    }
+    .dpc-btn-primary { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .dpc-btn-primary:hover { background: #1e293b; color: #fff; }
+    .dpc-btn-outline { background: var(--dpc-white); color: var(--dpc-ink); border-color: var(--dpc-border); }
+    .dpc-btn-outline:hover { border-color: #0f172a; }
+    .dpc-btn-save { height: 34px; padding: 0 14px; font-size: 13px; border-radius: 7px; background: #0f172a; color: #fff; border-color: #0f172a; }
+    .dpc-btn-save:hover { background: #1e293b; color: #fff; }
+
+    /* ─── Table ──────────────────────────────────────────── */
+    .dpc-table-wrap { overflow-x: auto; }
+    .dpc-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .dpc-table thead th {
+        padding: 11px 16px;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--dpc-muted);
+        background: #f8fafc;
+        border-bottom: 1px solid var(--dpc-border);
+        white-space: nowrap;
+    }
+    .dpc-table tbody td {
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--dpc-border);
+        vertical-align: middle;
+        color: var(--dpc-ink);
+    }
+    .dpc-table tbody tr:last-child td { border-bottom: none; }
+    .dpc-table tbody tr:hover td { background: #f8fafc; }
+    .dpc-table tbody tr:target td { background: #fef9c3; }
+
+    .dpc-product-name { font-weight: 600; font-size: 14px; color: var(--dpc-ink); margin-bottom: 2px; }
+    .dpc-product-sku  { font-size: 11.5px; color: var(--dpc-muted); font-family: 'DM Mono', monospace; letter-spacing: .04em; }
+
+    .dpc-cost-input {
+        width: 150px;
+        height: 36px;
+        padding: 0 10px;
+        border: 1px solid var(--dpc-border);
+        border-radius: 7px;
+        font-size: 14px;
+        font-family: 'Inter', sans-serif;
+        color: var(--dpc-ink);
+        background: var(--dpc-white);
+        transition: border-color .15s, box-shadow .15s;
+        appearance: none;
+    }
+    .dpc-cost-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+
+    .dpc-active-cost { margin-top: 5px; font-size: 11.5px; color: var(--dpc-muted); }
+
+    .dpc-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 9px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: .04em;
+        margin-top: 5px;
+    }
+    .dpc-badge-ok   { background: var(--dpc-green-bg); color: var(--dpc-green); border: 1px solid #bbf7d0; }
+    .dpc-badge-warn { background: var(--dpc-amber-bg); color: var(--dpc-amber); border: 1px solid #fde68a; }
+    .dpc-uom        { font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--dpc-muted); }
+
+    /* ─── Responsive ─────────────────────────────────────── */
+    @@media (max-width: 991px) {
+        .dpc-hero { padding: 36px 24px 30px; }
+        .dpc-body { padding: 24px 20px; }
+        .dpc-metrics { grid-template-columns: 1fr 1fr; }
+        .dpc-filter { grid-template-columns: 1fr 1fr; }
+        .dpc-import-strip { grid-template-columns: 1fr; }
+    }
+    @@media (max-width: 575px) {
+        .dpc-metrics { grid-template-columns: 1fr; }
+        .dpc-filter { grid-template-columns: 1fr; }
+        .dpc-btn-ghost { width: 100%; justify-content: center; }
+    }
+</style>
 }
 
-<div class="container-fluid p-4">
-    <section class="admin-page-hero admin-page-flow mb-4">
-        <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start">
+<div class="dpc-page">
+
+    <header class="dpc-hero">
+        <div class="dpc-hero-inner">
             <div>
-                <div class="eyebrow">Cost of Goods</div>
+                <div class="dpc-hero-eyebrow">Cost of Goods</div>
                 <h1>Daily Purchase Cost</h1>
-                <p class="text-muted mb-0">Enter the daily buying cost per product. This updates item cost snapshots for profit reports without changing receipt selling prices directly.</p>
+                <p class="dpc-hero-sub">Enter the daily buying cost per product. Updates cost snapshots for profit reports without changing receipt selling prices.</p>
             </div>
-            <div class="daily-cost-hero-actions">
+            <div>
                 <a asp-controller="Expenses"
                    asp-action="Index"
                    asp-route-returnUrl="@dailyPurchaseCostReturnUrl"
-                   class="daily-cost-expense-btn">
-                    <i class="bi bi-receipt-cutoff"></i> Expenses
+                   class="dpc-btn-ghost">
+                    <i class="bi bi-receipt-cutoff"></i> View Expenses
                 </a>
             </div>
         </div>
-    </section>
+    </header>
 
-    @if (TempData["Message"] != null)
-    {
-        <div class="alert alert-success">@TempData["Message"]</div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
-    }
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div class="alert alert-danger">
-            Please check the entered purchase costs. Costs must be greater than zero.
+    <div class="dpc-body">
+
+        @if (TempData["Message"] != null)
+        {
+            <div class="dpc-alert dpc-alert-success">
+                <i class="bi bi-check-circle-fill" style="margin-top:1px;flex-shrink:0;"></i>
+                <span>@TempData["Message"]</span>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="dpc-alert dpc-alert-danger">
+                <i class="bi bi-exclamation-circle-fill" style="margin-top:1px;flex-shrink:0;"></i>
+                <span>@TempData["ErrorMessage"]</span>
+            </div>
+        }
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="dpc-alert dpc-alert-danger">
+                <i class="bi bi-exclamation-circle-fill" style="margin-top:1px;flex-shrink:0;"></i>
+                <span>Please check the entered purchase costs. Costs must be greater than zero.</span>
+            </div>
+        }
+
+        <div class="dpc-metrics">
+            <div class="dpc-metric">
+                <div class="dpc-metric-label">Total Products</div>
+                <div class="dpc-metric-value">@Model.TotalProducts.ToString("N0")</div>
+                <div class="dpc-metric-hint">Visible active items</div>
+            </div>
+            <div class="dpc-metric is-success">
+                <div class="dpc-metric-label">Updated for Date</div>
+                <div class="dpc-metric-value">@Model.UpdatedForDateCount.ToString("N0")</div>
+                <div class="dpc-metric-hint">@Model.TargetDate.ToString("MMM dd, yyyy")</div>
+            </div>
+            <div class="dpc-metric is-warn">
+                <div class="dpc-metric-label">Using Previous Cost</div>
+                <div class="dpc-metric-value">@Model.UsingPreviousCostCount.ToString("N0")</div>
+                <div class="dpc-metric-hint">No cost entered for this date</div>
+            </div>
         </div>
-    }
 
-    <section class="admin-surface-card p-4 mb-4">
-        <form method="get" asp-action="Index" class="row g-3 align-items-end">
-            <div class="col-lg-3">
-                <label class="form-label small text-uppercase fw-semibold">Cost Date</label>
-                <input type="date" name="date" value="@Model.TargetDate.ToString("yyyy-MM-dd")" class="form-control" />
+        <div class="dpc-card">
+            <div class="dpc-card-head">
+                <div>
+                    <div class="dpc-card-title">Filter Products</div>
+                    <div class="dpc-card-sub">Choose a date and narrow by name, SKU, unit, or category</div>
+                </div>
             </div>
-            <div class="col-lg-6">
-                <label class="form-label small text-uppercase fw-semibold">Search Product</label>
-                <input type="text" name="q" value="@Model.SearchTerm" class="form-control" placeholder="Search name, SKU, unit, category..." />
-            </div>
-            <div class="col-lg-3 d-grid">
-                <button type="submit" class="btn btn-dark">Load Products</button>
-            </div>
-        </form>
-    </section>
-
-    <section class="admin-surface-card p-4 mb-4">
-        <div class="row g-3 align-items-end">
-            <div class="col-lg-4">
-                <div class="small text-uppercase text-muted fw-semibold">Excel Template</div>
-                <div class="text-muted small">Download all active products, fill the PRICE column, then import it for @Model.TargetDate.ToString("MMM dd, yyyy").</div>
-            </div>
-            <div class="col-lg-3 d-grid">
-                <a asp-action="DownloadTemplate"
-                   asp-route-date="@Model.TargetDate.ToString("yyyy-MM-dd")"
-                   class="btn btn-outline-dark">
-                    <i class="bi bi-download"></i> Download Template
-                </a>
-            </div>
-            <div class="col-lg-5">
-                <form asp-action="ImportTemplate"
-                      method="post"
-                      enctype="multipart/form-data"
-                      class="row g-2 align-items-end">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="targetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
-                    <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
-                    <div class="col-md-7">
-                        <label class="form-label small text-uppercase fw-semibold">Import Purchase Cost</label>
-                        <input type="file" name="importFile" accept=".xlsx" class="form-control" required />
-                    </div>
-                    <div class="col-md-5 d-grid">
-                        <button type="submit" class="btn btn-dark">
-                            <i class="bi bi-upload"></i> Import
-                        </button>
+            <div class="dpc-card-body">
+                <form method="get" asp-action="Index">
+                    <div class="dpc-filter">
+                        <div>
+                            <label class="dpc-label">Cost Date</label>
+                            <input type="date" name="date" value="@Model.TargetDate.ToString("yyyy-MM-dd")" class="dpc-input" />
+                        </div>
+                        <div>
+                            <label class="dpc-label">Search Product</label>
+                            <input type="text" name="q" value="@Model.SearchTerm" class="dpc-input" placeholder="Name, SKU, unit, category…" />
+                        </div>
+                        <div>
+                            <label class="dpc-label">&nbsp;</label>
+                            <button type="submit" class="dpc-btn dpc-btn-primary" style="width:100%;">
+                                <i class="bi bi-search"></i> Load
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
-    </section>
 
-    <section class="admin-summary-grid mb-4">
-        <div class="metric-card">
-            <div class="metric-label">Products</div>
-            <div class="metric-value">@Model.TotalProducts.ToString("N0")</div>
-            <div class="metric-chip">Visible active items</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Purchase Costs Updated</div>
-            <div class="metric-value text-success">@Model.UpdatedForDateCount.ToString("N0")</div>
-            <div class="metric-chip chip-soft">@Model.TargetDate.ToString("MMM dd, yyyy")</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Using Previous Cost</div>
-            <div class="metric-value text-warning">@Model.UsingPreviousCostCount.ToString("N0")</div>
-            <div class="metric-chip chip-warn">No cost entered for this date</div>
-        </div>
-    </section>
-
-    <section class="admin-surface-card">
-        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center p-3 border-bottom">
-            <div>
-                <div class="small text-uppercase text-muted fw-semibold">Excel-style cost table</div>
-                <strong>@Model.TargetDate.ToString("dddd, MMMM dd, yyyy")</strong>
+        <div class="dpc-card">
+            <div class="dpc-card-head">
+                <div>
+                    <div class="dpc-card-title">Excel Import / Export</div>
+                    <div class="dpc-card-sub">Download the template, fill the PRICE column, then import it back</div>
+                </div>
             </div>
-            <div class="small text-muted">Save one item at a time to stay in your current row.</div>
+            <div class="dpc-card-body">
+                <div class="dpc-import-strip">
+                    <div>
+                        <label class="dpc-label">Download Template for @Model.TargetDate.ToString("MMM dd, yyyy")</label>
+                        <a asp-action="DownloadTemplate"
+                           asp-route-date="@Model.TargetDate.ToString("yyyy-MM-dd")"
+                           class="dpc-btn dpc-btn-outline" style="width:100%;max-width:240px;">
+                            <i class="bi bi-download"></i> Download Template
+                        </a>
+                    </div>
+                    <div>
+                        <form asp-action="ImportTemplate"
+                              method="post"
+                              enctype="multipart/form-data"
+                              style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="targetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
+                            <div>
+                                <label class="dpc-label">Import .xlsx File</label>
+                                <input type="file" name="importFile" accept=".xlsx" class="dpc-input" required />
+                            </div>
+                            <div>
+                                <button type="submit" class="dpc-btn dpc-btn-primary">
+                                    <i class="bi bi-upload"></i> Import
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table align-middle mb-0 daily-cost-table">
-                <thead>
-                    <tr>
-                        <th>LIST OF ITEMS</th>
-                        <th style="min-width: 220px;">PRICE</th>
-                        <th>UOM</th>
-                        <th class="text-end" style="min-width: 130px;">ACTION</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.Items.Any())
-                    {
+        <div class="dpc-card" style="margin-bottom:0;">
+            <div class="dpc-card-head">
+                <div>
+                    <div class="dpc-card-title">@Model.TargetDate.ToString("dddd, MMMM dd, yyyy")</div>
+                    <div class="dpc-card-sub">Save one item at a time to stay in your current row</div>
+                </div>
+            </div>
+            <div class="dpc-table-wrap">
+                <table class="dpc-table daily-cost-table">
+                    <thead>
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-4">No active products found.</td>
+                            <th>Product</th>
+                            <th style="min-width:220px;">Purchase Cost</th>
+                            <th>UOM</th>
+                            <th style="text-align:right;min-width:100px;">Action</th>
                         </tr>
-                    }
-                    @for (var i = 0; i < Model.Items.Count; i++)
-                    {
-                        var item = Model.Items[i];
-                        var formId = $"save-cost-{item.ProductId}";
-                        var rowId = $"cost-row-{item.ProductId}";
-                        <tr id="@rowId">
-                            <td>
-                                <div class="fw-semibold">@item.ProductName</div>
-                                <div class="small text-muted">@item.SKU</div>
-                            </td>
-                            <td>
-                                <input type="number"
-                                       form="@formId"
-                                       name="purchaseCostPerUnit"
-                                       value="@(item.PurchaseCostPerUnit?.ToString("0.##"))"
-                                       min="0.01"
-                                       step="0.01"
-                                       class="form-control"
-                                       placeholder="@item.EffectiveUnitCost.ToString("0.00")" />
-                                <div class="small text-muted mt-1">
-                                    Active cost: ₱@item.EffectiveUnitCost.ToString("N2")
-                                    @if (item.SourceDate.HasValue)
+                    </thead>
+                    <tbody>
+                        @if (!Model.Items.Any())
+                        {
+                            <tr>
+                                <td colspan="4" style="text-align:center;padding:48px 16px;color:#94a3b8;">
+                                    <i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:10px;opacity:.5;"></i>
+                                    No active products found.
+                                </td>
+                            </tr>
+                        }
+                        @for (var i = 0; i < Model.Items.Count; i++)
+                        {
+                            var item = Model.Items[i];
+                            var formId = $"save-cost-{item.ProductId}";
+                            var rowId  = $"cost-row-{item.ProductId}";
+                            <tr id="@rowId">
+                                <td>
+                                    <div class="dpc-product-name">@item.ProductName</div>
+                                    <div class="dpc-product-sku">@item.SKU</div>
+                                </td>
+                                <td>
+                                    <input type="number"
+                                           form="@formId"
+                                           name="purchaseCostPerUnit"
+                                           value="@(item.PurchaseCostPerUnit?.ToString("0.##"))"
+                                           min="0.01"
+                                           step="0.01"
+                                           class="dpc-cost-input"
+                                           placeholder="@item.EffectiveUnitCost.ToString("0.00")" />
+                                    <div class="dpc-active-cost">
+                                        Active: ₱@item.EffectiveUnitCost.ToString("N2")
+                                        @if (item.SourceDate.HasValue)
+                                        {
+                                            <span>· from @item.SourceDate.Value.ToString("MMM dd")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>· from default unit cost</span>
+                                        }
+                                    </div>
+                                    @if (item.IsUpdatedForDate)
                                     {
-                                        <span>from @item.SourceDate.Value.ToString("MMM dd, yyyy")</span>
+                                        <span class="dpc-badge dpc-badge-ok">
+                                            <i class="bi bi-check2-circle"></i> Updated
+                                        </span>
                                     }
                                     else
                                     {
-                                        <span>from default unit cost</span>
+                                        <span class="dpc-badge dpc-badge-warn">
+                                            <i class="bi bi-clock"></i> Using Previous
+                                        </span>
                                     }
-                                </div>
-                                @if (item.IsUpdatedForDate)
-                                {
-                                    <span class="badge rounded-pill text-bg-success mt-1">Updated Today</span>
-                                }
-                                else
-                                {
-                                    <span class="badge rounded-pill text-bg-warning mt-1">Using Previous Cost</span>
-                                }
-                            </td>
-                            <td class="fw-semibold">@item.Unit</td>
-                            <td class="text-end">
-                                <form id="@formId" asp-action="SaveItem" method="post" class="m-0">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="targetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
-                                    <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
-                                    <input type="hidden" name="productId" value="@item.ProductId" />
-                                    <button type="submit" class="btn btn-dark btn-sm px-3">Save</button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                                </td>
+                                <td><span class="dpc-uom">@item.Unit</span></td>
+                                <td style="text-align:right;">
+                                    <form id="@formId" asp-action="SaveItem" method="post" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="targetDate"  value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
+                                        <input type="hidden" name="searchTerm"  value="@Model.SearchTerm" />
+                                        <input type="hidden" name="productId"   value="@item.ProductId" />
+                                        <button type="submit" class="dpc-btn dpc-btn-save">Save</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </section>
+
+    </div>
 </div>
+

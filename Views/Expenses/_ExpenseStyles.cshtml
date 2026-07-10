@@ -1,112 +1,102 @@
-<style>
+﻿<style>
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       Expense Page â€” Premium Design
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     .expense-page,
-    .expense-page * {
-        box-sizing: border-box;
-    }
+    .expense-page * { box-sizing: border-box; }
 
     .expense-page {
-        --expense-border: #e8e8e8;
-        --expense-text: #0a0a0a;
-        --expense-muted: #888888;
-        --expense-bg: #ffffff;
-        background: var(--expense-bg);
-        color: var(--expense-text);
-        font-family: 'DM Sans', sans-serif;
+        --ex-ink:      #0f172a;
+        --ex-muted:    #64748b;
+        --ex-border:   #e2e8f0;
+        --ex-bg:       #f8fafc;
+        --ex-white:    #ffffff;
+        --ex-indigo:   #6366f1;
+        --ex-radius:   12px;
+        --expense-border: #e2e8f0;
+        --expense-text:   #0f172a;
+        --expense-muted:  #64748b;
+        --expense-bg:     #f8fafc;
+        --ui-radius-xl: 12px;
+        --ui-radius-md: 8px;
+        font-family: 'Inter', 'DM Sans', sans-serif;
+        background: var(--ex-bg);
+        color: var(--ex-ink);
         min-height: calc(100vh - 90px);
         padding: 0;
     }
 
+    /* â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-shell {
         display: grid;
-        grid-template-columns: 200px minmax(0, 1fr);
+        grid-template-columns: 220px minmax(0, 1fr);
         min-height: calc(100vh - 90px);
-        background: #ffffff;
-        border-top: 1px solid var(--expense-border);
+        background: var(--ex-white);
+        border-top: 1px solid var(--ex-border);
     }
 
+    /* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-sidebar {
-        border-right: 1px solid var(--expense-border);
-        padding: 44px 24px;
+        background: #fcfcfd;
+        border-right: 1px solid var(--ex-border);
+        padding: 40px 16px;
     }
 
-    .expense-sidebar-group + .expense-sidebar-group {
-        margin-top: 32px;
-    }
+    .expense-sidebar-group + .expense-sidebar-group { margin-top: 30px; }
 
     .expense-sidebar-label,
     .expense-page-label {
-        font-family: 'DM Mono', monospace;
-        font-size: 9px;
-        font-weight: 500;
+        font-size: 10px;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: var(--expense-muted);
+        letter-spacing: 0.12em;
+        color: var(--ex-muted);
+        padding: 0 10px;
+        margin-bottom: 4px;
     }
 
     .expense-sidebar-link {
-        display: block;
-        margin-top: 12px;
-        color: var(--expense-text);
+        display: flex;
+        align-items: center;
+        margin-top: 2px;
+        padding: 7px 10px;
+        border-radius: 8px;
+        color: var(--ex-ink);
         text-decoration: none;
-        font-size: 14px;
-        line-height: 1.45;
+        font-size: 13.5px;
+        font-weight: 400;
+        transition: background 0.12s;
     }
+
+    .expense-sidebar-link:hover { background: #f1f5f9; color: var(--ex-ink); }
 
     .expense-sidebar-link.is-active {
         font-weight: 600;
+        background: #eef2ff;
+        color: var(--ex-indigo);
     }
 
-    .expense-main {
-        padding: 60px 80px;
-    }
+    /* â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .expense-main { padding: 52px 72px; }
+    .expense-content { max-width: 680px; }
+    .expense-content-wide { max-width: 1000px; }
 
-    .expense-content {
-        max-width: 700px;
-    }
+    /* â”€â”€ Breadcrumb â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .expense-breadcrumb { margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .expense-breadcrumb a, .expense-breadcrumb span { color: var(--ex-muted); text-decoration: none; font-size: 12px; }
+    .expense-breadcrumb a:hover { color: var(--ex-ink); }
 
-    .expense-content-wide {
-        max-width: 980px;
-    }
+    /* â”€â”€ Title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .expense-title { margin: 0 0 32px; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; color: var(--ex-ink); }
+    .expense-title-compact { margin-bottom: 6px; font-size: 21px; }
+    .expense-sub { font-size: 13px; color: var(--ex-muted); margin-top: 4px; }
 
-    .expense-breadcrumb {
-        margin-bottom: 10px;
-    }
-
-    .expense-breadcrumb a,
-    .expense-breadcrumb span {
-        color: var(--expense-muted);
-        text-decoration: none;
-    }
-
-    .expense-title {
-        margin: 0 0 36px;
-        font-size: 22px;
-        line-height: 1.2;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-        color: var(--expense-text);
-    }
-
-    .expense-title-compact {
-        margin-bottom: 8px;
-    }
-
-    .expense-primary-btn,
-    .expense-secondary-btn {
-        border: 0;
-        border-radius: var(--ui-radius-xl);
-        box-shadow: none;
-    }
-
-    .expense-field-input:focus,
-    .expense-field-select:focus,
-    .expense-field-textarea:focus {
-        outline: none;
-    }
-
+    /* â”€â”€ Form shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-form-shell {
-        border-top: 1px solid var(--expense-border);
-        border-left: 1px solid var(--expense-border);
+        border: 1px solid var(--ex-border);
+        border-radius: var(--ex-radius);
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(15,23,42,0.05);
     }
 
     .expense-form-grid {
@@ -118,25 +108,21 @@
     .expense-field-wide,
     .expense-actions {
         position: relative;
-        border-right: 1px solid var(--expense-border);
-        border-bottom: 1px solid var(--expense-border);
-        padding: 16px 18px 18px;
-        min-height: 108px;
-        background: #ffffff;
+        border-right: 1px solid var(--ex-border);
+        border-bottom: 1px solid var(--ex-border);
+        padding: 18px 20px 20px;
+        min-height: 112px;
+        background: var(--ex-white);
+        transition: background 0.1s;
     }
 
-    .expense-field-wide,
-    .expense-actions {
-        grid-column: 1 / -1;
-    }
+    .expense-field:hover, .expense-field-wide:hover { background: #fafbfc; }
 
-    .expense-field-head {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-    }
+    .expense-field-wide, .expense-actions { grid-column: 1 / -1; }
 
+    .expense-field-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+
+    /* â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-field-input,
     .expense-field-select,
     .expense-field-textarea,
@@ -144,33 +130,31 @@
         width: 100%;
         border: 0;
         background: transparent;
-        color: #0a0a0a;
-        font-family: 'DM Sans', sans-serif;
+        color: var(--ex-ink);
+        font-family: 'Inter', 'DM Sans', sans-serif;
         font-size: 15px;
         line-height: 1.5;
         padding: 0;
         appearance: none;
     }
 
+    .expense-field-input:focus,
+    .expense-field-select:focus,
+    .expense-field-textarea:focus { outline: none; }
+
     .expense-field-select {
-        background-image: linear-gradient(45deg, transparent 50%, #0a0a0a 50%), linear-gradient(135deg, #0a0a0a 50%, transparent 50%);
+        background-image: linear-gradient(45deg,transparent 50%,var(--ex-ink) 50%),
+                          linear-gradient(135deg,var(--ex-ink) 50%,transparent 50%);
         background-position: calc(100% - 14px) calc(50% - 2px), calc(100% - 8px) calc(50% - 2px);
         background-size: 6px 6px, 6px 6px;
         background-repeat: no-repeat;
         padding-right: 28px;
+        cursor: pointer;
     }
 
-    .expense-field-textarea {
-        min-height: 96px;
-        resize: vertical;
-    }
+    .expense-field-textarea { min-height: 96px; resize: vertical; }
 
-    .expense-field-prefix {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 12px;
-        align-items: center;
-    }
+    .expense-field-prefix { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: center; }
 
     .expense-field-addon {
         width: auto;
@@ -178,66 +162,68 @@
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: #0a0a0a;
+        color: var(--ex-muted);
+        border-right: 1px solid var(--ex-border);
+        padding-right: 10px;
     }
 
-    .expense-help,
+    /* â”€â”€ Help / validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .expense-help { font-size: 11px; color: var(--ex-muted); margin-top: 8px; line-height: 1.5; }
     .field-validation-error,
     .validation-summary-errors,
-    .validation-summary-valid {
-        font-family: 'DM Mono', monospace;
-        font-size: 10px;
-        letter-spacing: 0.08em;
-        color: var(--expense-muted);
-        margin-top: 12px;
-    }
+    .validation-summary-valid { font-size: 11px; color: #dc2626; margin-top: 6px; }
+    .validation-summary-valid { display: none; }
 
-    .field-validation-error {
-        color: #0a0a0a;
-    }
-
+    /* â”€â”€ Actions row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-actions {
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 16px;
-        min-height: auto;
+        min-height: 108px;
+        border-bottom: none;
+        background: #f8fafc;
     }
 
-    .expense-actions-meta {
-        max-width: 360px;
-    }
+    .expense-actions-meta { max-width: 380px; }
+    .expense-actions-meta > div:last-child { font-size: 13px; color: var(--ex-muted); margin-top: 4px; line-height: 1.5; }
 
     .expense-button-row {
         display: flex;
-        gap: 12px;
+        gap: 10px;
         flex-wrap: wrap;
+        justify-content: flex-end;
+        flex-shrink: 0;
     }
 
+    /* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-primary-btn,
     .expense-secondary-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 44px;
-        padding: 0 18px;
-        border: 1px solid #0a0a0a;
+        gap: 6px;
+        min-height: 42px;
+        padding: 0 20px;
+        border-radius: 9px;
         text-decoration: none;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 500;
+        font-family: 'Inter', 'DM Sans', sans-serif;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+        white-space: nowrap;
+        box-shadow: none;
     }
 
-    .expense-primary-btn {
-        background: #0a0a0a;
-        color: #ffffff;
-    }
+    .expense-primary-btn { background: var(--ex-ink); color: #fff; border-color: var(--ex-ink); }
+    .expense-primary-btn:hover { background: #1e293b; color: #fff; box-shadow: 0 2px 8px rgba(15,23,42,0.18); }
 
-    .expense-secondary-btn {
-        background: #ffffff;
-        color: #0a0a0a;
-        border-color: var(--expense-border);
-    }
+    .expense-secondary-btn { background: var(--ex-white); color: var(--ex-ink); border-color: var(--ex-border); }
+    .expense-secondary-btn:hover { border-color: #94a3b8; background: #f8fafc; color: var(--ex-ink); }
 
+    /* â”€â”€ Ledger header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-ledger-header {
         display: flex;
         justify-content: space-between;
@@ -246,34 +232,49 @@
         margin-bottom: 24px;
     }
 
-    .expense-ledger-total,
-    .expense-empty-state,
-    .expense-ledger-group {
-        border: 1px solid var(--expense-border);
-        background: #ffffff;
+    /* â”€â”€ Grand total â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .expense-ledger-total {
+        background: var(--ex-white);
+        border: 1px solid var(--ex-border);
+        border-radius: var(--ex-radius);
+        padding: 20px 22px;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.04);
     }
 
-    .expense-ledger-total,
+    .expense-ledger-total::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--ex-indigo);
+        border-radius: 3px 3px 0 0;
+    }
+
+    .expense-ledger-total-value { margin-top: 8px; font-size: 28px; font-weight: 700; letter-spacing: -0.04em; }
+
+    /* â”€â”€ Empty state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-empty-state {
-        padding: 16px 18px;
+        background: var(--ex-white);
+        border: 1px solid var(--ex-border);
+        border-radius: var(--ex-radius);
+        padding: 40px 22px;
         margin-bottom: 20px;
+        text-align: center;
     }
 
-    .expense-ledger-total-value {
-        margin-top: 8px;
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: -0.03em;
-    }
+    .expense-empty-state p { margin: 10px 0 0; color: var(--ex-muted); font-size: 14px; }
 
-    .expense-empty-state p {
-        margin: 8px 0 0;
-        color: var(--expense-muted);
-        font-size: 15px;
-    }
-
+    /* â”€â”€ Ledger groups â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .expense-ledger-group {
+        background: var(--ex-white);
+        border: 1px solid var(--ex-border);
+        border-radius: var(--ex-radius);
         margin-bottom: 20px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.04);
     }
 
     .expense-ledger-group-head {
@@ -281,107 +282,68 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 16px;
-        padding: 16px 18px;
-        border-bottom: 1px solid var(--expense-border);
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--ex-border);
+        background: #f8fafc;
     }
 
-    .expense-ledger-group-head h2 {
-        margin: 8px 0 0;
-        font-size: 18px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-    }
+    .expense-ledger-group-head h2 { margin: 6px 0 0; font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+    .expense-ledger-group-total { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
 
-    .expense-ledger-group-total {
-        font-size: 18px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-    }
+    /* â”€â”€ Ledger table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .expense-ledger-table-wrap { overflow-x: auto; }
 
-    .expense-ledger-table-wrap {
-        overflow-x: auto;
-    }
+    .expense-ledger-table { width: 100%; margin: 0; border-collapse: collapse; }
 
-    .expense-ledger-table {
-        width: 100%;
-        margin: 0;
-    }
-
-    .expense-ledger-table thead th,
-    .expense-ledger-table tfoot td {
-        font-family: 'DM Mono', monospace;
-        font-size: 9px;
-        font-weight: 500;
+    .expense-ledger-table thead th {
+        font-size: 10px;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: var(--expense-muted);
-        background: #ffffff;
-        border-bottom: 1px solid var(--expense-border);
-        padding: 14px 18px;
+        letter-spacing: 0.1em;
+        color: var(--ex-muted);
+        background: var(--ex-white);
+        border-bottom: 1px solid var(--ex-border);
+        padding: 11px 16px;
+        white-space: nowrap;
     }
 
     .expense-ledger-table tbody td {
-        padding: 14px 18px;
-        border-bottom: 1px solid var(--expense-border);
-        color: var(--expense-text);
-        font-size: 15px;
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--ex-border);
+        color: var(--ex-ink);
+        font-size: 14px;
         vertical-align: top;
     }
 
-    .expense-ledger-table tbody tr:last-child td {
-        border-bottom: 0;
-    }
+    .expense-ledger-table tbody tr:last-child td { border-bottom: none; }
+    .expense-ledger-table tbody tr:hover td { background: #f8fafc; }
 
     .expense-ledger-table tfoot td {
-        border-top: 1px solid var(--expense-border);
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--ex-muted);
+        border-top: 1px solid var(--ex-border);
         border-bottom: 0;
+        padding: 11px 16px;
     }
 
+    .expense-category { font-weight: 600; }
+    .expense-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     @@media (max-width: 991.98px) {
-        .expense-shell {
-            grid-template-columns: 1fr;
-        }
-
-        .expense-sidebar {
-            border-right: 0;
-            border-bottom: 1px solid var(--expense-border);
-            padding: 28px 24px;
-        }
-
-        .expense-main {
-            padding: 36px 24px;
-        }
+        .expense-shell { grid-template-columns: 1fr; }
+        .expense-sidebar { border-right: 0; border-bottom: 1px solid var(--ex-border); padding: 24px 16px; }
+        .expense-main { padding: 36px 24px; }
     }
 
     @@media (max-width: 767.98px) {
-        .expense-form-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .expense-actions {
-            align-items: flex-start;
-            flex-direction: column;
-        }
-
-        .expense-ledger-header,
-        .expense-ledger-group-head {
-            flex-direction: column;
-        }
-    }
-
-    .expense-shell,
-    .expense-sidebar,
-    .expense-panel,
-    .expense-ledger-total,
-    .expense-empty-state,
-    .expense-ledger-group {
-        border-radius: var(--ui-radius-xl) !important;
-    }
-
-    .expense-page .btn,
-    .expense-page .form-control,
-    .expense-page .form-select,
-    .expense-page .input-group-text {
-        border-radius: var(--ui-radius-md) !important;
+        .expense-form-grid { grid-template-columns: 1fr; }
+        .expense-field { border-right: none; }
+        .expense-actions { align-items: flex-start; flex-direction: column; }
+        .expense-button-row { justify-content: flex-start; width: 100%; }
+        .expense-ledger-header, .expense-ledger-group-head { flex-direction: column; }
     }
 </style>

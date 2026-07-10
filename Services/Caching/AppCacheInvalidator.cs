@@ -90,5 +90,11 @@ public sealed class AppCacheInvalidator : IAppCacheInvalidator
 
             _dashboardKeys.Clear();
         }
+
+        // Proactively bust today's and yesterday's dashboard cache by their known key
+        // pattern, even if no request has registered the key via TrackDashboardKey yet.
+        var today = DateTime.Today;
+        _cache.Remove(AppCacheKeys.Dashboard(today));
+        _cache.Remove(AppCacheKeys.Dashboard(today.AddDays(-1)));
     }
 }
