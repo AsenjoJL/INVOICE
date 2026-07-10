@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -35,6 +35,7 @@
             "Customers" => "Stock",
             "Suppliers" => "Purchases",
             "WeeklyPrices" => "Stock",
+            "DailyPurchaseCosts" => "Stock",
             "Purchases" => "Purchases",
             "Expenses" => "Finance",
             "Laborers" => "Workforce",
@@ -42,6 +43,7 @@
             "Payroll" => "Workforce",
             "ProfitReport" => "Finance",
             _ => "Workspace"
+
         };
         string NavClass(string controller, string? action = null)
         {
@@ -78,6 +80,8 @@
                 <a class="@NavClass("Customers", "Index")" asp-area="" asp-controller="Customers" asp-action="Index">Outlets</a>
                 <a class="@NavClass("WeeklyPrices", "PriceVersus")" asp-area="" asp-controller="WeeklyPrices" asp-action="PriceVersus">Price Setup</a>
                 <a class="@NavClass("WeeklyPrices", "Index")" asp-area="" asp-controller="WeeklyPrices" asp-action="Index">Price History</a>
+                <a class="@NavClass("DailyPurchaseCosts", "Index")" asp-area="" asp-controller="DailyPurchaseCosts" asp-action="Index">Daily Purchase Cost</a>
+
 
                 <div class="sidebar-section-title">Purchases</div>
                 <a class="@NavClass("Suppliers", "Index")" asp-area="" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
