@@ -87,6 +87,12 @@ public class WeeklyPricesController : Controller
             return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
         }
 
+        if (importFile.Length > 20 * 1024 * 1024)
+        {
+            TempData["ErrorMessage"] = "File is too large. Maximum size is 20 MB.";
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+        }
+
         await using var stream = new MemoryStream();
         await importFile.CopyToAsync(stream);
 
@@ -116,7 +122,7 @@ public class WeeklyPricesController : Controller
             itemCol = FindColumnByHeaders(sheet, headerRow, "items", "item", "product", "productname");
             sellingPriceCol = FindColumnByHeaders(sheet, headerRow, "deliveryprice", "sellingprice", "price");
             unitCol = FindColumnByHeaders(sheet, headerRow, "uom", "unit");
-            purchasePriceCol = FindColumnByHeaders(sheet, headerRow, "originalprice", "purchaseprice", "costprice");
+            purchasePriceCol = FindColumnByHeaders(sheet, headerRow, "purchasecost", "originalprice", "purchaseprice", "costprice");
         }
         else if (TryFindHeaderlessDeliveryPriceTemplate(sheet, out firstDataRow, out itemCol, out sellingPriceCol, out unitCol))
         {
@@ -347,7 +353,7 @@ public class WeeklyPricesController : Controller
         var fileName = normalizedImportMode switch
         {
             "delivery-only" => $"DeliveryPriceTemplate_{day:yyyy-MM-dd}.xlsx",
-            "original-only" => $"OriginalPriceTemplate_{day:yyyy-MM-dd}.xlsx",
+            "original-only" => $"PurchaseCostTemplate_{day:yyyy-MM-dd}.xlsx",
             _ => $"WeeklyPriceTemplate_{day:yyyy-MM-dd}.xlsx"
         };
 
@@ -717,7 +723,7 @@ public class WeeklyPricesController : Controller
             {
                 var key = OrderImportHelpers.NormalizeKey(sheet.GetCell(row, col));
                 if (key is "items" or "item" or "product" or "productname") hasItems = true;
-                if (key is "price" or "deliveryprice" or "sellingprice" or "originalprice" or "purchaseprice" or "costprice") hasPrice = true;
+                if (key is "price" or "deliveryprice" or "sellingprice" or "purchasecost" or "originalprice" or "purchaseprice" or "costprice") hasPrice = true;
                 if (key is "uom" or "unit") hasUnit = true;
             }
 
@@ -819,7 +825,7 @@ public class WeeklyPricesController : Controller
         => importMode switch
         {
             "delivery-only" => "delivery prices only",
-            "original-only" => "original prices only",
+            "original-only" => "purchase cost only",
             _ => "weekly prices"
         };
 
@@ -827,8 +833,8 @@ public class WeeklyPricesController : Controller
         => importMode switch
         {
             "delivery-only" => ["ITEMS", "DELIVERY PRICE", "UOM"],
-            "original-only" => ["ITEMS", "ORIGINAL PRICE", "UOM"],
-            _ => ["ITEMS", "DELIVERY PRICE", "UOM", "ORIGINAL PRICE"]
+            "original-only" => ["ITEMS", "PURCHASE COST", "UOM"],
+            _ => ["ITEMS", "DELIVERY PRICE", "UOM", "PURCHASE COST"]
         };
 
     private static string[] BuildTemplateRow(string productName, string unit, decimal deliveryPrice, decimal originalPrice, string importMode)

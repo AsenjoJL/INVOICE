@@ -410,9 +410,9 @@
         <div>
             <label class="price-field-label">Import Mode</label>
             <select name="importMode" class="form-control">
-                <option value="both">Both Delivery + Original</option>
+                <option value="both">Both Delivery + Purchase Cost</option>
                 <option value="delivery-only">Delivery Prices Only</option>
-                <option value="original-only">Original Prices Only</option>
+                <option value="original-only">Purchase Cost Only</option>
             </select>
         </div>
         <div>
@@ -430,7 +430,7 @@
                asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
                asp-route-importMode="both"
                class="btn price-btn price-btn-neutral w-100">
-                <i class="bi bi-download me-1"></i> Both Delivery + Original
+                <i class="bi bi-download me-1"></i> Both Delivery + Purchase Cost
             </a>
         </div>
         <div>
@@ -443,12 +443,12 @@
             </a>
         </div>
         <div>
-            <label class="price-field-label">Original Only</label>
+            <label class="price-field-label">Purchase Cost Only</label>
             <a asp-action="DownloadTemplate"
                asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
                asp-route-importMode="original-only"
                class="btn price-btn price-btn-neutral w-100">
-                <i class="bi bi-download me-1"></i> Original Template
+                <i class="bi bi-download me-1"></i> Purchase Cost Template
             </a>
         </div>
     </div>
@@ -493,7 +493,7 @@
                             <tr>
                                 <th class="ps-4 py-3">Product Name</th>
                                 <th class="py-3">Unit</th>
-                                <th class="text-end py-3" style="width: 140px;">Original Price</th>
+                                <th class="text-end py-3" style="width: 140px;">Purchase Cost</th>
                                 <th class="text-end py-3" style="width: 140px;">Markup (Added)</th>
                                 <th class="text-end py-3" style="width: 140px;">Base Price</th>
                                 <th class="text-end py-3" style="width: 140px;">Delivery Price</th>

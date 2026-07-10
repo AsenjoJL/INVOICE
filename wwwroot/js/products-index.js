@@ -187,6 +187,7 @@
 
         row.classList.add('product-row-highlight');
         window.setTimeout(() => row.classList.remove('product-row-highlight'), 2200);
+        document.dispatchEvent(new CustomEvent('products:row-updated'));
     }
 
     function bindModalForm() {
@@ -550,6 +551,10 @@
             updateBulkToolbar();
         });
     }
+
+    document.addEventListener('products:row-updated', () => {
+        refreshTable();
+    });
 
     sortTriggers.forEach(trigger => {
         trigger.addEventListener('click', () => {

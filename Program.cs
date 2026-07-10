@@ -11,6 +11,7 @@ using HazelInvoice.Services.Caching;
 using HazelInvoice.Services.Expenses;
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -74,6 +75,14 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Identity/Account/Login";
     options.AccessDeniedPath = "/Identity/Account/Login";
 });
+
+var dataProtectionKeyDirectory = builder.Configuration["DataProtection:KeyDirectory"];
+if (!builder.Environment.IsDevelopment() && !string.IsNullOrWhiteSpace(dataProtectionKeyDirectory))
+{
+    Directory.CreateDirectory(dataProtectionKeyDirectory);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeyDirectory));
+}
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -222,7 +231,6 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<ApplicationDbContext>();
-    context.Database.Migrate();
     var bootstrapSeed = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<BootstrapSeedOptions>>().Value;
     var expenseCatalog = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ExpenseCatalogOptions>>().Value;
     await DbInitializer.Initialize(context, bootstrapSeed, expenseCatalog);

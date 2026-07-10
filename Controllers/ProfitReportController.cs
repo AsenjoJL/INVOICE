@@ -73,14 +73,14 @@ public class ProfitReportController : Controller
             await _context.SaveChangesAsync();
             _cacheInvalidator.InvalidateProfitReports();
         }
-        return Redirect(returnUrl);
+        return SafeReportRedirect(returnUrl);
     }
     
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddCapital(PartnerCapital model, string returnUrl)
     {
-         if (model == null) return Redirect(returnUrl);
+         if (model == null) return SafeReportRedirect(returnUrl);
 
         if (string.IsNullOrWhiteSpace(model.FundName))
         {
@@ -118,7 +118,7 @@ public class ProfitReportController : Controller
             await _context.SaveChangesAsync();
             _cacheInvalidator.InvalidateProfitReports();
         }
-        return Redirect(returnUrl);
+        return SafeReportRedirect(returnUrl);
     }
 
     [HttpPost]
@@ -131,7 +131,7 @@ public class ProfitReportController : Controller
             await _context.SaveChangesAsync();
             _cacheInvalidator.InvalidateProfitReports();
         }
-        return Redirect(returnUrl);
+        return SafeReportRedirect(returnUrl);
     }
 
     [HttpPost]
@@ -153,7 +153,7 @@ public class ProfitReportController : Controller
                 await _context.SaveChangesAsync();
             }
             _cacheInvalidator.InvalidateProfitReports();
-            return Redirect(returnUrl);
+            return SafeReportRedirect(returnUrl);
         }
 
         var model = new CollectionReceivedOverride
@@ -168,6 +168,16 @@ public class ProfitReportController : Controller
         await _context.SaveChangesAsync();
         _cacheInvalidator.InvalidateProfitReports();
 
-        return Redirect(returnUrl);
+        return SafeReportRedirect(returnUrl);
+    }
+
+    private IActionResult SafeReportRedirect(string? returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return LocalRedirect(returnUrl);
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 }

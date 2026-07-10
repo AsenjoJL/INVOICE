@@ -15,9 +15,18 @@
 
 <div class="container-fluid p-4">
     <section class="admin-page-hero admin-page-flow mb-4">
-        <div class="eyebrow">Cost of Goods</div>
-        <h1>Daily Purchase Cost</h1>
-        <p class="text-muted mb-0">Enter the daily buying cost per product. This updates item cost snapshots for profit reports without changing receipt selling prices directly.</p>
+        <div class="d-flex flex-wrap gap-3 justify-content-between align-items-start">
+            <div>
+                <div class="eyebrow">Cost of Goods</div>
+                <h1>Daily Purchase Cost</h1>
+                <p class="text-muted mb-0">Enter the daily buying cost per product. This updates item cost snapshots for profit reports without changing receipt selling prices directly.</p>
+            </div>
+            <a asp-controller="Expenses"
+               asp-action="Index"
+               class="btn btn-outline-dark">
+                <i class="bi bi-receipt-cutoff"></i> Expenses
+            </a>
+        </div>
     </section>
 
     @if (TempData["Message"] != null)
@@ -49,6 +58,41 @@
                 <button type="submit" class="btn btn-dark">Load Products</button>
             </div>
         </form>
+    </section>
+
+    <section class="admin-surface-card p-4 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-4">
+                <div class="small text-uppercase text-muted fw-semibold">Excel Template</div>
+                <div class="text-muted small">Download all active products, fill the PRICE column, then import it for @Model.TargetDate.ToString("MMM dd, yyyy").</div>
+            </div>
+            <div class="col-lg-3 d-grid">
+                <a asp-action="DownloadTemplate"
+                   asp-route-date="@Model.TargetDate.ToString("yyyy-MM-dd")"
+                   class="btn btn-outline-dark">
+                    <i class="bi bi-download"></i> Download Template
+                </a>
+            </div>
+            <div class="col-lg-5">
+                <form asp-action="ImportTemplate"
+                      method="post"
+                      enctype="multipart/form-data"
+                      class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="targetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
+                    <div class="col-md-7">
+                        <label class="form-label small text-uppercase fw-semibold">Import Purchase Cost</label>
+                        <input type="file" name="importFile" accept=".xlsx" class="form-control" required />
+                    </div>
+                    <div class="col-md-5 d-grid">
+                        <button type="submit" class="btn btn-dark">
+                            <i class="bi bi-upload"></i> Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </section>
 
     <section class="admin-summary-grid mb-4">

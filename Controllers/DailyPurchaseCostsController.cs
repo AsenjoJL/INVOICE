@@ -1,7 +1,9 @@
 using HazelInvoice.Data;
 using HazelInvoice.Helpers;
 using HazelInvoice.Models;
+using HazelInvoice.Services;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Orders;
 using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +15,8 @@ namespace HazelInvoice.Controllers;
 [Authorize]
 public class DailyPurchaseCostsController : Controller
 {
+    private const int MaxImportFileBytes = 20 * 1024 * 1024;
+
     private readonly ApplicationDbContext _context;
     private readonly IDailyPurchaseCostService _dailyPurchaseCosts;
     private readonly IAppCacheInvalidator _cacheInvalidator;
@@ -33,6 +37,181 @@ public class DailyPurchaseCostsController : Controller
         var targetDate = (date ?? BusinessDate.Today()).Date;
         var model = await BuildIndexModelAsync(targetDate, q, cancellationToken);
         return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadTemplate(DateTime? date, string? q, CancellationToken cancellationToken)
+    {
+        var targetDate = (date ?? BusinessDate.Today()).Date;
+        // Templates are always full active-product exports so newly added items are included.
+        var model = await BuildIndexModelAsync(targetDate, null, cancellationToken);
+
+        var rows = new List<IReadOnlyList<string>>
+        {
+            new[] { "DAILY PURCHASE COST TEMPLATE" },
+            new[] { "Cost Date", targetDate.ToString("yyyy-MM-dd") },
+            new[] { "Fill PRICE only for items with new purchase cost. Blank prices will be skipped on import." },
+            new[] { string.Empty },
+            new[] { "LIST OF ITEMS", "PRICE", "UOM", "SKU" }
+        };
+
+        rows.AddRange(model.Items.Select(item => new[]
+        {
+            item.ProductName,
+            item.PurchaseCostPerUnit?.ToString("0.##") ?? string.Empty,
+            item.Unit,
+            item.SKU
+        }));
+
+        var bytes = SimpleXlsxWriter.WriteSingleSheet("Daily Purchase Cost", rows);
+        var fileName = $"DailyPurchaseCostTemplate_{targetDate:yyyy-MM-dd}.xlsx";
+        return File(
+            bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            fileName);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ImportTemplate(
+        IFormFile? importFile,
+        DateTime targetDate,
+        string? searchTerm,
+        CancellationToken cancellationToken)
+    {
+        targetDate = targetDate.Date;
+
+        if (importFile == null || importFile.Length == 0)
+        {
+            TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) daily purchase cost template.";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        if (importFile.Length > MaxImportFileBytes)
+        {
+            TempData["ErrorMessage"] = "File is too large. Maximum size is 20 MB.";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        await using var stream = new MemoryStream();
+        await importFile.CopyToAsync(stream, cancellationToken);
+
+        SimpleXlsxSheet sheet;
+        try
+        {
+            sheet = SimpleXlsxReader.ReadFirstSheet(stream);
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        var headerRow = FindTemplateHeaderRow(sheet);
+        if (headerRow <= 0)
+        {
+            TempData["ErrorMessage"] = "Could not find the daily purchase cost header row.";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        var itemCol = FindColumnByHeader(sheet, headerRow, "listofitems", "item", "items", "product", "productname", "particulars");
+        var priceCol = FindColumnByHeader(sheet, headerRow, "price", "purchasecost", "dailycost", "dailypurchasecost", "unitcost", "cost");
+        var skuCol = FindColumnByHeader(sheet, headerRow, "sku", "code");
+
+        if (itemCol <= 0 || priceCol <= 0)
+        {
+            TempData["ErrorMessage"] = "The template must contain LIST OF ITEMS and PRICE columns.";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        var products = await _context.Products
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .ToListAsync(cancellationToken);
+        var productMap = OrderImportHelpers.BuildProductLookup(products);
+        var importedItems = new List<DailyPurchaseCostItemViewModel>();
+        var unmatched = new List<string>();
+        var invalidPrices = new List<string>();
+
+        for (var row = headerRow + 1; row <= sheet.MaxRow; row++)
+        {
+            var productName = sheet.GetCell(row, itemCol).Trim();
+            var sku = skuCol > 0 ? sheet.GetCell(row, skuCol).Trim() : string.Empty;
+            var rawPrice = sheet.GetCell(row, priceCol).Trim();
+
+            if (string.IsNullOrWhiteSpace(productName) && string.IsNullOrWhiteSpace(sku) && string.IsNullOrWhiteSpace(rawPrice))
+                continue;
+
+            if (string.IsNullOrWhiteSpace(rawPrice))
+                continue;
+
+            if (!SimpleXlsxReader.TryParseDecimal(rawPrice, out var purchaseCost) || purchaseCost <= 0m)
+            {
+                invalidPrices.Add(string.IsNullOrWhiteSpace(productName) ? $"row {row}" : productName);
+                continue;
+            }
+
+            Product? product = null;
+            if (!string.IsNullOrWhiteSpace(sku) &&
+                productMap.TryGetValue(OrderImportHelpers.NormalizeKey(sku), out var skuProduct))
+            {
+                product = skuProduct;
+            }
+            else if (!string.IsNullOrWhiteSpace(productName) &&
+                     OrderImportHelpers.TryResolveProductByName(productName, productMap, out var nameProduct))
+            {
+                product = nameProduct;
+            }
+
+            if (product == null)
+            {
+                unmatched.Add(string.IsNullOrWhiteSpace(productName) ? $"row {row}" : productName);
+                continue;
+            }
+
+            importedItems.Add(new DailyPurchaseCostItemViewModel
+            {
+                ProductId = product.Id,
+                PurchaseCostPerUnit = purchaseCost
+            });
+        }
+
+        if (invalidPrices.Count > 0)
+        {
+            TempData["ErrorMessage"] = $"Invalid purchase cost for: {string.Join(", ", invalidPrices.Take(8))}{(invalidPrices.Count > 8 ? "..." : "")}. Costs must be greater than zero.";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        if (importedItems.Count == 0)
+        {
+            TempData["ErrorMessage"] = unmatched.Count > 0
+                ? $"No purchase costs were imported. Unmatched items: {string.Join(", ", unmatched.Take(8))}{(unmatched.Count > 8 ? "..." : "")}."
+                : "No purchase costs were found in the template.";
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+        }
+
+        var saved = await SavePurchaseCostsAsync(
+            targetDate,
+            importedItems
+                .GroupBy(i => i.ProductId)
+                .Select(g => g.Last())
+                .ToList(),
+            cancellationToken);
+
+        var unmatchedNote = unmatched.Count > 0
+            ? $" Unmatched items skipped: {string.Join(", ", unmatched.Take(8))}{(unmatched.Count > 8 ? "..." : "")}."
+            : string.Empty;
+        TempData["Message"] = saved == 0
+            ? $"Imported template, but daily purchase costs were already up to date.{unmatchedNote}"
+            : $"Imported and saved {saved} daily purchase cost update{(saved == 1 ? "" : "s")}.{unmatchedNote}";
+
+        return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd") });
     }
 
     [HttpPost]
@@ -186,6 +365,41 @@ public class DailyPurchaseCostsController : Controller
     {
         var url = Url.Action(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm }) ?? "/DailyPurchaseCosts";
         return $"{url}#{anchor}";
+    }
+
+    private static int FindTemplateHeaderRow(SimpleXlsxSheet sheet)
+    {
+        for (var row = 1; row <= Math.Min(sheet.MaxRow, 12); row++)
+        {
+            var hasItem = false;
+            var hasPrice = false;
+            for (var col = 1; col <= sheet.MaxCol; col++)
+            {
+                var key = OrderImportHelpers.NormalizeKey(sheet.GetCell(row, col));
+                if (key is "listofitems" or "item" or "items" or "product" or "productname" or "particulars")
+                    hasItem = true;
+                if (key is "price" or "purchasecost" or "dailycost" or "dailypurchasecost" or "unitcost" or "cost")
+                    hasPrice = true;
+            }
+
+            if (hasItem && hasPrice)
+                return row;
+        }
+
+        return -1;
+    }
+
+    private static int FindColumnByHeader(SimpleXlsxSheet sheet, int headerRow, params string[] expectedKeys)
+    {
+        var expected = expectedKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        for (var col = 1; col <= sheet.MaxCol; col++)
+        {
+            var key = OrderImportHelpers.NormalizeKey(sheet.GetCell(headerRow, col));
+            if (expected.Contains(key))
+                return col;
+        }
+
+        return -1;
     }
 
     private async Task RefreshSameDayReceiptCostsAsync(

@@ -144,9 +144,9 @@
                 <div class="col-lg-3">
                     <label class="form-label small text-uppercase fw-bold">Import Mode</label>
                     <select name="importMode" class="form-select">
-                        <option value="both">Both Delivery + Original</option>
+                        <option value="both">Both Delivery + Purchase Cost</option>
                         <option value="delivery-only">Delivery Prices Only</option>
-                        <option value="original-only">Original Prices Only</option>
+                        <option value="original-only">Purchase Cost Only</option>
                     </select>
                 </div>
                 <div class="col-lg-3">
@@ -167,7 +167,7 @@
                        asp-route-targetDate="@targetDate.ToString("yyyy-MM-dd")"
                        asp-route-importMode="both"
                        class="btn btn-ghost w-100">
-                        <i class="bi bi-download"></i> Both Delivery + Original
+                        <i class="bi bi-download"></i> Both Delivery + Purchase Cost
                     </a>
                 </div>
                 <div class="col-lg-4">
@@ -185,7 +185,7 @@
                        asp-route-targetDate="@targetDate.ToString("yyyy-MM-dd")"
                        asp-route-importMode="original-only"
                        class="btn btn-ghost w-100">
-                        <i class="bi bi-download"></i> Original Template
+                        <i class="bi bi-download"></i> Purchase Cost Template
                     </a>
                 </div>
             </div>
