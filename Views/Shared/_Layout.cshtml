@@ -140,13 +140,18 @@
             if (!sidebar) return;
 
             const storageKey = 'hazelinvoice.sidebar.scrollTop';
+            let isRestoring = false;
 
             function restoreSidebarPosition() {
                 const saved = sessionStorage.getItem(storageKey);
                 if (saved !== null) {
                     const top = parseInt(saved, 10);
                     if (!Number.isNaN(top)) {
+                        isRestoring = true;
                         sidebar.scrollTop = top;
+                        window.requestAnimationFrame(() => {
+                            isRestoring = false;
+                        });
                     }
                     return;
                 }
@@ -160,15 +165,21 @@
             restoreSidebarPosition();
 
             sidebar.addEventListener('scroll', () => {
+                if (isRestoring) return;
                 sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
             }, { passive: true });
 
+            function saveSidebarPosition() {
+                sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
+            }
+
             const links = sidebar.querySelectorAll('.sidebar-link');
             links.forEach(link => {
-                link.addEventListener('click', () => {
-                    sessionStorage.setItem(storageKey, sidebar.scrollTop.toString());
-                });
+                link.addEventListener('pointerdown', saveSidebarPosition, { passive: true });
+                link.addEventListener('click', saveSidebarPosition);
             });
+
+            window.addEventListener('pagehide', saveSidebarPosition);
         })();
     </script>
     @await RenderSectionAsync("Scripts", required: false)

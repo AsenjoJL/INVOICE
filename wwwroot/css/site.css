@@ -3887,6 +3887,9 @@ textarea,
     box-shadow: none !important;
     border-radius: 0 !important;
     margin-left: 0 !important;
+    overscroll-behavior: contain;
+    scroll-behavior: auto;
+    scrollbar-gutter: stable;
 }
 
 .sidebar.offcanvas-start,
@@ -3944,6 +3947,7 @@ textarea,
   font-weight: 500 !important;
   line-height: 1.45;
   transition: background-color 0.18s ease, color 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sidebar-link i,
@@ -4280,6 +4284,7 @@ textarea,
     height: 100vh !important;
     overflow-y: auto;
     z-index: 1030;
+    transform: none !important;
   }
 
   .content {
