@@ -4,6 +4,15 @@ using System.Xml.Linq;
 
 namespace HazelInvoice.Services;
 
+public sealed class SimpleXlsxSheetOptions
+{
+    public IReadOnlyDictionary<int, double> ColumnWidths { get; init; } = new Dictionary<int, double>();
+    public bool AutoFitColumns { get; init; }
+    public double MinimumColumnWidth { get; init; } = 10;
+    public double MaximumColumnWidth { get; init; } = 42;
+    public double ColumnPadding { get; init; } = 2;
+}
+
 /// <summary>
 /// Minimal .xlsx writer (single worksheet) with inline strings.
 /// Avoids external dependencies (ClosedXML/EPPlus) for easier packaging/offline builds.
@@ -11,6 +20,12 @@ namespace HazelInvoice.Services;
 public static class SimpleXlsxWriter
 {
     public static byte[] WriteSingleSheet(string sheetName, IReadOnlyList<IReadOnlyList<string>> rows)
+        => WriteSingleSheet(sheetName, rows, null);
+
+    public static byte[] WriteSingleSheet(
+        string sheetName,
+        IReadOnlyList<IReadOnlyList<string>> rows,
+        SimpleXlsxSheetOptions? options)
     {
         if (string.IsNullOrWhiteSpace(sheetName))
             sheetName = "Sheet1";
@@ -22,7 +37,7 @@ public static class SimpleXlsxWriter
             WriteRootRels(zip);
             WriteWorkbook(zip, sheetName);
             WriteWorkbookRels(zip);
-            WriteSheet(zip, rows);
+            WriteSheet(zip, rows, options);
             WriteDocProps(zip);
         }
 
@@ -108,7 +123,10 @@ public static class SimpleXlsxWriter
         WriteXml(zip, "xl/_rels/workbook.xml.rels", doc);
     }
 
-    private static void WriteSheet(ZipArchive zip, IReadOnlyList<IReadOnlyList<string>> rows)
+    private static void WriteSheet(
+        ZipArchive zip,
+        IReadOnlyList<IReadOnlyList<string>> rows,
+        SimpleXlsxSheetOptions? options)
     {
         XNamespace ss = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 
@@ -143,11 +161,62 @@ public static class SimpleXlsxWriter
 
         var doc = new XDocument(
             new XElement(ss + "worksheet",
+                BuildColumnsElement(ss, rows, options),
                 sheetData
             )
         );
 
         WriteXml(zip, "xl/worksheets/sheet1.xml", doc);
+    }
+
+    private static XElement? BuildColumnsElement(
+        XNamespace ss,
+        IReadOnlyList<IReadOnlyList<string>> rows,
+        SimpleXlsxSheetOptions? options)
+    {
+        var widths = ResolveColumnWidths(rows, options);
+        if (widths.Count == 0)
+            return null;
+
+        var columns = widths
+            .Where(pair => pair.Key > 0 && pair.Value > 0)
+            .OrderBy(pair => pair.Key)
+            .Select(pair => new XElement(ss + "col",
+                new XAttribute("min", pair.Key),
+                new XAttribute("max", pair.Key),
+                new XAttribute("width", pair.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)),
+                new XAttribute("customWidth", 1)));
+
+        return new XElement(ss + "cols", columns);
+    }
+
+    private static IReadOnlyDictionary<int, double> ResolveColumnWidths(
+        IReadOnlyList<IReadOnlyList<string>> rows,
+        SimpleXlsxSheetOptions? options)
+    {
+        if (options?.ColumnWidths != null && options.ColumnWidths.Count > 0)
+            return options.ColumnWidths;
+
+        if (options?.AutoFitColumns != true)
+            return new Dictionary<int, double>();
+
+        var columnCount = rows.Count == 0 ? 0 : rows.Max(row => row.Count);
+        var widths = new Dictionary<int, double>();
+        for (var col = 0; col < columnCount; col++)
+        {
+            var longestValue = rows
+                .Select(row => col < row.Count ? row[col] ?? string.Empty : string.Empty)
+                .DefaultIfEmpty(string.Empty)
+                .Max(value => value.Length);
+
+            var width = Math.Clamp(
+                longestValue + options.ColumnPadding,
+                options.MinimumColumnWidth,
+                options.MaximumColumnWidth);
+            widths[col + 1] = width;
+        }
+
+        return widths;
     }
 
     private static void WriteDocProps(ZipArchive zip)
@@ -213,4 +282,3 @@ public static class SimpleXlsxWriter
     private static string SanitizeForXml(string value)
         => value.Replace("\u0000", string.Empty, StringComparison.Ordinal);
 }
-

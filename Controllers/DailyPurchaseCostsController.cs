@@ -63,7 +63,13 @@ public class DailyPurchaseCostsController : Controller
             item.SKU
         }));
 
-        var bytes = SimpleXlsxWriter.WriteSingleSheet("Daily Purchase Cost", rows);
+        var bytes = SimpleXlsxWriter.WriteSingleSheet(
+            "Daily Purchase Cost",
+            rows,
+            new SimpleXlsxSheetOptions
+            {
+                AutoFitColumns = true
+            });
         var fileName = $"DailyPurchaseCostTemplate_{targetDate:yyyy-MM-dd}.xlsx";
         return File(
             bytes,
