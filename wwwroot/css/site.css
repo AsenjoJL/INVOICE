@@ -3939,6 +3939,7 @@ textarea,
   display: block;
   margin: 0;
   padding: 9px 12px !important;
+  min-height: 40px;
   border: 0 !important;
   border-radius: var(--ui-radius-md) !important;
   background: transparent !important;
@@ -3946,7 +3947,7 @@ textarea,
   font-size: 15px !important;
   font-weight: 500 !important;
   line-height: 1.45;
-  transition: background-color 0.18s ease, color 0.18s ease;
+  transition: background-color 0.14s ease, color 0.14s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -3967,7 +3968,7 @@ textarea,
 .sidebar-link.active {
   color: #F1F5F9 !important;
   background: #3B82F6 !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
 }
 
 .sidebar-brand,

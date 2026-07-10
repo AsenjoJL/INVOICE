@@ -156,10 +156,8 @@
                     return;
                 }
 
-                const active = sidebar.querySelector('.sidebar-link.active');
-                if (active && active.scrollIntoView) {
-                    active.scrollIntoView({ block: 'nearest' });
-                }
+                // No fallback auto-scroll: it can visibly jump after navigation.
+                // The sidebar should only restore the saved position.
             }
 
             restoreSidebarPosition();
