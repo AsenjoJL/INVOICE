@@ -214,14 +214,14 @@
 /* KPI Strip */
 .dashboard-refresh .dashboard-kpi-strip {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 1.25rem;
     margin: 2rem 0;
 }
 
 @media (max-width: 1400px) {
     .dashboard-refresh .dashboard-kpi-strip {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
 }
 
@@ -229,20 +229,14 @@
     background: var(--dash-surface);
     border: 1px solid var(--dash-border);
     border-radius: 14px;
-    padding: 1.35rem;
-    display: grid;
-    grid-template-columns: 50px minmax(0, 1fr) auto;
+    padding: 1.5rem;
+    display: flex;
     gap: 1rem;
     align-items: flex-start;
     position: relative;
     min-height: 140px;
-    min-width: 0;
     box-shadow: var(--dash-shadow-xs);
     transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dashboard-refresh .dashboard-kpi-next-row {
-    grid-column: 1;
 }
 
 .dashboard-refresh .dashboard-kpi-tile:hover {
@@ -286,13 +280,12 @@
 
 .dashboard-refresh .dashboard-kpi-copy {
     flex: 1;
-    min-width: 0;
 }
 
 .dashboard-refresh .dashboard-kpi-label {
     color: var(--dash-muted);
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
@@ -301,12 +294,11 @@
 
 .dashboard-refresh .dashboard-kpi-number {
     color: var(--dash-text);
-    font-size: clamp(1.05rem, 1.35vw, 1.4rem);
-    font-weight: 500;
+    font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    font-weight: 700;
     line-height: 1.2;
     display: block;
     margin-bottom: 0.4rem;
-    overflow-wrap: anywhere;
 }
 
 .dashboard-refresh .dashboard-kpi-tile small {
@@ -316,19 +308,18 @@
 }
 
 .dashboard-refresh .dashboard-kpi-trend {
-    position: static;
-    justify-self: end;
-    align-self: start;
+    position: absolute;
+    top: 1.2rem;
+    right: 1.2rem;
     background: rgba(16, 185, 129, 0.1);
     color: #10b981;
-    padding: 0.35rem 0.55rem;
+    padding: 0.4rem 0.7rem;
     border-radius: 8px;
-    font-size: 0.7rem;
-    font-weight: 500;
+    font-size: 0.75rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.3rem;
-    white-space: nowrap;
 }
 
 .dashboard-refresh .dashboard-kpi-trend.is-down {
@@ -409,7 +400,7 @@
 .dashboard-refresh .metric-label {
     color: var(--dash-muted);
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
@@ -417,11 +408,10 @@
 
 .dashboard-refresh .metric-value {
     color: var(--dash-text);
-    font-size: clamp(1.25rem, 1.9vw, 1.65rem);
-    font-weight: 500;
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 700;
     line-height: 1.2;
     margin-bottom: 0.3rem;
-    overflow-wrap: anywhere;
 }
 
 .dashboard-refresh .metric-unit {
@@ -574,7 +564,7 @@
     }
 
     .dashboard-refresh .dashboard-kpi-strip {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(5, 1fr);
         gap: 1rem;
     }
 }

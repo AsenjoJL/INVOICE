@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Expenses";
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+    var dailyPurchaseCostReturnUrl = ViewBag.ReturnUrl as string;
 }
 
 <partial name="_ExpenseStyles" />
@@ -41,7 +42,13 @@
                         <h1 class="expense-title expense-title-compact">Expense Ledger</h1>
                         <div class="expense-sub">Grouped by category schedule with section totals and overall total.</div>
                     </div>
-                    <a asp-action="Create" asp-route-returnUrl="@returnUrl" class="expense-primary-btn expense-return-link">Record Expense</a>
+                    <div class="expense-button-row">
+                        @if (!string.IsNullOrWhiteSpace(dailyPurchaseCostReturnUrl))
+                        {
+                            <a href="@dailyPurchaseCostReturnUrl" class="expense-secondary-btn">Back to Daily Purchase Cost</a>
+                        }
+                        <a asp-action="Create" asp-route-returnUrl="@returnUrl" class="expense-primary-btn expense-return-link">Record Expense</a>
+                    </div>
                 </div>
 
                 <div class="expense-ledger-total">

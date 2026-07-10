@@ -27,8 +27,12 @@ public class ExpensesController : Controller
     }
 
     // GET: Expenses
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? returnUrl = null)
     {
+        ViewBag.ReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : null;
+
         var expenses = await _context.Expenses
             .AsNoTracking()
             .OrderByDescending(e => e.Date)

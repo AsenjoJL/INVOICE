@@ -3887,10 +3887,6 @@ textarea,
     box-shadow: none !important;
     border-radius: 0 !important;
     margin-left: 0 !important;
-    overscroll-behavior: contain;
-    overflow-anchor: none;
-    scroll-behavior: auto;
-    scrollbar-gutter: stable;
 }
 
 .sidebar.offcanvas-start,
@@ -3940,7 +3936,6 @@ textarea,
   display: block;
   margin: 0;
   padding: 9px 12px !important;
-  min-height: 40px;
   border: 0 !important;
   border-radius: var(--ui-radius-md) !important;
   background: transparent !important;
@@ -3948,8 +3943,7 @@ textarea,
   font-size: 15px !important;
   font-weight: 500 !important;
   line-height: 1.45;
-  transition: background-color 0.14s ease, color 0.14s ease;
-  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 .sidebar-link i,
@@ -3969,7 +3963,7 @@ textarea,
 .sidebar-link.active {
   color: #F1F5F9 !important;
   background: #3B82F6 !important;
-  font-weight: 500 !important;
+  font-weight: 700 !important;
 }
 
 .sidebar-brand,
@@ -4286,7 +4280,6 @@ textarea,
     height: 100vh !important;
     overflow-y: auto;
     z-index: 1030;
-    transform: none !important;
   }
 
   .content {

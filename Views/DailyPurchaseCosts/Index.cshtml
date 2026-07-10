@@ -2,6 +2,11 @@
 
 @{
     ViewData["Title"] = "Daily Purchase Cost";
+    var dailyPurchaseCostReturnUrl = Url.Action("Index", "DailyPurchaseCosts", new
+    {
+        date = Model.TargetDate.ToString("yyyy-MM-dd"),
+        q = Model.SearchTerm
+    }) ?? "/DailyPurchaseCosts";
 }
 
 @section Styles {
@@ -9,6 +14,42 @@
         .daily-cost-table tr:target {
             background: #fff8db;
             scroll-margin-top: 120px;
+        }
+
+        .daily-cost-hero-actions {
+            display: flex;
+            align-items: stretch;
+        }
+
+        .daily-cost-expense-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-width: 150px;
+            min-height: 48px;
+            padding: 0.7rem 1.1rem;
+            border-radius: 16px;
+            border: 1px solid #d9e2ec;
+            background: #ffffff;
+            color: #0f172a;
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+            white-space: nowrap;
+        }
+
+        .daily-cost-expense-btn:hover,
+        .daily-cost-expense-btn:focus {
+            border-color: #0f172a;
+            background: #0f172a;
+            color: #ffffff;
+        }
+
+        @@media (max-width: 575.98px) {
+            .daily-cost-hero-actions,
+            .daily-cost-expense-btn {
+                width: 100%;
+            }
         }
     </style>
 }
@@ -21,11 +62,14 @@
                 <h1>Daily Purchase Cost</h1>
                 <p class="text-muted mb-0">Enter the daily buying cost per product. This updates item cost snapshots for profit reports without changing receipt selling prices directly.</p>
             </div>
-            <a asp-controller="Expenses"
-               asp-action="Index"
-               class="btn btn-outline-dark">
-                <i class="bi bi-receipt-cutoff"></i> Expenses
-            </a>
+            <div class="daily-cost-hero-actions">
+                <a asp-controller="Expenses"
+                   asp-action="Index"
+                   asp-route-returnUrl="@dailyPurchaseCostReturnUrl"
+                   class="daily-cost-expense-btn">
+                    <i class="bi bi-receipt-cutoff"></i> Expenses
+                </a>
+            </div>
         </div>
     </section>
 

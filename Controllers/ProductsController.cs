@@ -2,7 +2,6 @@ using HazelInvoice.Data;
 using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
-using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,18 +21,12 @@ public class ProductsController : Controller
     private readonly ApplicationDbContext _context;
     private readonly ILookupCacheService _lookupCache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
-    private readonly IProductPricingService _productPricing;
 
-    public ProductsController(
-        ApplicationDbContext context,
-        ILookupCacheService lookupCache,
-        IAppCacheInvalidator cacheInvalidator,
-        IProductPricingService productPricing)
+    public ProductsController(ApplicationDbContext context, ILookupCacheService lookupCache, IAppCacheInvalidator cacheInvalidator)
     {
         _context = context;
         _lookupCache = lookupCache;
         _cacheInvalidator = cacheInvalidator;
-        _productPricing = productPricing;
     }
 
     // GET: Products
@@ -41,6 +34,8 @@ public class ProductsController : Controller
     {
         var businessMoment = date ?? BusinessDate.Now();
         var businessDate = businessMoment.Date;
+        var applicableBusinessDate = WeeklyPriceCalendar.GetApplicablePriceDate(businessMoment);
+        var isResetDay = WeeklyPriceCalendar.IsResetDay(businessMoment);
         var normalizedScope = NormalizeScope(scope);
         var summary = await _context.Products
             .AsNoTracking()
@@ -79,14 +74,42 @@ public class ProductsController : Controller
             .ToListAsync();
 
         var productIds = products.Select(p => p.Id).ToList();
-        var priceMap = await _productPricing.GetEffectivePricesAsync(
-            productIds,
-            businessMoment,
-            HttpContext.RequestAborted);
+        var weeklyPrices = applicableBusinessDate.HasValue
+            ? await _context.WeeklyPrices
+                .AsNoTracking()
+                .Where(w => productIds.Contains(w.ProductId) && w.EffectiveFrom <= applicableBusinessDate.Value && w.EffectiveTo >= applicableBusinessDate.Value)
+                .ToListAsync()
+            : new List<WeeklyPrice>();
+
+        var weeklyMap = weeklyPrices
+            .GroupBy(w => w.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(w => w.EffectiveFrom)
+                      .ThenByDescending(w => w.Id)
+                      .First());
 
         var viewModel = products.Select(product =>
         {
-            var price = priceMap.GetValueOrDefault(product.Id);
+            var weeklyPrice = !isResetDay && weeklyMap.TryGetValue(product.Id, out var wp) ? wp : null;
+            var effectiveCost = isResetDay ? 0m : weeklyPrice?.CostOverride ?? product.UnitCost;
+            var effectiveDeliveryFee = isResetDay ? 0m : weeklyPrice?.DeliveryFee ?? product.DeliveryFee;
+
+            decimal effectiveMarkup = isResetDay ? 0m : product.Markup;
+            if (!isResetDay && weeklyPrice != null)
+            {
+                if (weeklyPrice.Markup != 0)
+                {
+                    effectiveMarkup = weeklyPrice.Markup;
+                }
+                else if (weeklyPrice.BasePrice > 0)
+                {
+                    effectiveMarkup = weeklyPrice.BasePrice - effectiveCost;
+                }
+            }
+
+            var effectiveBasePrice = effectiveCost + effectiveMarkup;
+            var effectiveDeliveryPrice = isResetDay ? 0m : weeklyPrice?.DeliveryPrice ?? (effectiveBasePrice + effectiveDeliveryFee);
 
             return new ProductListItemViewModel
             {
@@ -96,11 +119,11 @@ public class ProductsController : Controller
                 Category = product.Category,
                 Unit = product.Unit,
                 UnitCost = product.UnitCost,
-                EffectiveCost = price?.Cost ?? product.UnitCost,
-                EffectiveBasePrice = price?.BasePrice ?? product.UnitCost + product.Markup,
-                EffectiveDeliveryFee = price?.DeliveryFee ?? product.DeliveryFee,
-                EffectiveDeliveryPrice = price?.DeliveryPrice ?? product.UnitCost + product.Markup + product.DeliveryFee,
-                HasWeeklyPrice = price?.HasWeeklyPrice == true,
+                EffectiveCost = effectiveCost,
+                EffectiveBasePrice = effectiveBasePrice,
+                EffectiveDeliveryFee = effectiveDeliveryFee,
+                EffectiveDeliveryPrice = effectiveDeliveryPrice,
+                HasWeeklyPrice = weeklyPrice != null,
                 IsActive = product.IsActive
             };
         }).ToList();
@@ -168,19 +191,10 @@ public class ProductsController : Controller
 
         var product = await _context.Products.FindAsync(id);
         if (product == null) return NotFound();
-        await PrepareProductFormOptionsAsync(returnUrl);
+        ViewBag.ReturnUrl = returnUrl;
+        ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
+        ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
         return View(product);
-    }
-
-    // GET: Products/EditModal/5
-    [HttpGet]
-    public async Task<IActionResult> EditModal(int id, string? returnUrl = null)
-    {
-        var product = await _context.Products.FindAsync(id);
-        if (product == null) return NotFound();
-
-        await PrepareProductFormOptionsAsync(returnUrl);
-        return PartialView("_ProductEditModalForm", product);
     }
 
     // POST: Products/Edit/5
@@ -192,10 +206,12 @@ public class ProductsController : Controller
 
         if (ModelState.IsValid)
         {
-            Product? updatedProduct;
             try
             {
-                updatedProduct = await UpdateProductFromEditAsync(id, product);
+                _context.Update(product);
+                await _context.SaveChangesAsync();
+                _cacheInvalidator.InvalidateProducts();
+                _cacheInvalidator.InvalidateWeeklyPrices();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -203,9 +219,7 @@ public class ProductsController : Controller
                 else throw;
             }
 
-            if (updatedProduct == null) return NotFound();
-
-            if (!updatedProduct.IsActive)
+            if (!product.IsActive)
             {
                 returnUrl = BuildActiveCatalogReturnUrl(returnUrl);
             }
@@ -218,52 +232,17 @@ public class ProductsController : Controller
                     redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "restorePage", returnClientPage.Value.ToString());
                 }
 
-                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "highlightProductId", updatedProduct.Id.ToString());
+                redirectUrl = QueryHelpers.AddQueryString(redirectUrl, "highlightProductId", product.Id.ToString());
 
                 return LocalRedirect(redirectUrl);
             }
 
             return RedirectToAction(nameof(Index));
         }
-        await PrepareProductFormOptionsAsync(returnUrl);
+        ViewBag.ReturnUrl = returnUrl;
+        ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
+        ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
         return View(product);
-    }
-
-    // POST: Products/EditModal/5
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditModal(int id, [Bind("Id,SKU,Name,Category,SupplierId,Unit,UnitCost,IsActive")] Product product, string? returnUrl = null, int? returnClientPage = null)
-    {
-        if (id != product.Id) return NotFound();
-
-        if (!ModelState.IsValid)
-        {
-            await PrepareProductFormOptionsAsync(returnUrl);
-            Response.StatusCode = 400;
-            return PartialView("_ProductEditModalForm", product);
-        }
-
-        Product? updatedProduct;
-        try
-        {
-            updatedProduct = await UpdateProductFromEditAsync(id, product);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!ProductExists(product.Id)) return NotFound();
-            throw;
-        }
-
-        if (updatedProduct == null) return NotFound();
-
-        var rowSnapshot = await BuildProductRowSnapshotAsync(updatedProduct, returnUrl);
-
-        return Json(new
-        {
-            ok = true,
-            message = $"Saved {updatedProduct.Name}.",
-            product = rowSnapshot
-        });
     }
 
     // GET: Products/Delete/5
@@ -425,88 +404,6 @@ public class ProductsController : Controller
     private async Task<List<Supplier>> GetSupplierOptionsAsync()
     {
         return (await _lookupCache.GetActiveSuppliersAsync(HttpContext.RequestAborted)).ToList();
-    }
-
-    private async Task PrepareProductFormOptionsAsync(string? returnUrl = null)
-    {
-        ViewBag.ReturnUrl = returnUrl;
-        ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
-        ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
-    }
-
-    private async Task<Product?> UpdateProductFromEditAsync(int id, Product postedProduct)
-    {
-        var existing = await _context.Products.FindAsync(id);
-        if (existing == null) return null;
-
-        existing.SKU = postedProduct.SKU?.Trim() ?? string.Empty;
-        existing.Name = postedProduct.Name?.Trim() ?? string.Empty;
-        existing.Category = postedProduct.Category?.Trim() ?? string.Empty;
-        existing.SupplierId = postedProduct.SupplierId;
-        existing.Unit = postedProduct.Unit?.Trim() ?? string.Empty;
-        existing.UnitCost = postedProduct.UnitCost;
-        existing.IsActive = postedProduct.IsActive;
-
-        await _context.SaveChangesAsync();
-        _cacheInvalidator.InvalidateProducts();
-        _cacheInvalidator.InvalidateWeeklyPrices();
-
-        return existing;
-    }
-
-    private async Task<object> BuildProductRowSnapshotAsync(Product product, string? returnUrl)
-    {
-        var businessMoment = GetBusinessMomentFromReturnUrl(returnUrl);
-        var priceMap = await _productPricing.GetEffectivePricesAsync(
-            new[] { product.Id },
-            businessMoment,
-            HttpContext.RequestAborted);
-        var price = priceMap.GetValueOrDefault(product.Id);
-        var category = string.IsNullOrWhiteSpace(product.Category) ? "Uncategorized" : product.Category.Trim();
-        var effectiveCost = price?.Cost ?? product.UnitCost;
-        var effectiveBasePrice = price?.BasePrice ?? product.UnitCost + product.Markup;
-        var effectiveDeliveryPrice = price?.DeliveryPrice ?? product.UnitCost + product.Markup + product.DeliveryFee;
-
-        return new
-        {
-            id = product.Id,
-            sku = product.SKU,
-            name = product.Name,
-            category,
-            unit = product.Unit,
-            isActive = product.IsActive,
-            status = product.IsActive ? "active" : "inactive",
-            effectiveCost,
-            effectiveBasePrice,
-            effectiveDeliveryPrice,
-            effectiveCostText = effectiveCost.ToString("F2"),
-            effectiveBasePriceText = effectiveBasePrice.ToString("F2"),
-            effectiveDeliveryPriceText = effectiveDeliveryPrice.ToString("F2"),
-            hasWeeklyPrice = price?.HasWeeklyPrice == true
-        };
-    }
-
-    private static DateTime GetBusinessMomentFromReturnUrl(string? returnUrl)
-    {
-        if (string.IsNullOrWhiteSpace(returnUrl))
-        {
-            return BusinessDate.Now();
-        }
-
-        var queryIndex = returnUrl.IndexOf('?', StringComparison.Ordinal);
-        if (queryIndex < 0 || queryIndex == returnUrl.Length - 1)
-        {
-            return BusinessDate.Now();
-        }
-
-        var query = QueryHelpers.ParseQuery(returnUrl[(queryIndex + 1)..]);
-        if (query.TryGetValue("date", out var values) &&
-            DateTime.TryParse(values.FirstOrDefault(), out var date))
-        {
-            return date.Date;
-        }
-
-        return BusinessDate.Now();
     }
 
     private static string NormalizeScope(string? scope)
