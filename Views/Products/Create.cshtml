@@ -20,7 +20,7 @@
                         <h4>Add New Product</h4>
                         <p class="subtitle">Capture the essentials so pricing and orders stay consistent.</p>
                     </div>
-                    <a asp-action="Index" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
+                    <a href="javascript:void(0)" onclick="if(document.referrer) { window.history.back(); } else { window.location.href='@Url.Action("Index")'; }" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
                 </div>
             </div>
 
