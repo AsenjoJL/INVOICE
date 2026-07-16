@@ -53,7 +53,7 @@
                     </a>
                 }
             </form>
-            <a href="javascript:void(0)" onclick="if(document.referrer) { window.history.back(); } else { window.location.href='/Receipts'; }" class="invoice-btn invoice-btn-ghost">Back</a>
+            <a href="javascript:void(0)" onclick="event.preventDefault(); document.body.style.transition = 'opacity 0.3s ease'; document.body.style.opacity = '0'; setTimeout(() => { if(document.referrer) { window.history.back(); } else { window.location.href='/Receipts'; } }, 300);" class="invoice-btn invoice-btn-ghost">Back</a>
         </div>
     </div>
 

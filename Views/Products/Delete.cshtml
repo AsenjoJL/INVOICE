@@ -17,7 +17,7 @@
                         <h4>Deactivate Product</h4>
                         <p class="subtitle">Archive the item from active operations while preserving order and stock history.</p>
                     </div>
-                    <a href="javascript:void(0)" onclick="if(document.referrer) { window.history.back(); } else { window.location.href='@Url.Action("Index")'; }" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
+                    <a href="javascript:void(0)" onclick="event.preventDefault(); document.body.style.transition = 'opacity 0.3s ease'; document.body.style.opacity = '0'; setTimeout(() => { if(document.referrer) { window.history.back(); } else { window.location.href='@Url.Action("Index")'; } }, 300);" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
                 </div>
             </div>
 
