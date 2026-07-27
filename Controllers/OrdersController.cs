@@ -79,7 +79,7 @@ public class OrdersController : Controller
     public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1, bool print = false, bool details = false, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
-        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
+        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
 
         if (print)
         {
@@ -124,7 +124,7 @@ public class OrdersController : Controller
     public async Task<IActionResult> DownloadVegetableMatrixTemplate(DateTime? date, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
-        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
+        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
         var bytes = await _vegetableMatrixTemplateService.BuildTemplateAsync(targetDate, selectedGroup, HttpContext.RequestAborted);
 
         var safeGroup = Regex.Replace(selectedGroup, "[^A-Za-z0-9]+", "_").Trim('_');
@@ -138,7 +138,7 @@ public class OrdersController : Controller
     {
         if (model == null) return BadRequest("Model is null");
         model.Date = NormalizeOrderDate(model.Date);
-        model.SelectedGroupName = _operations.ResolveOutletGroupOrDefault(model.SelectedGroupName);
+        model.SelectedGroupName = _operations.ResolveClientGroupOrDefault(model.SelectedGroupName);
         model.ProductPrices ??= new Dictionary<int, decimal>();
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
@@ -445,7 +445,8 @@ public class OrdersController : Controller
     public async Task<IActionResult> ImportVegetableMatrixExcel(IFormFile? importFile, DateTime date, int page = 1, int productPage = 1, bool details = false, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
-        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
+        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
+        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
 
         if (importFile == null || importFile.Length == 0)
         {
@@ -510,7 +511,7 @@ public class OrdersController : Controller
 
         var customers = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive && c.GroupName == selectedGroup)
+            .Where(c => c.IsActive && includedGroups.Contains(c.GroupName))
             .ToListAsync();
 
         var customerMap = customers

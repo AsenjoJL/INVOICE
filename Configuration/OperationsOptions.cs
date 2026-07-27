@@ -13,6 +13,18 @@ public sealed class OperationsOptions
         "MCIAA"
     ];
 
+    public List<string> ClientGroups { get; set; } =
+    [
+        "EIGHT2EIGHT OUTLETS",
+        "MCIAA"
+    ];
+
+    public Dictionary<string, List<string>> ClientOutletGroups { get; set; } = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["EIGHT2EIGHT OUTLETS"] = ["EIGHT2EIGHT OUTLETS", "Taste 8 outlets"],
+        ["MCIAA"] = ["MCIAA"]
+    };
+
     public List<string> OutletSortTokens { get; set; } =
     [
         "autoliv", "autolive", "taiyo", "gmc", "global", "uct", "knowles", "knowless",
@@ -56,14 +68,40 @@ public sealed class OperationsOptions
     public string DefaultOutletGroup =>
         OutletGroups.FirstOrDefault(g => !string.IsNullOrWhiteSpace(g)) ?? "EIGHT2EIGHT OUTLETS";
 
-    public string ResolveOutletGroupOrDefault(string? groupName)
+    public IReadOnlyList<string> GetClientGroups()
+    {
+        var groups = ClientGroups.Count > 0 ? ClientGroups : OutletGroups;
+        return groups
+            .Where(g => !string.IsNullOrWhiteSpace(g))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public string DefaultClientGroup =>
+        GetClientGroups().FirstOrDefault(g => !string.IsNullOrWhiteSpace(g)) ?? DefaultOutletGroup;
+
+    public string ResolveClientGroupOrDefault(string? groupName)
     {
         if (string.IsNullOrWhiteSpace(groupName))
-            return DefaultOutletGroup;
+            return DefaultClientGroup;
 
-        var match = OutletGroups.FirstOrDefault(
+        var match = GetClientGroups().FirstOrDefault(
             g => string.Equals(g, groupName.Trim(), StringComparison.OrdinalIgnoreCase));
 
-        return string.IsNullOrWhiteSpace(match) ? DefaultOutletGroup : match;
+        return string.IsNullOrWhiteSpace(match) ? DefaultClientGroup : match;
+    }
+
+    public IReadOnlyList<string> ResolveOutletGroupsForClient(string? clientGroup)
+    {
+        var selectedClient = ResolveClientGroupOrDefault(clientGroup);
+        if (ClientOutletGroups.TryGetValue(selectedClient, out var mappedGroups) && mappedGroups.Count > 0)
+        {
+            return mappedGroups
+                .Where(g => !string.IsNullOrWhiteSpace(g))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        return [selectedClient];
     }
 }

@@ -100,7 +100,7 @@ public class DashboardMetricsService : IDashboardMetricsService
     private List<string> GetDashboardGroups()
     {
         return new[] { "All" }
-            .Concat(_operations.OutletGroups.Where(g => !string.IsNullOrWhiteSpace(g)))
+            .Concat(_operations.GetClientGroups())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -113,10 +113,8 @@ public class DashboardMetricsService : IDashboardMetricsService
             return "All";
         }
 
-        var match = _operations.OutletGroups.FirstOrDefault(
-            g => string.Equals(g, groupName.Trim(), StringComparison.OrdinalIgnoreCase));
-
-        return string.IsNullOrWhiteSpace(match) ? "All" : match;
+        var resolved = _operations.ResolveClientGroupOrDefault(groupName);
+        return string.IsNullOrWhiteSpace(resolved) ? "All" : resolved;
     }
 
     private async Task<DashboardCustomerScope> BuildCustomerScopeAsync(string selectedGroup, CancellationToken ct)
@@ -124,9 +122,11 @@ public class DashboardMetricsService : IDashboardMetricsService
         if (string.Equals(selectedGroup, "All", StringComparison.OrdinalIgnoreCase))
             return DashboardCustomerScope.All;
 
+        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
+
         var customers = await _db.Customers
             .AsNoTracking()
-            .Where(c => c.GroupName == selectedGroup)
+            .Where(c => includedGroups.Contains(c.GroupName))
             .Select(c => new { c.Id, c.Name })
             .ToListAsync(ct);
 

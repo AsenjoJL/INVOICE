@@ -48,7 +48,8 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
     public async Task<VegetableMatrixViewModel> GetAsync(VegetableMatrixQueryOptions options, CancellationToken cancellationToken = default)
     {
         var targetDate = options.Date.Date;
-        var selectedGroup = _operations.ResolveOutletGroupOrDefault(options.GroupName);
+        var selectedGroup = _operations.ResolveClientGroupOrDefault(options.GroupName);
+        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
         var dayStart = targetDate;
         var dayEnd = targetDate.AddDays(1);
 
@@ -74,13 +75,13 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         // 1) OUTLETS (base query)
         var outletsAll = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive && c.GroupName == selectedGroup)
+            .Where(c => c.IsActive && includedGroups.Contains(c.GroupName))
             .ToListAsync(cancellationToken);
 
         var totalOutlets = outletsAll.Count;
 
         // Optional "self heal" (keep existing behavior)
-        if (totalOutlets == 0 && string.Equals(selectedGroup, _defaultOutletGroup, StringComparison.OrdinalIgnoreCase))
+        if (totalOutlets == 0 && string.Equals(selectedGroup, _operations.DefaultClientGroup, StringComparison.OrdinalIgnoreCase))
         {
             var fix = await _context.Customers
                 .Where(c => c.IsActive && (c.GroupName == null || c.GroupName == ""))
@@ -93,7 +94,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
 
                 outletsAll = await _context.Customers
                     .AsNoTracking()
-                    .Where(c => c.IsActive && c.GroupName == selectedGroup)
+                    .Where(c => c.IsActive && includedGroups.Contains(c.GroupName))
                     .ToListAsync(cancellationToken);
 
                 totalOutlets = outletsAll.Count;
@@ -668,10 +669,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             ShowDetails = showDetails,
 
             SelectedGroupName = selectedGroup,
-            AvailableGroupNames = _operations.OutletGroups
-                .Where(g => !string.IsNullOrWhiteSpace(g))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList(),
+            AvailableGroupNames = _operations.GetClientGroups().ToList(),
 
             VisibleOutlets = visibleOutlets,
             VisibleProducts = visibleProducts,

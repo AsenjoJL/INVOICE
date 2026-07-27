@@ -33,14 +33,15 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
 
     public async Task<byte[]> BuildTemplateAsync(DateTime date, string? groupName = null, CancellationToken cancellationToken = default)
     {
-        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
+        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
+        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
 
         // Keep template compatible with ImportVegetableMatrixExcel:
         // - Header row must have "Vegetables" in column A.
         // - Outlet headers should match Customer.Name values.
         var outlets = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive && c.GroupName == selectedGroup)
+            .Where(c => c.IsActive && includedGroups.Contains(c.GroupName))
             .OrderBy(c => c.GroupName)
             .ThenBy(c => c.Name)
             .Select(c => c.Name)
