@@ -18,6 +18,7 @@ public class DashboardMetricsService : IDashboardMetricsService
     private readonly IMemoryCache _cache;
     private readonly IAppCacheInvalidator _cacheInvalidator;
     private readonly IExpenseCategoryCatalogService _expenseCategoryCatalog;
+    private readonly OperationsOptions _operations;
     private readonly decimal _profitFeePercent;
 
     public DashboardMetricsService(
@@ -33,14 +34,17 @@ public class DashboardMetricsService : IDashboardMetricsService
         _cache = cache;
         _cacheInvalidator = cacheInvalidator;
         _expenseCategoryCatalog = expenseCategoryCatalog;
+        _operations = operations.Value;
         _profitFeePercent = operations.Value.VegetableDetailPercentFeeDefault > 0m
             ? operations.Value.VegetableDetailPercentFeeDefault
             : 1.0m;
     }
 
-    public async Task<DashboardViewModel> BuildAsync(DateTime today, CancellationToken ct = default)
+    public async Task<DashboardViewModel> BuildAsync(DateTime today, string? groupName = null, CancellationToken ct = default)
     {
-        var cacheKey = AppCacheKeys.Dashboard(today.Date);
+        var selectedGroup = ResolveDashboardGroup(groupName);
+        var cacheGroup = string.Equals(selectedGroup, "All", StringComparison.OrdinalIgnoreCase) ? null : selectedGroup;
+        var cacheKey = AppCacheKeys.Dashboard(today.Date, cacheGroup);
         if (_cacheInvalidator is AppCacheInvalidator invalidator)
             invalidator.TrackDashboardKey(cacheKey);
 
@@ -51,14 +55,15 @@ public class DashboardMetricsService : IDashboardMetricsService
         {
             var periods = DashboardPeriods.Create(today.Date);
             var expenseGroupMap = await _expenseCategoryCatalog.GetGroupMapAsync(ct);
+            var scope = await BuildCustomerScopeAsync(selectedGroup, ct);
 
             // Keep one query in flight at a time because EF Core DbContext does not support
             // concurrent operations on the same instance.
-            var receiptMetrics = await GetReceiptMetricsAsync(periods, ct);
+            var receiptMetrics = await GetReceiptMetricsAsync(periods, scope, ct);
             var expenseMetrics = await GetExpenseMetricsAsync(periods, expenseGroupMap, ct);
-            var paymentMetrics = await GetPaymentMetricsAsync(periods, ct);
-            var profitMetrics = await GetProfitMetricsAsync(periods, ct);
-            var itemMetrics = await GetItemMetricsAsync(periods, ct);
+            var paymentMetrics = await GetPaymentMetricsAsync(periods, scope, ct);
+            var profitMetrics = await GetProfitMetricsAsync(periods, scope, ct);
+            var itemMetrics = await GetItemMetricsAsync(periods, scope, ct);
             var dailyCostMetrics = await GetDailyPurchaseCostMetricsAsync(periods, ct);
 
             var vm = BuildViewModel(
@@ -70,11 +75,13 @@ public class DashboardMetricsService : IDashboardMetricsService
                 itemMetrics,
                 dailyCostMetrics);
 
-            vm.DailySales = await GetDailySalesAsync(periods, ct);
-            vm.TopItems = await GetTopItemsAsync(ct);
-            vm.RecentUnpaidOrders = await GetRecentOrdersAsync(PaymentStatus.Unpaid, ct);
-            vm.RecentPaidOrders = await GetRecentOrdersAsync(PaymentStatus.Paid, ct);
-            vm.TopOutlets = await GetTopOutletsAsync(ct);
+            vm.SelectedGroupName = selectedGroup;
+            vm.AvailableGroupNames = GetDashboardGroups();
+            vm.DailySales = await GetDailySalesAsync(periods, scope, ct);
+            vm.TopItems = await GetTopItemsAsync(scope, ct);
+            vm.RecentUnpaidOrders = await GetRecentOrdersAsync(PaymentStatus.Unpaid, scope, ct);
+            vm.RecentPaidOrders = await GetRecentOrdersAsync(PaymentStatus.Paid, scope, ct);
+            vm.TopOutlets = await GetTopOutletsAsync(scope, ct);
 
             _cache.Set(cacheKey, vm, TimeSpan.FromSeconds(30));
             return vm;
@@ -82,8 +89,51 @@ public class DashboardMetricsService : IDashboardMetricsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "DashboardMetricsService.BuildAsync failed.");
-            return new DashboardViewModel();
+            return new DashboardViewModel
+            {
+                SelectedGroupName = selectedGroup,
+                AvailableGroupNames = GetDashboardGroups()
+            };
         }
+    }
+
+    private List<string> GetDashboardGroups()
+    {
+        return new[] { "All" }
+            .Concat(_operations.OutletGroups.Where(g => !string.IsNullOrWhiteSpace(g)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private string ResolveDashboardGroup(string? groupName)
+    {
+        if (string.IsNullOrWhiteSpace(groupName) ||
+            string.Equals(groupName.Trim(), "All", StringComparison.OrdinalIgnoreCase))
+        {
+            return "All";
+        }
+
+        var match = _operations.OutletGroups.FirstOrDefault(
+            g => string.Equals(g, groupName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        return string.IsNullOrWhiteSpace(match) ? "All" : match;
+    }
+
+    private async Task<DashboardCustomerScope> BuildCustomerScopeAsync(string selectedGroup, CancellationToken ct)
+    {
+        if (string.Equals(selectedGroup, "All", StringComparison.OrdinalIgnoreCase))
+            return DashboardCustomerScope.All;
+
+        var customers = await _db.Customers
+            .AsNoTracking()
+            .Where(c => c.GroupName == selectedGroup)
+            .Select(c => new { c.Id, c.Name })
+            .ToListAsync(ct);
+
+        return new DashboardCustomerScope(
+            IsFiltered: true,
+            CustomerIds: customers.Select(c => c.Id).ToArray(),
+            CustomerNames: customers.Select(c => c.Name).Where(n => !string.IsNullOrWhiteSpace(n)).ToArray());
     }
 
     private DashboardViewModel BuildViewModel(
@@ -198,9 +248,31 @@ public class DashboardMetricsService : IDashboardMetricsService
             AllTime = receipts.SalesAllTime - payments.PaymentsAllTime
         };
 
-    private async Task<ReceiptMetrics> GetReceiptMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    private static IQueryable<Receipt> ApplyReceiptScope(IQueryable<Receipt> query, DashboardCustomerScope scope)
     {
-        var metrics = await _db.Receipts
+        if (!scope.IsFiltered)
+            return query;
+
+        return query.Where(r =>
+            (r.CustomerId.HasValue && scope.CustomerIds.Contains(r.CustomerId.Value)) ||
+            (!r.CustomerId.HasValue && scope.CustomerNames.Contains(r.CustomerName)));
+    }
+
+    private static IQueryable<Payment> ApplyPaymentScope(IQueryable<Payment> query, DashboardCustomerScope scope)
+    {
+        if (!scope.IsFiltered)
+            return query;
+
+        return query.Where(p => p.Receipt != null &&
+            ((p.Receipt.CustomerId.HasValue && scope.CustomerIds.Contains(p.Receipt.CustomerId.Value)) ||
+             (!p.Receipt.CustomerId.HasValue && scope.CustomerNames.Contains(p.Receipt.CustomerName))));
+    }
+
+    private async Task<ReceiptMetrics> GetReceiptMetricsAsync(DashboardPeriods periods, DashboardCustomerScope scope, CancellationToken ct)
+    {
+        var receiptQuery = ApplyReceiptScope(_db.Receipts.AsNoTracking(), scope);
+
+        var metrics = await receiptQuery
             .AsNoTracking()
             .Where(r => r.Status != PaymentStatus.Void)
             .GroupBy(_ => 1)
@@ -229,6 +301,7 @@ public class DashboardMetricsService : IDashboardMetricsService
         var dailyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Daily).Select(x => x.Key).ToArray();
         var weeklyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Weekly).Select(x => x.Key).ToArray();
         var monthlyNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Monthly).Select(x => x.Key).ToArray();
+        var otherNames = expenseGroupMap.Where(x => x.Value == ExpenseCategoryGroup.Other).Select(x => x.Key).ToArray();
         var categorizedNames = expenseGroupMap.Keys.ToArray();
 
         var metrics = await _db.Expenses
@@ -245,16 +318,18 @@ public class DashboardMetricsService : IDashboardMetricsService
                 DailyExpenseTotal = g.Where(e => dailyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
                 WeeklyExpenseTotal = g.Where(e => weeklyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
                 MonthlyExpenseBucketTotal = g.Where(e => monthlyNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m,
-                OtherExpenseTotal = g.Where(e => !categorizedNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m
+                OtherExpenseTotal = g.Where(e => otherNames.Contains(e.Category) || !categorizedNames.Contains(e.Category)).Sum(e => (decimal?)e.Amount) ?? 0m
             })
             .SingleOrDefaultAsync(ct);
 
         return metrics ?? new ExpenseMetrics();
     }
 
-    private async Task<PaymentMetrics> GetPaymentMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    private async Task<PaymentMetrics> GetPaymentMetricsAsync(DashboardPeriods periods, DashboardCustomerScope scope, CancellationToken ct)
     {
-        var metrics = await _db.Payments
+        var paymentQuery = ApplyPaymentScope(_db.Payments.AsNoTracking(), scope);
+
+        var metrics = await paymentQuery
             .AsNoTracking()
             .GroupBy(_ => 1)
             .Select(g => new PaymentMetrics
@@ -272,7 +347,7 @@ public class DashboardMetricsService : IDashboardMetricsService
         return metrics ?? new PaymentMetrics();
     }
 
-    private async Task<ProfitMetrics> GetProfitMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    private async Task<ProfitMetrics> GetProfitMetricsAsync(DashboardPeriods periods, DashboardCustomerScope scope, CancellationToken ct)
     {
         var metrics = await (
             from line in _db.ReceiptLines.AsNoTracking()
@@ -280,6 +355,9 @@ public class DashboardMetricsService : IDashboardMetricsService
             join product in _db.Products.AsNoTracking() on line.ProductId equals (int?)product.Id into productJoin
             from product in productJoin.DefaultIfEmpty()
             where receipt.Status != PaymentStatus.Void
+            where !scope.IsFiltered ||
+                  (receipt.CustomerId.HasValue && scope.CustomerIds.Contains(receipt.CustomerId.Value)) ||
+                  (!receipt.CustomerId.HasValue && scope.CustomerNames.Contains(receipt.CustomerName))
             select new
             {
                 ReceiptDate = receipt.Date,
@@ -310,11 +388,18 @@ public class DashboardMetricsService : IDashboardMetricsService
         return metrics ?? new ProfitMetrics();
     }
 
-    private async Task<ItemMetrics> GetItemMetricsAsync(DashboardPeriods periods, CancellationToken ct)
+    private async Task<ItemMetrics> GetItemMetricsAsync(DashboardPeriods periods, DashboardCustomerScope scope, CancellationToken ct)
     {
         var linesBase = _db.ReceiptLines
             .AsNoTracking()
             .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void);
+
+        if (scope.IsFiltered)
+        {
+            linesBase = linesBase.Where(l =>
+                (l.Receipt!.CustomerId.HasValue && scope.CustomerIds.Contains(l.Receipt.CustomerId.Value)) ||
+                (!l.Receipt.CustomerId.HasValue && scope.CustomerNames.Contains(l.Receipt.CustomerName)));
+        }
 
         var itemVolume = await linesBase
             .Where(l => l.Receipt!.Date >= periods.YesterdayStart && l.Receipt.Date < periods.DayEnd)
@@ -369,9 +454,11 @@ public class DashboardMetricsService : IDashboardMetricsService
         };
     }
 
-    private async Task<List<DateValuePoint>> GetDailySalesAsync(DashboardPeriods periods, CancellationToken ct)
+    private async Task<List<DateValuePoint>> GetDailySalesAsync(DashboardPeriods periods, DashboardCustomerScope scope, CancellationToken ct)
     {
-        var last7DaysRaw = await _db.Receipts
+        var receiptQuery = ApplyReceiptScope(_db.Receipts.AsNoTracking(), scope);
+
+        var last7DaysRaw = await receiptQuery
             .AsNoTracking()
             .Where(r => r.Date >= periods.DayStart.AddDays(-6) && r.Status != PaymentStatus.Void)
             .GroupBy(r => r.Date.Date)
@@ -392,11 +479,20 @@ public class DashboardMetricsService : IDashboardMetricsService
             .ToList();
     }
 
-    private async Task<List<CategoryValuePoint>> GetTopItemsAsync(CancellationToken ct)
+    private async Task<List<CategoryValuePoint>> GetTopItemsAsync(DashboardCustomerScope scope, CancellationToken ct)
     {
-        return await _db.ReceiptLines
+        var lineQuery = _db.ReceiptLines
             .AsNoTracking()
-            .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void)
+            .Where(l => l.Receipt != null && l.Receipt.Status != PaymentStatus.Void);
+
+        if (scope.IsFiltered)
+        {
+            lineQuery = lineQuery.Where(l =>
+                (l.Receipt!.CustomerId.HasValue && scope.CustomerIds.Contains(l.Receipt.CustomerId.Value)) ||
+                (!l.Receipt.CustomerId.HasValue && scope.CustomerNames.Contains(l.Receipt.CustomerName)));
+        }
+
+        return await lineQuery
             .GroupBy(l => l.ItemName)
             .Select(g => new CategoryValuePoint
             {
@@ -408,9 +504,11 @@ public class DashboardMetricsService : IDashboardMetricsService
             .ToListAsync(ct);
     }
 
-    private async Task<List<Receipt>> GetRecentOrdersAsync(PaymentStatus status, CancellationToken ct)
+    private async Task<List<Receipt>> GetRecentOrdersAsync(PaymentStatus status, DashboardCustomerScope scope, CancellationToken ct)
     {
-        return await _db.Receipts
+        var receiptQuery = ApplyReceiptScope(_db.Receipts.AsNoTracking(), scope);
+
+        return await receiptQuery
             .AsNoTracking()
             .Where(r => r.Status == status)
             .OrderByDescending(r => r.Date)
@@ -418,9 +516,11 @@ public class DashboardMetricsService : IDashboardMetricsService
             .ToListAsync(ct);
     }
 
-    private async Task<List<CategoryValuePoint>> GetTopOutletsAsync(CancellationToken ct)
+    private async Task<List<CategoryValuePoint>> GetTopOutletsAsync(DashboardCustomerScope scope, CancellationToken ct)
     {
-        return await _db.Receipts
+        var receiptQuery = ApplyReceiptScope(_db.Receipts.AsNoTracking(), scope);
+
+        return await receiptQuery
             .AsNoTracking()
             .Where(r => r.Status != PaymentStatus.Void)
             .GroupBy(r => r.CustomerName)
@@ -548,5 +648,13 @@ public class DashboardMetricsService : IDashboardMetricsService
         public decimal Week { get; init; }
         public decimal Month { get; init; }
         public decimal AllTime { get; init; }
+    }
+
+    private sealed record DashboardCustomerScope(
+        bool IsFiltered,
+        int[] CustomerIds,
+        string[] CustomerNames)
+    {
+        public static DashboardCustomerScope All { get; } = new(false, [], []);
     }
 }

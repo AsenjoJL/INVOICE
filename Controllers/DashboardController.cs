@@ -32,9 +32,9 @@ public class DashboardController : Controller
         _environment = environment;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? groupName = null)
     {
-        var model = await _metrics.BuildAsync(BusinessDate.Today(), HttpContext.RequestAborted);
+        var model = await _metrics.BuildAsync(BusinessDate.Today(), groupName, HttpContext.RequestAborted);
         return View(model);
     }
 

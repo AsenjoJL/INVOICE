@@ -9,7 +9,8 @@ public sealed class OperationsOptions
     public List<string> OutletGroups { get; set; } =
     [
         "EIGHT2EIGHT OUTLETS",
-        "Taste 8 outlets"
+        "Taste 8 outlets",
+        "MCIAA"
     ];
 
     public List<string> OutletSortTokens { get; set; } =
@@ -54,4 +55,15 @@ public sealed class OperationsOptions
 
     public string DefaultOutletGroup =>
         OutletGroups.FirstOrDefault(g => !string.IsNullOrWhiteSpace(g)) ?? "EIGHT2EIGHT OUTLETS";
+
+    public string ResolveOutletGroupOrDefault(string? groupName)
+    {
+        if (string.IsNullOrWhiteSpace(groupName))
+            return DefaultOutletGroup;
+
+        var match = OutletGroups.FirstOrDefault(
+            g => string.Equals(g, groupName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        return string.IsNullOrWhiteSpace(match) ? DefaultOutletGroup : match;
+    }
 }

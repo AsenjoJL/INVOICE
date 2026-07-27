@@ -20,7 +20,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
 
     private readonly ApplicationDbContext _context;
     private readonly bool _partnersEnabled;
-    private readonly HashSet<string> _outletGroups;
+    private readonly OperationsOptions _operations;
     private readonly string[] _outletOrderTokens;
     private readonly string _defaultOutletGroup;
     private readonly int _targetPrintSheets;
@@ -37,8 +37,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         _context = context;
         _productPricing = productPricing;
         _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
-        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _operations = operations.Value;
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
         _defaultOutletGroup = operations.Value.DefaultOutletGroup;
         _targetPrintSheets = operations.Value.VegetablePrintTargetSheets > 0 ? operations.Value.VegetablePrintTargetSheets : 3;
@@ -49,6 +48,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
     public async Task<VegetableMatrixViewModel> GetAsync(VegetableMatrixQueryOptions options, CancellationToken cancellationToken = default)
     {
         var targetDate = options.Date.Date;
+        var selectedGroup = _operations.ResolveOutletGroupOrDefault(options.GroupName);
         var dayStart = targetDate;
         var dayEnd = targetDate.AddDays(1);
 
@@ -74,13 +74,13 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
         // 1) OUTLETS (base query)
         var outletsAll = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
+            .Where(c => c.IsActive && c.GroupName == selectedGroup)
             .ToListAsync(cancellationToken);
 
         var totalOutlets = outletsAll.Count;
 
         // Optional "self heal" (keep existing behavior)
-        if (totalOutlets == 0)
+        if (totalOutlets == 0 && string.Equals(selectedGroup, _defaultOutletGroup, StringComparison.OrdinalIgnoreCase))
         {
             var fix = await _context.Customers
                 .Where(c => c.IsActive && (c.GroupName == null || c.GroupName == ""))
@@ -93,7 +93,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
 
                 outletsAll = await _context.Customers
                     .AsNoTracking()
-                    .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
+                    .Where(c => c.IsActive && c.GroupName == selectedGroup)
                     .ToListAsync(cancellationToken);
 
                 totalOutlets = outletsAll.Count;
@@ -667,7 +667,11 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             IsPrint = print,
             ShowDetails = showDetails,
 
-            SelectedGroupName = "All",
+            SelectedGroupName = selectedGroup,
+            AvailableGroupNames = _operations.OutletGroups
+                .Where(g => !string.IsNullOrWhiteSpace(g))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
 
             VisibleOutlets = visibleOutlets,
             VisibleProducts = visibleProducts,

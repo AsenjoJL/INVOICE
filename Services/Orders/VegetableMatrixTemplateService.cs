@@ -11,7 +11,7 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
 {
     private readonly ApplicationDbContext _context;
     private readonly IProductPricingService _productPricing;
-    private readonly HashSet<string> _outletGroups;
+    private readonly OperationsOptions _operations;
     private readonly string _productHeader;
     private readonly string _priceHeader;
 
@@ -22,8 +22,7 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
     {
         _context = context;
         _productPricing = productPricing;
-        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _operations = operations.Value;
         _productHeader = string.IsNullOrWhiteSpace(operations.Value.VegetableTemplateProductHeader)
             ? "Vegetables"
             : operations.Value.VegetableTemplateProductHeader;
@@ -32,14 +31,16 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
             : operations.Value.VegetableTemplatePriceHeader;
     }
 
-    public async Task<byte[]> BuildTemplateAsync(DateTime date, CancellationToken cancellationToken = default)
+    public async Task<byte[]> BuildTemplateAsync(DateTime date, string? groupName = null, CancellationToken cancellationToken = default)
     {
+        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
+
         // Keep template compatible with ImportVegetableMatrixExcel:
         // - Header row must have "Vegetables" in column A.
         // - Outlet headers should match Customer.Name values.
         var outlets = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
+            .Where(c => c.IsActive && c.GroupName == selectedGroup)
             .OrderBy(c => c.GroupName)
             .ThenBy(c => c.Name)
             .Select(c => c.Name)
@@ -68,7 +69,8 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
         rows.Add(new[]
         {
             "VEGETABLE ORDER MATRIX TEMPLATE",
-            $"Delivery Date: {date:yyyy-MM-dd}"
+            $"Delivery Date: {date:yyyy-MM-dd}",
+            $"Client Group: {selectedGroup}"
         });
 
         var header = new List<string>(capacity: 2 + outlets.Count)

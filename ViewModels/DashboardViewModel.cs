@@ -2,6 +2,10 @@ namespace HazelInvoice.ViewModels;
 
 public class DashboardViewModel
 {
+    public string SelectedGroupName { get; set; } = "All";
+    public List<string> AvailableGroupNames { get; set; } = new();
+    public bool IsGroupFiltered => !string.Equals(SelectedGroupName, "All", StringComparison.OrdinalIgnoreCase);
+
     public decimal SalesToday { get; set; }
     public decimal SalesWeekly { get; set; }
     public decimal SalesMonthly { get; set; }

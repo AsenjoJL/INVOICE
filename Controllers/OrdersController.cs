@@ -31,7 +31,7 @@ public class OrdersController : Controller
     private readonly IAppCacheInvalidator _cacheInvalidator;
     private readonly IProductPricingService _productPricing;
     private readonly IDailyPurchaseCostService _dailyPurchaseCosts;
-    private readonly HashSet<string> _outletGroups;
+    private readonly OperationsOptions _operations;
     private readonly string[] _outletOrderTokens;
     private readonly Dictionary<string, string> _outletImportAliasMap;
     private readonly HashSet<string> _vegetableNonOutletHeaderKeys;
@@ -61,8 +61,7 @@ public class OrdersController : Controller
         _cacheInvalidator = cacheInvalidator;
         _productPricing = productPricing;
         _dailyPurchaseCosts = dailyPurchaseCosts;
-        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _operations = operations.Value;
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
         _outletImportAliasMap = operations.Value.OutletImportAliases ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         _vegetableNonOutletHeaderKeys = (operations.Value.VegetableNonOutletHeaderKeys ?? [])
@@ -77,9 +76,10 @@ public class OrdersController : Controller
     }
 
     // GET: Orders/VegetableMatrix?date=yyyy-MM-dd&page=1&productPage=1&print=false&details=false
-    public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1, bool print = false, bool details = false)
+    public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1, bool print = false, bool details = false, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
+        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
 
         if (print)
         {
@@ -94,7 +94,8 @@ public class OrdersController : Controller
                         date = targetDate.ToString("yyyy-MM-dd"),
                         page = 1,
                         productPage = 1,
-                        print = true
+                        print = true,
+                        groupName = selectedGroup
                     })
                 });
             }
@@ -108,6 +109,7 @@ public class OrdersController : Controller
             Date = targetDate,
             OutletPage = page,
             ProductPage = productPage,
+            GroupName = selectedGroup,
             Print = print,
             Details = details
         }, HttpContext.RequestAborted);
@@ -119,12 +121,14 @@ public class OrdersController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> DownloadVegetableMatrixTemplate(DateTime? date)
+    public async Task<IActionResult> DownloadVegetableMatrixTemplate(DateTime? date, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
-        var bytes = await _vegetableMatrixTemplateService.BuildTemplateAsync(targetDate, HttpContext.RequestAborted);
+        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
+        var bytes = await _vegetableMatrixTemplateService.BuildTemplateAsync(targetDate, selectedGroup, HttpContext.RequestAborted);
 
-        var fileName = $"VegetableOrderTemplate_{targetDate:yyyy-MM-dd}.xlsx";
+        var safeGroup = Regex.Replace(selectedGroup, "[^A-Za-z0-9]+", "_").Trim('_');
+        var fileName = $"VegetableOrderTemplate_{safeGroup}_{targetDate:yyyy-MM-dd}.xlsx";
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
@@ -134,6 +138,7 @@ public class OrdersController : Controller
     {
         if (model == null) return BadRequest("Model is null");
         model.Date = NormalizeOrderDate(model.Date);
+        model.SelectedGroupName = _operations.ResolveOutletGroupOrDefault(model.SelectedGroupName);
         model.ProductPrices ??= new Dictionary<int, decimal>();
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
@@ -430,32 +435,34 @@ public class OrdersController : Controller
             page = model.CurrentPage,
             productPage = model.ProductPage,
             print = doPrint,
-            details = model.ShowDetails
+            details = model.ShowDetails,
+            groupName = model.SelectedGroupName
         });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ImportVegetableMatrixExcel(IFormFile? importFile, DateTime date, int page = 1, int productPage = 1, bool details = false)
+    public async Task<IActionResult> ImportVegetableMatrixExcel(IFormFile? importFile, DateTime date, int page = 1, int productPage = 1, bool details = false, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
+        var selectedGroup = _operations.ResolveOutletGroupOrDefault(groupName);
 
         if (importFile == null || importFile.Length == 0)
         {
             TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) file.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         if (importFile.Length > 20 * 1024 * 1024)
         {
             TempData["ErrorMessage"] = "File is too large. Maximum size is 20 MB.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         await using var stream = new MemoryStream();
@@ -469,14 +476,14 @@ public class OrdersController : Controller
         catch (Exception ex)
         {
             TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         var headerRow = FindHeaderRow(sheet, _vegetableTemplateProductHeader);
         if (headerRow <= 0)
         {
             TempData["ErrorMessage"] = $"Could not find header row. Expected a row containing '{_vegetableTemplateProductHeader}'.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         var priceCol = FindColumnByHeader(sheet, headerRow, _vegetableTemplatePriceHeader);
@@ -498,12 +505,12 @@ public class OrdersController : Controller
         if (outletColumns.Count == 0)
         {
             TempData["ErrorMessage"] = "No outlet columns found in the Excel file.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         var customers = await _context.Customers
             .AsNoTracking()
-            .Where(c => c.IsActive && c.GroupName != null && _outletGroups.Contains(c.GroupName))
+            .Where(c => c.IsActive && c.GroupName == selectedGroup)
             .ToListAsync();
 
         var customerMap = customers
@@ -530,7 +537,7 @@ public class OrdersController : Controller
         if (matchedOutletCols.Count == 0)
         {
             TempData["ErrorMessage"] = "No Excel outlets matched your Outlet list.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         var products = await _context.Products
@@ -619,7 +626,7 @@ public class OrdersController : Controller
         if (matrix.Count == 0)
         {
             TempData["ErrorMessage"] = "No matched product/outlet quantities were found to import.";
-            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details });
+            return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
         var vm = new VegetableMatrixViewModel
@@ -627,6 +634,7 @@ public class OrdersController : Controller
             Date = targetDate,
             CurrentPage = page,
             ProductPage = productPage,
+            SelectedGroupName = selectedGroup,
             ShowDetails = details,
             MatrixQuantities = matrix,
             ProductPrices = prices

@@ -15,6 +15,7 @@
     string TrendBadgeClass(decimal value) => value > 0 ? "is-up" : (value < 0 ? "is-down" : "is-flat");
     string TrendIcon(decimal value) => value > 0 ? "bi-arrow-up-right" : (value < 0 ? "bi-arrow-down-right" : "bi-dash");
     string TrendText(decimal value) => $"{Math.Abs(value):0.#}%";
+    var selectedRouteGroup = Model.IsGroupFiltered ? Model.SelectedGroupName : null;
 }
 
 @section Styles {
@@ -28,6 +29,19 @@
             <h1 class="dashboard-hero-title">Admin Console</h1>
             <p class="dashboard-hero-text">Track sales, expenses, margins, cash flow, and daily outlet movement from one command center.</p>
             <div class="dashboard-hero-meta">
+                <form asp-action="Index" method="get" class="d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-diagram-3"></i>
+                    <select name="groupName"
+                            class="form-select form-select-sm"
+                            style="width:auto; min-width:180px;"
+                            aria-label="Dashboard client group"
+                            onchange="this.form.submit()">
+                        @foreach (var group in Model.AvailableGroupNames)
+                        {
+                            <option value="@group" selected="@(string.Equals(group, Model.SelectedGroupName, StringComparison.OrdinalIgnoreCase))">@group</option>
+                        }
+                    </select>
+                </form>
                 <span><i class="bi bi-calendar3"></i> @businessNow.ToString("dddd, MMMM dd, yyyy")</span>
                 <span><i class="bi bi-clock-history"></i> @businessNow.ToString("h:mm tt")</span>
             </div>
@@ -35,7 +49,7 @@
         <div class="dashboard-hero-side">
             <div class="dashboard-hero-actions">
                 <a href="@Url.Action("Create", "Receipts", new { date = nextDeliveryDate })" class="dash-btn dash-btn-dark"><i class="bi bi-plus-circle"></i> New Sale</a>
-                <a href="/Orders/VegetableOutletOrder" class="dash-btn dash-btn-light"><i class="bi bi-basket2"></i> New Order</a>
+                <a href="@Url.Action("VegetableMatrix", "Orders", new { groupName = selectedRouteGroup })" class="dash-btn dash-btn-light"><i class="bi bi-basket2"></i> New Order</a>
             </div>
             <div class="dashboard-hero-highlight">
                 <span>Cash Balance</span>
@@ -92,9 +106,9 @@
     </section>
 
     <section class="dashboard-module-bar">
-        <a href="/Dashboard" class="dashboard-module-pill active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        <a href="@Url.Action("Index", "Dashboard", new { groupName = selectedRouteGroup })" class="dashboard-module-pill active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
         <a href="/Receipts" class="dashboard-module-pill"><i class="bi bi-receipt-cutoff"></i> Receipts</a>
-        <a href="/Orders/VegetableMatrix" class="dashboard-module-pill"><i class="bi bi-table"></i> Vegetable Order</a>
+        <a href="@Url.Action("VegetableMatrix", "Orders", new { groupName = selectedRouteGroup })" class="dashboard-module-pill"><i class="bi bi-table"></i> Vegetable Order</a>
         <a href="/Products" class="dashboard-module-pill"><i class="bi bi-box-seam"></i> Products</a>
         <a href="/DailyPurchaseCosts" class="dashboard-module-pill"><i class="bi bi-coin"></i> Daily Purchase Cost</a>
         <a href="/Customers" class="dashboard-module-pill"><i class="bi bi-shop"></i> Outlets</a>

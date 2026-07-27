@@ -29,7 +29,7 @@
             <div class="matrix-title-block">
                 <div class="admin-section-kicker">Daily Planning</div>
                 <div class="matrix-title">Daily Order Matrix</div>
-                <div class="matrix-page-meta">Outlets @Model.CurrentPage/@Model.TotalPages · Products @Model.ProductPage/@Model.TotalProductPages</div>
+                <div class="matrix-page-meta">@Model.SelectedGroupName · Outlets @Model.CurrentPage/@Model.TotalPages · Products @Model.ProductPage/@Model.TotalProductPages</div>
             </div>
             <button type="button"
                     class="btn-matrix btn-matrix-subtle btn-icon-only"
@@ -45,6 +45,18 @@
         <div class="matrix-toolbar-body">
             <div class="matrix-tool-group">
                 <span class="group-label">Navigation</span>
+                <select id="toolbarGroupName"
+                        name="groupName"
+                        form="filterForm"
+                        class="matrix-date-input"
+                        title="Client Group"
+                        aria-label="Client Group"
+                        onchange="document.getElementById('hiddenOutletPage').value='1'; document.getElementById('hiddenProductPage').value='1'; document.getElementById('filterForm').submit();">
+                    @foreach (var group in Model.AvailableGroupNames)
+                    {
+                        <option value="@group" selected="@(string.Equals(group, Model.SelectedGroupName, StringComparison.OrdinalIgnoreCase))">@group</option>
+                    }
+                </select>
                 <button type="button" class="btn-matrix btn-matrix-outline"
                         onclick="changeProductPage(-1)" @(Model.ProductPage <= 1 ? "disabled" : "")>
                     <i class="bi bi-chevron-left"></i> Prev
@@ -72,6 +84,7 @@
                        asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
                        asp-route-page="@Model.CurrentPage"
                        asp-route-productPage="@Model.ProductPage"
+                       asp-route-groupName="@Model.SelectedGroupName"
                        asp-route-details="true"
                        class="btn-matrix btn-matrix-outline btn-action-secondary">
                         <i class="bi bi-layout-text-sidebar-reverse"></i> Load Details
@@ -83,6 +96,7 @@
                        asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
                        asp-route-page="@Model.CurrentPage"
                        asp-route-productPage="@Model.ProductPage"
+                       asp-route-groupName="@Model.SelectedGroupName"
                        asp-route-details="false"
                        class="btn-matrix btn-matrix-outline btn-action-secondary">
                         <i class="bi bi-layout-text-sidebar"></i> Hide Details
@@ -110,6 +124,7 @@
                     <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
                     <input type="hidden" name="page" value="@Model.CurrentPage" />
                     <input type="hidden" name="productPage" value="@Model.ProductPage" />
+                    <input type="hidden" name="groupName" value="@Model.SelectedGroupName" />
                     <input type="hidden" name="details" value="@Model.ShowDetails.ToString().ToLowerInvariant()" />
                     <input type="file"
                            name="importFile"
@@ -123,6 +138,7 @@
 
                 <a asp-action="DownloadVegetableMatrixTemplate"
                    asp-route-date="@Model.Date.ToString("yyyy-MM-dd")"
+                   asp-route-groupName="@Model.SelectedGroupName"
                    class="btn-matrix btn-matrix-outline btn-import"
                    title="Download an .xlsx template that matches the Import Excel format">
                     <i class="bi bi-download"></i> Template
@@ -184,6 +200,7 @@
         <input type="hidden" name="date" id="hiddenDate" value="@Model.Date.ToString("yyyy-MM-dd")" />
         <input type="hidden" name="page" id="hiddenOutletPage" value="@Model.CurrentPage" />
         <input type="hidden" name="productPage" id="hiddenProductPage" value="@Model.ProductPage" />
+        <input type="hidden" name="groupName" value="@Model.SelectedGroupName" />
         <input type="hidden" name="details" value="@Model.ShowDetails.ToString().ToLowerInvariant()" />
     </form>
 
@@ -221,7 +238,7 @@
                     <tr>
                         <th colspan="@totalHeaderSpan" class="header-row-1-title sticky-h top-0">
                             <div class="matrix-title-row">
-                                <span class="matrix-title-text">VEGETABLE ORDER</span>
+                                <span class="matrix-title-text">VEGETABLE ORDER - @Model.SelectedGroupName</span>
                                 <span class="matrix-title-date-inline">Delivery Date: @Model.Date.ToString("MM/dd/yyyy")</span>
                             </div>
                         </th>

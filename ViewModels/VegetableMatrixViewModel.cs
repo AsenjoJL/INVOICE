@@ -21,8 +21,9 @@ public class VegetableMatrixViewModel
     public bool IsPrint { get; set; }
     public bool ShowDetails { get; set; }
 
-    // Grouping (optional)
-    public string SelectedGroupName { get; set; } = "All";
+    // Client/outlet group selected for the matrix. Defaults are resolved by OperationsOptions.
+    public string SelectedGroupName { get; set; } = string.Empty;
+    public List<string> AvailableGroupNames { get; set; } = new();
 
     // Visible Data
     public List<Customer> VisibleOutlets { get; set; } = new();
