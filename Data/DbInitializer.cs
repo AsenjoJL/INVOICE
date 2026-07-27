@@ -1,5 +1,6 @@
 using HazelInvoice.Models;
 using HazelInvoice.Configuration;
+using HazelInvoice.Services.Clients;
 using Microsoft.EntityFrameworkCore;
 
 namespace HazelInvoice.Data;
@@ -9,10 +10,12 @@ public static class DbInitializer
     public static async Task Initialize(
         ApplicationDbContext context,
         BootstrapSeedOptions? seedOptions = null,
-        ExpenseCatalogOptions? expenseCatalog = null)
+        ExpenseCatalogOptions? expenseCatalog = null,
+        OperationsOptions? operations = null)
     {
         seedOptions ??= new BootstrapSeedOptions();
         expenseCatalog ??= new ExpenseCatalogOptions();
+        operations ??= new OperationsOptions();
 
         // Ensure database is created
         await context.Database.MigrateAsync();
@@ -55,6 +58,8 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
+        await SeedClientGroupsAsync(context, operations);
+
         // 1. Seed Customers
         if (!await context.Customers.AnyAsync())
         {
@@ -85,6 +90,72 @@ public static class DbInitializer
                 .ToList();
 
             await context.Products.AddRangeAsync(products);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    private static async Task SeedClientGroupsAsync(ApplicationDbContext context, OperationsOptions operations)
+    {
+        var configuredClientGroups = operations.GetClientGroups();
+        var existingOutletGroups = await context.Customers
+            .AsNoTracking()
+            .Where(c => c.GroupName != null && c.GroupName != "")
+            .Select(c => c.GroupName)
+            .Distinct()
+            .ToListAsync();
+
+        var mappedConfiguredOutletGroups = operations.ClientOutletGroups.Values
+            .SelectMany(groups => groups)
+            .Where(g => !string.IsNullOrWhiteSpace(g))
+            .Select(g => g.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var standaloneExistingOutletGroups = existingOutletGroups
+            .Where(g => !mappedConfiguredOutletGroups.Contains(g))
+            .ToList();
+
+        var defaultGroups = configuredClientGroups
+            .Concat(standaloneExistingOutletGroups)
+            .Where(g => !string.IsNullOrWhiteSpace(g))
+            .Select(g => g.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var existingGroups = await context.ClientGroups
+            .ToDictionaryAsync(g => g.Name.ToLower());
+
+        var displayOrder = existingGroups.Count == 0 ? 0 : existingGroups.Values.Max(g => g.DisplayOrder);
+
+        foreach (var groupName in defaultGroups)
+        {
+            var key = groupName.ToLower();
+            var mappedOutletGroups = operations.ClientOutletGroups.TryGetValue(groupName, out var configuredMapping)
+                ? configuredMapping
+                : [groupName];
+
+            var outletGroupNames = ClientGroupService.NormalizeOutletGroupNames(mappedOutletGroups);
+            if (!existingGroups.TryGetValue(key, out var existing))
+            {
+                displayOrder++;
+                context.ClientGroups.Add(new ClientGroup
+                {
+                    Name = groupName,
+                    OutletGroupNames = string.IsNullOrWhiteSpace(outletGroupNames) ? groupName : outletGroupNames,
+                    IsActive = true,
+                    DisplayOrder = displayOrder,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                });
+            }
+            else if (string.IsNullOrWhiteSpace(existing.OutletGroupNames))
+            {
+                existing.OutletGroupNames = string.IsNullOrWhiteSpace(outletGroupNames) ? existing.Name : outletGroupNames;
+                existing.UpdatedAt = DateTime.Now;
+            }
+        }
+
+        if (context.ChangeTracker.HasChanges())
+        {
             await context.SaveChangesAsync();
         }
     }

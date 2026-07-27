@@ -33,6 +33,7 @@
             "Orders" => "Orders",
             "Products" => "Stock",
             "Customers" => "Stock",
+            "ClientGroups" => "Stock",
             "Suppliers" => "Purchases",
             "WeeklyPrices" => "Stock",
             "DailyPurchaseCosts" => "Stock",
@@ -78,6 +79,7 @@
                 <div class="sidebar-section-title">Stock</div>
                 <a class="@NavClass("Products", "Index")" asp-area="" asp-controller="Products" asp-action="Index">Products</a>
                 <a class="@NavClass("Customers", "Index")" asp-area="" asp-controller="Customers" asp-action="Index">Outlets</a>
+                <a class="@NavClass("ClientGroups", "Index")" asp-area="" asp-controller="ClientGroups" asp-action="Index">Client Groups</a>
                 <a class="@NavClass("WeeklyPrices", "PriceVersus")" asp-area="" asp-controller="WeeklyPrices" asp-action="PriceVersus">Price Setup</a>
                 <a class="@NavClass("WeeklyPrices", "Index")" asp-area="" asp-controller="WeeklyPrices" asp-action="Index">Price History</a>
                 <a class="@NavClass("DailyPurchaseCosts", "Index")" asp-area="" asp-controller="DailyPurchaseCosts" asp-action="Index">Daily Purchase Cost</a>

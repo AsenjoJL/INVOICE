@@ -2,6 +2,7 @@ using HazelInvoice.Configuration;
 using HazelInvoice.Data;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Clients;
 using HazelInvoice.Services.Expenses;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ public class DashboardMetricsService : IDashboardMetricsService
     private readonly IAppCacheInvalidator _cacheInvalidator;
     private readonly IExpenseCategoryCatalogService _expenseCategoryCatalog;
     private readonly OperationsOptions _operations;
+    private readonly IClientGroupService _clientGroups;
     private readonly decimal _profitFeePercent;
 
     public DashboardMetricsService(
@@ -27,6 +29,7 @@ public class DashboardMetricsService : IDashboardMetricsService
         IMemoryCache cache,
         IAppCacheInvalidator cacheInvalidator,
         IExpenseCategoryCatalogService expenseCategoryCatalog,
+        IClientGroupService clientGroups,
         IOptions<OperationsOptions> operations)
     {
         _db = db;
@@ -34,6 +37,7 @@ public class DashboardMetricsService : IDashboardMetricsService
         _cache = cache;
         _cacheInvalidator = cacheInvalidator;
         _expenseCategoryCatalog = expenseCategoryCatalog;
+        _clientGroups = clientGroups;
         _operations = operations.Value;
         _profitFeePercent = operations.Value.VegetableDetailPercentFeeDefault > 0m
             ? operations.Value.VegetableDetailPercentFeeDefault
@@ -42,7 +46,7 @@ public class DashboardMetricsService : IDashboardMetricsService
 
     public async Task<DashboardViewModel> BuildAsync(DateTime today, string? groupName = null, CancellationToken ct = default)
     {
-        var selectedGroup = ResolveDashboardGroup(groupName);
+        var selectedGroup = await ResolveDashboardGroupAsync(groupName, ct);
         var cacheGroup = string.Equals(selectedGroup, "All", StringComparison.OrdinalIgnoreCase) ? null : selectedGroup;
         var cacheKey = AppCacheKeys.Dashboard(today.Date, cacheGroup);
         if (_cacheInvalidator is AppCacheInvalidator invalidator)
@@ -76,7 +80,7 @@ public class DashboardMetricsService : IDashboardMetricsService
                 dailyCostMetrics);
 
             vm.SelectedGroupName = selectedGroup;
-            vm.AvailableGroupNames = GetDashboardGroups();
+            vm.AvailableGroupNames = await GetDashboardGroupsAsync(ct);
             vm.DailySales = await GetDailySalesAsync(periods, scope, ct);
             vm.TopItems = await GetTopItemsAsync(scope, ct);
             vm.RecentUnpaidOrders = await GetRecentOrdersAsync(PaymentStatus.Unpaid, scope, ct);
@@ -92,20 +96,20 @@ public class DashboardMetricsService : IDashboardMetricsService
             return new DashboardViewModel
             {
                 SelectedGroupName = selectedGroup,
-                AvailableGroupNames = GetDashboardGroups()
+                AvailableGroupNames = await GetDashboardGroupsAsync(ct)
             };
         }
     }
 
-    private List<string> GetDashboardGroups()
+    private async Task<List<string>> GetDashboardGroupsAsync(CancellationToken ct)
     {
         return new[] { "All" }
-            .Concat(_operations.GetClientGroups())
+            .Concat(await _clientGroups.GetClientGroupNamesAsync(ct))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    private string ResolveDashboardGroup(string? groupName)
+    private async Task<string> ResolveDashboardGroupAsync(string? groupName, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(groupName) ||
             string.Equals(groupName.Trim(), "All", StringComparison.OrdinalIgnoreCase))
@@ -113,7 +117,7 @@ public class DashboardMetricsService : IDashboardMetricsService
             return "All";
         }
 
-        var resolved = _operations.ResolveClientGroupOrDefault(groupName);
+        var resolved = await _clientGroups.ResolveClientGroupOrDefaultAsync(groupName, ct);
         return string.IsNullOrWhiteSpace(resolved) ? "All" : resolved;
     }
 
@@ -122,7 +126,7 @@ public class DashboardMetricsService : IDashboardMetricsService
         if (string.Equals(selectedGroup, "All", StringComparison.OrdinalIgnoreCase))
             return DashboardCustomerScope.All;
 
-        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
+        var includedGroups = await _clientGroups.ResolveOutletGroupsForClientAsync(selectedGroup, ct);
 
         var customers = await _db.Customers
             .AsNoTracking()

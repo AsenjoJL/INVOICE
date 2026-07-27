@@ -8,6 +8,7 @@ using HazelInvoice.Services.Receipts;
 using HazelInvoice.Services.Reports;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Clients;
 using HazelInvoice.Services.Expenses;
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
@@ -131,6 +132,7 @@ builder.Services.AddScoped<HazelInvoice.Services.IReceiptService, HazelInvoice.S
 builder.Services.AddScoped<IReceiptQueryService, ReceiptQueryService>();
 builder.Services.AddSingleton<IAppCacheInvalidator, AppCacheInvalidator>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
+builder.Services.AddScoped<IClientGroupService, ClientGroupService>();
 builder.Services.AddScoped<IExpenseCategoryCatalogService, ExpenseCategoryCatalogService>();
 builder.Services.AddScoped<IDailyPurchaseCostService, DailyPurchaseCostService>();
 builder.Services.AddScoped<IProductPricingService, ProductPricingService>();
@@ -233,7 +235,8 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<ApplicationDbContext>();
     var bootstrapSeed = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<BootstrapSeedOptions>>().Value;
     var expenseCatalog = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ExpenseCatalogOptions>>().Value;
-    await DbInitializer.Initialize(context, bootstrapSeed, expenseCatalog);
+    var operations = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<OperationsOptions>>().Value;
+    await DbInitializer.Initialize(context, bootstrapSeed, expenseCatalog, operations);
 }
 
 app.Run();

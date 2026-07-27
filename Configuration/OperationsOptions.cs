@@ -10,19 +10,25 @@ public sealed class OperationsOptions
     [
         "EIGHT2EIGHT OUTLETS",
         "Taste 8 outlets",
-        "MCIAA"
+        "MCIAA",
+        "GAISANO GRAND CARCAR",
+        "GREEN ORGANICS"
     ];
 
     public List<string> ClientGroups { get; set; } =
     [
         "EIGHT2EIGHT OUTLETS",
-        "MCIAA"
+        "MCIAA",
+        "GAISANO GRAND CARCAR",
+        "GREEN ORGANICS"
     ];
 
     public Dictionary<string, List<string>> ClientOutletGroups { get; set; } = new(StringComparer.OrdinalIgnoreCase)
     {
         ["EIGHT2EIGHT OUTLETS"] = ["EIGHT2EIGHT OUTLETS", "Taste 8 outlets"],
-        ["MCIAA"] = ["MCIAA"]
+        ["MCIAA"] = ["MCIAA"],
+        ["GAISANO GRAND CARCAR"] = ["GAISANO GRAND CARCAR"],
+        ["GREEN ORGANICS"] = ["GREEN ORGANICS"]
     };
 
     public List<string> OutletSortTokens { get; set; } =

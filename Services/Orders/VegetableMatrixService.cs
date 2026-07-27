@@ -1,5 +1,6 @@
 using HazelInvoice.Data;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Clients;
 using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
     private readonly ApplicationDbContext _context;
     private readonly bool _partnersEnabled;
     private readonly OperationsOptions _operations;
+    private readonly IClientGroupService _clientGroups;
     private readonly string[] _outletOrderTokens;
     private readonly string _defaultOutletGroup;
     private readonly int _targetPrintSheets;
@@ -31,11 +33,13 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
     public VegetableMatrixService(
         ApplicationDbContext context,
         IProductPricingService productPricing,
+        IClientGroupService clientGroups,
         IOptions<FeaturesOptions> features,
         IOptions<OperationsOptions> operations)
     {
         _context = context;
         _productPricing = productPricing;
+        _clientGroups = clientGroups;
         _partnersEnabled = features?.Value?.PartnersEnabled ?? false;
         _operations = operations.Value;
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
@@ -48,8 +52,8 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
     public async Task<VegetableMatrixViewModel> GetAsync(VegetableMatrixQueryOptions options, CancellationToken cancellationToken = default)
     {
         var targetDate = options.Date.Date;
-        var selectedGroup = _operations.ResolveClientGroupOrDefault(options.GroupName);
-        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
+        var selectedGroup = await _clientGroups.ResolveClientGroupOrDefaultAsync(options.GroupName, cancellationToken);
+        var includedGroups = await _clientGroups.ResolveOutletGroupsForClientAsync(selectedGroup, cancellationToken);
         var dayStart = targetDate;
         var dayEnd = targetDate.AddDays(1);
 
@@ -669,7 +673,7 @@ public sealed class VegetableMatrixService : IVegetableMatrixService
             ShowDetails = showDetails,
 
             SelectedGroupName = selectedGroup,
-            AvailableGroupNames = _operations.GetClientGroups().ToList(),
+            AvailableGroupNames = (await _clientGroups.GetClientGroupNamesAsync(cancellationToken)).ToList(),
 
             VisibleOutlets = visibleOutlets,
             VisibleProducts = visibleProducts,

@@ -49,14 +49,13 @@
                         </div>
 
                         <div class="form-floating mt-3">
-                            <input asp-for="GroupName" class="form-control" list="groupOptions" placeholder="Group Name" />
-                            <label asp-for="GroupName">Group Name</label>
-                            <datalist id="groupOptions">
+                            <select asp-for="GroupName" class="form-select">
                                 @foreach (var g in groupOptions)
                                 {
-                                    <option value="@g"></option>
+                                    <option value="@g">@g</option>
                                 }
-                            </datalist>
+                            </select>
+                            <label asp-for="GroupName">Group Name</label>
                             <span asp-validation-for="GroupName" class="text-danger"></span>
                         </div>
                     </div>

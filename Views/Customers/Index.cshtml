@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Outlets";
     ViewData["NotePurpose"] = "Maintain outlet records used in vegetable orders and sales.";
-    ViewData["NoteInstructions"] = "Only outlets in configured client groups appear in the vegetable order matrix.";
+    ViewData["NoteInstructions"] = "Only outlets assigned to active client groups appear in the vegetable order matrix.";
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
@@ -24,6 +24,7 @@
             <div class="sub">Maintain outlet records used in vegetable orders and sales.</div>
         </div>
         <div class="outlet-actions">
+            <a asp-controller="ClientGroups" asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-diagram-3"></i> Client Groups</a>
             <a asp-action="Create" class="btn admin-action-btn"><i class="bi bi-plus-lg"></i> Add Outlet</a>
         </div>
     </div>

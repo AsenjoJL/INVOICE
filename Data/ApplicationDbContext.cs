@@ -26,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext
     public DbSet<ProductStockMovement> ProductStockMovements { get; set; }
     public DbSet<SupplyStockMovement> SupplyStockMovements { get; set; }
     public DbSet<Customer> Customers { get; set; }
+    public DbSet<ClientGroup> ClientGroups { get; set; }
     public DbSet<Supplier> Suppliers { get; set; }
     public DbSet<Purchase> Purchases { get; set; }
     public DbSet<PurchaseLine> PurchaseLines { get; set; }
@@ -81,6 +82,8 @@ public class ApplicationDbContext : IdentityDbContext
 
         builder.Entity<Product>().HasIndex(p => p.IsActive);
         builder.Entity<Customer>().HasIndex(c => c.IsActive);
+        builder.Entity<ClientGroup>().HasIndex(g => g.Name).IsUnique();
+        builder.Entity<ClientGroup>().HasIndex(g => g.IsActive);
         builder.Entity<Supplier>().HasIndex(s => s.IsActive);
 
         builder.Entity<WeeklyPrice>().HasIndex(w => new { w.ProductId, w.EffectiveFrom, w.EffectiveTo });

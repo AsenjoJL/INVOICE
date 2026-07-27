@@ -1,0 +1,95 @@
+@model IReadOnlyList<HazelInvoice.ViewModels.ClientGroupListItemVm>
+
+@{
+    ViewData["Title"] = "Client Groups";
+}
+
+<partial name="~/Views/Customers/_OutletStyles.cshtml" />
+
+<div class="container-fluid p-4 outlet-page">
+    <div class="outlet-header d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 admin-page-hero admin-page-hero-soft">
+        <div>
+            <div class="admin-section-kicker">Client Setup</div>
+            <h1>Client Groups</h1>
+            <div class="sub">Manage official client selections used by dashboards, vegetable orders, templates, and outlet setup.</div>
+        </div>
+        <div class="outlet-actions">
+            <a asp-action="Create" class="btn admin-action-btn"><i class="bi bi-plus-lg"></i> Add Client Group</a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success">@successMessage</div>
+    }
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="outlet-card admin-surface-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table outlet-table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Client Group</th>
+                            <th>Included Outlet Groups</th>
+                            <th>Active Outlets</th>
+                            <th>Status</th>
+                            <th>Order</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="outlet-name">@item.Name</div>
+                                    <div class="outlet-meta">Shown in client selectors</div>
+                                </td>
+                                <td>
+                                    <span class="group-pill"><i class="bi bi-diagram-3"></i> @item.OutletGroupNames</span>
+                                </td>
+                                <td>@item.OutletCount</td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="status-pill status-active">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-pill status-inactive">Inactive</span>
+                                    }
+                                </td>
+                                <td>@item.DisplayOrder</td>
+                                <td>
+                                    <div class="outlet-actions-row d-flex gap-2">
+                                        <a asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        @if (item.IsActive)
+                                        {
+                                            <form asp-action="Deactivate" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        title="Deactivate"
+                                                        onclick="return confirm('Deactivate this client group? Active outlets must be moved or deactivated first.');">
+                                                    <i class="bi bi-archive"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

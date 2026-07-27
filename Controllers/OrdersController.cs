@@ -5,6 +5,7 @@ using HazelInvoice.Services.Orders;
 using HazelInvoice.Services.Printing;
 using HazelInvoice.Services.Settings;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Clients;
 using HazelInvoice.Services.Pricing;
 using HazelInvoice.ViewModels;
 using HazelInvoice.Helpers;
@@ -31,6 +32,7 @@ public class OrdersController : Controller
     private readonly IAppCacheInvalidator _cacheInvalidator;
     private readonly IProductPricingService _productPricing;
     private readonly IDailyPurchaseCostService _dailyPurchaseCosts;
+    private readonly IClientGroupService _clientGroups;
     private readonly OperationsOptions _operations;
     private readonly string[] _outletOrderTokens;
     private readonly Dictionary<string, string> _outletImportAliasMap;
@@ -49,6 +51,7 @@ public class OrdersController : Controller
         IAppCacheInvalidator cacheInvalidator,
         IProductPricingService productPricing,
         IDailyPurchaseCostService dailyPurchaseCosts,
+        IClientGroupService clientGroups,
         IOptions<OperationsOptions> operations)
     {
         _context = context;
@@ -61,6 +64,7 @@ public class OrdersController : Controller
         _cacheInvalidator = cacheInvalidator;
         _productPricing = productPricing;
         _dailyPurchaseCosts = dailyPurchaseCosts;
+        _clientGroups = clientGroups;
         _operations = operations.Value;
         _outletOrderTokens = (operations.Value.OutletSortTokens ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToArray();
         _outletImportAliasMap = operations.Value.OutletImportAliases ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -79,7 +83,7 @@ public class OrdersController : Controller
     public async Task<IActionResult> VegetableMatrix(DateTime? date, int page = 1, int productPage = 1, bool print = false, bool details = false, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
-        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
+        var selectedGroup = await _clientGroups.ResolveClientGroupOrDefaultAsync(groupName, HttpContext.RequestAborted);
 
         if (print)
         {
@@ -124,7 +128,7 @@ public class OrdersController : Controller
     public async Task<IActionResult> DownloadVegetableMatrixTemplate(DateTime? date, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
-        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
+        var selectedGroup = await _clientGroups.ResolveClientGroupOrDefaultAsync(groupName, HttpContext.RequestAborted);
         var bytes = await _vegetableMatrixTemplateService.BuildTemplateAsync(targetDate, selectedGroup, HttpContext.RequestAborted);
 
         var safeGroup = Regex.Replace(selectedGroup, "[^A-Za-z0-9]+", "_").Trim('_');
@@ -138,8 +142,8 @@ public class OrdersController : Controller
     {
         if (model == null) return BadRequest("Model is null");
         model.Date = NormalizeOrderDate(model.Date);
-        model.SelectedGroupName = _operations.ResolveClientGroupOrDefault(model.SelectedGroupName);
-        var includedGroups = _operations.ResolveOutletGroupsForClient(model.SelectedGroupName);
+        model.SelectedGroupName = await _clientGroups.ResolveClientGroupOrDefaultAsync(model.SelectedGroupName, HttpContext.RequestAborted);
+        var includedGroups = await _clientGroups.ResolveOutletGroupsForClientAsync(model.SelectedGroupName, HttpContext.RequestAborted);
         model.ProductPrices ??= new Dictionary<int, decimal>();
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
@@ -446,8 +450,8 @@ public class OrdersController : Controller
     public async Task<IActionResult> ImportVegetableMatrixExcel(IFormFile? importFile, DateTime date, int page = 1, int productPage = 1, bool details = false, string? groupName = null)
     {
         var targetDate = NormalizeOrderDate(date);
-        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
-        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
+        var selectedGroup = await _clientGroups.ResolveClientGroupOrDefaultAsync(groupName, HttpContext.RequestAborted);
+        var includedGroups = await _clientGroups.ResolveOutletGroupsForClientAsync(selectedGroup, HttpContext.RequestAborted);
 
         if (importFile == null || importFile.Length == 0)
         {

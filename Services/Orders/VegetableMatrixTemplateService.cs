@@ -1,6 +1,7 @@
 using HazelInvoice.Data;
 using HazelInvoice.Configuration;
 using HazelInvoice.Services;
+using HazelInvoice.Services.Clients;
 using HazelInvoice.Services.Pricing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,16 +13,19 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
     private readonly ApplicationDbContext _context;
     private readonly IProductPricingService _productPricing;
     private readonly OperationsOptions _operations;
+    private readonly IClientGroupService _clientGroups;
     private readonly string _productHeader;
     private readonly string _priceHeader;
 
     public VegetableMatrixTemplateService(
         ApplicationDbContext context,
         IProductPricingService productPricing,
+        IClientGroupService clientGroups,
         IOptions<OperationsOptions> operations)
     {
         _context = context;
         _productPricing = productPricing;
+        _clientGroups = clientGroups;
         _operations = operations.Value;
         _productHeader = string.IsNullOrWhiteSpace(operations.Value.VegetableTemplateProductHeader)
             ? "Vegetables"
@@ -33,8 +37,8 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
 
     public async Task<byte[]> BuildTemplateAsync(DateTime date, string? groupName = null, CancellationToken cancellationToken = default)
     {
-        var selectedGroup = _operations.ResolveClientGroupOrDefault(groupName);
-        var includedGroups = _operations.ResolveOutletGroupsForClient(selectedGroup);
+        var selectedGroup = await _clientGroups.ResolveClientGroupOrDefaultAsync(groupName, cancellationToken);
+        var includedGroups = await _clientGroups.ResolveOutletGroupsForClientAsync(selectedGroup, cancellationToken);
 
         // Keep template compatible with ImportVegetableMatrixExcel:
         // - Header row must have "Vegetables" in column A.

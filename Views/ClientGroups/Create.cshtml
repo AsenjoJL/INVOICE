@@ -1,0 +1,39 @@
+@model HazelInvoice.ViewModels.ClientGroupFormVm
+
+@{
+    ViewData["Title"] = "Add Client Group";
+}
+
+<partial name="~/Views/Customers/_OutletStyles.cshtml" />
+
+<div class="container outlet-page py-4">
+    <div class="outlet-form-shell">
+        <div class="outlet-form-card">
+            <div class="outlet-form-banner">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="outlet-form-kicker">Client Setup</div>
+                        <h4>Add Client Group</h4>
+                        <p class="subtitle">Create an official client selector for outlets, vegetable orders, and dashboard filtering.</p>
+                    </div>
+                    <a asp-action="Index" class="btn btn-light text-dark"><i class="bi bi-arrow-left"></i> Back</a>
+                </div>
+            </div>
+
+            <div class="outlet-form-body">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <partial name="_Form" model="Model" />
+                    <div class="outlet-form-section outlet-form-actions">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-lg">Save Client Group</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

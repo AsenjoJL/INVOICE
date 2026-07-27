@@ -2,6 +2,7 @@ using HazelInvoice.Data;
 using HazelInvoice.Configuration;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
+using HazelInvoice.Services.Clients;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,17 +15,18 @@ public class CustomersController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IAppCacheInvalidator _cacheInvalidator;
-    private readonly IReadOnlyList<string> _outletGroups;
+    private readonly IClientGroupService _clientGroups;
     private readonly string _defaultOutletGroup;
 
     public CustomersController(
         ApplicationDbContext context,
         IAppCacheInvalidator cacheInvalidator,
+        IClientGroupService clientGroups,
         IOptions<OperationsOptions> operations)
     {
         _context = context;
         _cacheInvalidator = cacheInvalidator;
-        _outletGroups = (operations.Value.OutletGroups ?? []).Where(g => !string.IsNullOrWhiteSpace(g)).ToList();
+        _clientGroups = clientGroups;
         _defaultOutletGroup = operations.Value.DefaultOutletGroup;
     }
 
@@ -39,9 +41,9 @@ public class CustomersController : Controller
         return View(customers);
     }
 
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
-        ViewBag.OutletGroups = _outletGroups;
+        ViewBag.OutletGroups = (await _clientGroups.GetOutletGroupNamesAsync(HttpContext.RequestAborted)).ToArray();
         return View(new Customer { GroupName = _defaultOutletGroup, IsActive = true });
     }
 
@@ -71,7 +73,7 @@ public class CustomersController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        ViewBag.OutletGroups = _outletGroups;
+        ViewBag.OutletGroups = (await _clientGroups.GetOutletGroupNamesAsync(HttpContext.RequestAborted)).ToArray();
         return View(customer);
     }
 
@@ -83,7 +85,7 @@ public class CustomersController : Controller
         if (customer == null) return NotFound();
 
         ViewBag.ReturnUrl = returnUrl;
-        ViewBag.OutletGroups = _outletGroups;
+        ViewBag.OutletGroups = (await _clientGroups.GetOutletGroupNamesAsync(HttpContext.RequestAborted)).ToArray();
         return View(customer);
     }
 
@@ -128,7 +130,7 @@ public class CustomersController : Controller
         }
 
         ViewBag.ReturnUrl = returnUrl;
-        ViewBag.OutletGroups = _outletGroups;
+        ViewBag.OutletGroups = (await _clientGroups.GetOutletGroupNamesAsync(HttpContext.RequestAborted)).ToArray();
         return View(customer);
     }
 
