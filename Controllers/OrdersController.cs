@@ -139,6 +139,7 @@ public class OrdersController : Controller
         if (model == null) return BadRequest("Model is null");
         model.Date = NormalizeOrderDate(model.Date);
         model.SelectedGroupName = _operations.ResolveClientGroupOrDefault(model.SelectedGroupName);
+        var includedGroups = _operations.ResolveOutletGroupsForClient(model.SelectedGroupName);
         model.ProductPrices ??= new Dictionary<int, decimal>();
         var dayStart = model.Date.Date;
         var dayEnd = dayStart.AddDays(1);
@@ -151,7 +152,7 @@ public class OrdersController : Controller
         var affectedCustomerIds = affectedCustomerIdsSet.ToList();
 
         var customers = await _context.Customers
-            .Where(c => affectedCustomerIds.Contains(c.Id))
+            .Where(c => affectedCustomerIds.Contains(c.Id) && includedGroups.Contains(c.GroupName))
             .ToListAsync();
         var customerIdSet = customers.Select(c => c.Id).ToHashSet();
         var customerNameSet = customers.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);

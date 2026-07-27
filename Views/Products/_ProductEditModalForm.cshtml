@@ -20,13 +20,14 @@
 
     allCategories.Sort(StringComparer.OrdinalIgnoreCase);
     var unitOptions = new[] { "pc", "pcs", "kg", "liter", "liters", "gallon", "bottle", "pack", "bundle", "box", "bag", "sack", "tray" };
+    var productId = Model?.Id ?? 0;
 }
 
 <form asp-action="EditModal"
-      asp-route-id="@Model.Id"
+      asp-route-id="@productId"
       method="post"
       id="productEditModalForm"
-      data-fallback-action="@Url.Action("Edit", "Products", new { id = Model.Id })"
+      data-fallback-action="@Url.Action("Edit", "Products", new { id = productId })"
       data-product-edit-modal-form>
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
