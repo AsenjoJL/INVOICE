@@ -714,3 +714,70 @@
 .info-btn {
     border-radius: var(--ui-radius-md) !important;
 }
+
+/* Final product layout guard: keeps text/forms away from rounded borders after global UI overrides. */
+.product-page.product-refresh {
+    padding-inline: clamp(1.25rem, 3vw, 2.5rem) !important;
+    overflow: visible;
+}
+
+.product-page .product-header {
+    padding: clamp(1.25rem, 2.4vw, 2rem) !important;
+    overflow: visible;
+}
+
+.product-page .product-header-top {
+    gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.product-page .product-header-main {
+    min-width: 0;
+    flex: 1 1 620px;
+    padding: clamp(1.25rem, 2.2vw, 1.75rem) !important;
+    border: 1px solid var(--product-line) !important;
+    background: #ffffff !important;
+    overflow: hidden;
+}
+
+.product-page .product-header-main > * {
+    max-width: 100%;
+}
+
+.product-page .product-header .sub {
+    max-width: 760px;
+}
+
+.product-page .product-tools {
+    width: 100%;
+}
+
+.product-page .product-search-bar {
+    max-width: 100%;
+    min-width: min(100%, 520px);
+}
+
+@media (max-width: 1200px) {
+    .product-page .product-header-main {
+        flex-basis: 100%;
+    }
+
+    .product-page .product-actions {
+        width: 100%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .product-page.product-refresh {
+        padding-inline: 1rem !important;
+    }
+
+    .product-page .product-header,
+    .product-page .product-header-main {
+        padding: 1rem !important;
+    }
+
+    .product-page .product-search-bar {
+        min-width: 0;
+        padding: 0.85rem !important;
+    }
+}
