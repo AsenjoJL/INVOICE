@@ -35,12 +35,19 @@
         align-items: center;
         gap: 1rem;
         margin-bottom: 1.25rem;
-        padding: 0;
+        padding: 1.15rem 1.35rem;
+        background: #ffffff;
+        border: 1px solid var(--price-line);
+        border-radius: var(--ui-radius-xl);
+        box-shadow: none;
+        box-sizing: border-box;
+        overflow: visible;
     }
     .price-setup-meta {
         display: flex;
         flex-direction: column;
         gap: 0.35rem;
+        min-width: 0;
     }
     .price-setup-sub {
         margin: 0;
@@ -74,6 +81,7 @@
         align-items: center;
         flex-wrap: wrap;
         justify-content: flex-end;
+        flex: 0 0 auto;
     }
     .price-setup-summary {
         max-width: 760px;
@@ -323,6 +331,7 @@
         .price-setup-headline {
             flex-direction: column;
             align-items: flex-start;
+            padding: 1rem;
         }
         .price-actions {
             width: 100%;

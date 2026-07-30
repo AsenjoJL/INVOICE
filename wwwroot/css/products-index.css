@@ -727,12 +727,15 @@
 }
 
 .product-page .product-header-top {
+    align-items: stretch;
+    flex-direction: column;
     gap: clamp(1rem, 2vw, 1.5rem);
 }
 
 .product-page .product-header-main {
     min-width: 0;
-    flex: 1 1 620px;
+    flex: 0 1 auto;
+    width: 100%;
     padding: clamp(1.25rem, 2.2vw, 1.75rem) !important;
     border: 1px solid var(--product-line) !important;
     background: #ffffff !important;
@@ -756,14 +759,11 @@
     min-width: min(100%, 520px);
 }
 
-@media (max-width: 1200px) {
-    .product-page .product-header-main {
-        flex-basis: 100%;
-    }
-
-    .product-page .product-actions {
-        width: 100%;
-    }
+.product-page .product-actions {
+    width: 100%;
+    margin-top: 0 !important;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 @media (max-width: 767.98px) {
@@ -780,4 +780,14 @@
         min-width: 0;
         padding: 0.85rem !important;
     }
+}
+
+/* Product numbers should stay regular-weight even when page styles load after shared CSS. */
+.product-page .metric-value,
+.product-page .product-price-primary,
+.product-page .product-cost,
+.product-page .product-price-cost,
+.product-page .table td.text-end {
+    font-weight: 400 !important;
+    font-variant-numeric: tabular-nums;
 }

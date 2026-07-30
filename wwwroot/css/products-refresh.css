@@ -477,3 +477,13 @@
     .product-refresh .product-table tbody td { padding: 0.7rem 0.8rem; font-size: 0.75rem; }
     .product-refresh .product-price-primary { font-size: 0.95rem; }
 }
+
+/* Product numbers are intentionally regular-weight for a lighter catalog view. */
+.product-refresh .metric-value,
+.product-refresh .product-price-primary,
+.product-refresh .product-price-cost,
+.product-refresh .product-cost,
+.product-refresh .product-table td.text-end {
+    font-weight: 400 !important;
+    font-variant-numeric: tabular-nums;
+}
