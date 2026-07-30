@@ -41,10 +41,11 @@ public class CustomersController : Controller
         return View(customers);
     }
 
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(string? groupName = null)
     {
         ViewBag.OutletGroups = (await _clientGroups.GetOutletGroupNamesAsync(HttpContext.RequestAborted)).ToArray();
-        return View(new Customer { GroupName = _defaultOutletGroup, IsActive = true });
+        var outletGroup = string.IsNullOrWhiteSpace(groupName) ? _defaultOutletGroup : groupName.Trim();
+        return View(new Customer { GroupName = outletGroup, IsActive = true });
     }
 
     [HttpPost]
@@ -67,10 +68,13 @@ public class CustomersController : Controller
 
         if (ModelState.IsValid)
         {
+            var groupName = customer.GroupName;
             _context.Add(customer);
             await _context.SaveChangesAsync();
             _cacheInvalidator.InvalidateCustomers();
-            return RedirectToAction(nameof(Index));
+
+            TempData["Message"] = $"Outlet '{customer.Name}' saved. You can add another outlet below.";
+            return RedirectToAction(nameof(Create), new { groupName });
         }
 
         ViewBag.OutletGroups = (await _clientGroups.GetOutletGroupNamesAsync(HttpContext.RequestAborted)).ToArray();

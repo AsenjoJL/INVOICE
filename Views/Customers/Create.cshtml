@@ -22,6 +22,11 @@
             </div>
 
             <div class="outlet-form-body">
+                @if (TempData["Message"] is string message && !string.IsNullOrWhiteSpace(message))
+                {
+                    <div class="alert alert-success mb-3">@message</div>
+                }
+
                 <form asp-action="Create">
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
