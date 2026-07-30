@@ -291,7 +291,11 @@ namespace HazelInvoice.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GroupName");
+
                     b.HasIndex("IsActive");
+
+                    b.HasIndex("Name");
 
                     b.ToTable("Customers");
                 });
@@ -1146,9 +1150,15 @@ namespace HazelInvoice.Migrations
 
                     b.HasIndex("Date");
 
+                    b.HasIndex("PaidAmount");
+
                     b.HasIndex("ReceiptNumber");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("CustomerId", "Date");
+
+                    b.HasIndex("Date", "Id");
 
                     b.ToTable("Receipts");
                 });

@@ -6,6 +6,8 @@ public class ReceiptsIndexViewModel
     public List<ReceiptListItemViewModel> Receipts { get; set; } = new();
 
     public string Query { get; set; } = string.Empty;
+    public string SelectedClientGroup { get; set; } = "All";
+    public List<string> AvailableClientGroups { get; set; } = new();
     public DateTime? Date { get; set; }
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }

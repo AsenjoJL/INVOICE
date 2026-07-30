@@ -58,6 +58,9 @@ public class ApplicationDbContext : IdentityDbContext
         builder.Entity<Receipt>().HasIndex(r => r.CustomerName);
         builder.Entity<Receipt>().HasIndex(r => r.CustomerId);
         builder.Entity<Receipt>().HasIndex(r => r.ReceiptNumber);
+        builder.Entity<Receipt>().HasIndex(r => r.PaidAmount);
+        builder.Entity<Receipt>().HasIndex(r => new { r.CustomerId, r.Date });
+        builder.Entity<Receipt>().HasIndex(r => new { r.Date, r.Id });
 
         builder.Entity<Receipt>()
             .HasOne(r => r.Customer)
@@ -82,6 +85,8 @@ public class ApplicationDbContext : IdentityDbContext
 
         builder.Entity<Product>().HasIndex(p => p.IsActive);
         builder.Entity<Customer>().HasIndex(c => c.IsActive);
+        builder.Entity<Customer>().HasIndex(c => c.GroupName);
+        builder.Entity<Customer>().HasIndex(c => c.Name);
         builder.Entity<ClientGroup>().HasIndex(g => g.Name).IsUnique();
         builder.Entity<ClientGroup>().HasIndex(g => g.IsActive);
         builder.Entity<Supplier>().HasIndex(s => s.IsActive);

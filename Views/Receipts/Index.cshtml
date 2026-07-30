@@ -13,6 +13,8 @@
     var selectedDate = Model?.Date?.ToString("yyyy-MM-dd") ?? string.Empty;
     var selectedDateFrom = Model?.DateFrom?.ToString("yyyy-MM-dd") ?? string.Empty;
     var selectedDateTo = Model?.DateTo?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var selectedClientGroup = Model?.SelectedClientGroup ?? "All";
+    var availableClientGroups = Model?.AvailableClientGroups ?? new List<string>();
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var totalPages = pageSize <= 0 ? 1 : (int)Math.Ceiling(receiptCount / (double)pageSize);
     if (totalPages < 1) totalPages = 1;
@@ -68,6 +70,10 @@
                 {
                     <span>(Unpaid)</span>
                 }
+                @if (!string.Equals(selectedClientGroup, "All", StringComparison.OrdinalIgnoreCase))
+                {
+                    <div class="small fw-bold mt-2">Client: @selectedClientGroup</div>
+                }
             </div>
         </div>
         <div class="invoice-actions">
@@ -112,6 +118,13 @@
                 {
                     <input type="hidden" name="viewMode" value="sales" />
                 }
+                <select class="form-select form-select-sm" name="clientGroup" id="clientGroup" style="min-width: 210px;">
+                    <option value="All" selected="@(string.Equals(selectedClientGroup, "All", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">All Clients</option>
+                    @foreach (var group in availableClientGroups)
+                    {
+                        <option value="@group" selected="@(string.Equals(group, selectedClientGroup, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@group</option>
+                    }
+                </select>
                 <input class="form-control form-control-sm" name="q" id="q" value="@query" placeholder="Search receipt # or outlet" style="min-width: 240px;" />
                 <input class="form-control form-control-sm" type="date" name="date" value="@selectedDate" style="width: 170px;" />
                 <input class="form-control form-control-sm" type="date" name="dateFrom" value="@selectedDateFrom" style="width: 170px;" />
@@ -125,11 +138,11 @@
                 <button type="submit" class="invoice-btn invoice-btn-ghost">Search</button>
                 @if (isUnpaid)
                 {
-                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Index", "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, pageSize = pageSize })">All</a>
+                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Index", "Receipts", new { q = query, clientGroup = selectedClientGroup, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, pageSize = pageSize })">All</a>
                 }
                 else
                 {
-                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Unpaid", "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, pageSize = pageSize })">Unpaid</a>
+                    <a class="invoice-btn invoice-btn-ghost" href="@Url.Action("Unpaid", "Receipts", new { q = query, clientGroup = selectedClientGroup, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, pageSize = pageSize })">Unpaid</a>
                 }
             </form>
         </div>
@@ -240,9 +253,9 @@
                 var action = isUnpaid ? "Unpaid" : "Index";
             }
             <a class="invoice-btn invoice-btn-ghost @(currentPage <= 1 ? "disabled" : "")"
-               href="@Url.Action(action, "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, page = prevPage, pageSize = pageSize })">Prev</a>
+               href="@Url.Action(action, "Receipts", new { q = query, clientGroup = selectedClientGroup, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, page = prevPage, pageSize = pageSize })">Prev</a>
             <a class="invoice-btn invoice-btn-ghost @(currentPage >= totalPages ? "disabled" : "")"
-               href="@Url.Action(action, "Receipts", new { q = query, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, page = nextPage, pageSize = pageSize })">Next</a>
+               href="@Url.Action(action, "Receipts", new { q = query, clientGroup = selectedClientGroup, date = selectedDate, dateFrom = selectedDateFrom, dateTo = selectedDateTo, viewMode = isSalesView ? "sales" : null, page = nextPage, pageSize = pageSize })">Next</a>
         </div>
     </div>
 </div>

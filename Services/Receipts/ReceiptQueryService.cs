@@ -1,6 +1,7 @@
 using HazelInvoice.Data;
 using HazelInvoice.Helpers;
 using HazelInvoice.Models;
+using HazelInvoice.Services.Clients;
 using HazelInvoice.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,12 +11,15 @@ public sealed class ReceiptQueryService : IReceiptQueryService
 {
     private const int DefaultPageSize = 50;
     private const int MaxPageSize = 200;
+    private const string AllClientGroups = "All";
 
     private readonly ApplicationDbContext _db;
+    private readonly IClientGroupService _clientGroups;
 
-    public ReceiptQueryService(ApplicationDbContext db)
+    public ReceiptQueryService(ApplicationDbContext db, IClientGroupService clientGroups)
     {
         _db = db;
+        _clientGroups = clientGroups;
     }
 
     public async Task<ReceiptsIndexViewModel> QueryAsync(ReceiptQueryOptions options, CancellationToken ct = default)
@@ -25,8 +29,25 @@ public sealed class ReceiptQueryService : IReceiptQueryService
         if (pageSize > MaxPageSize) pageSize = MaxPageSize;
 
         var q = (options.Query ?? string.Empty).Trim();
+        var availableClientGroups = (await _clientGroups.GetClientGroupNamesAsync(ct)).ToList();
+        var requestedClientGroup = (options.ClientGroup ?? string.Empty).Trim();
+        var isAllClientGroups = string.IsNullOrWhiteSpace(requestedClientGroup) ||
+                                string.Equals(requestedClientGroup, AllClientGroups, StringComparison.OrdinalIgnoreCase);
+        var selectedClientGroup = isAllClientGroups
+            ? AllClientGroups
+            : await _clientGroups.ResolveClientGroupOrDefaultAsync(requestedClientGroup, ct);
 
         IQueryable<Receipt> baseQuery = _db.Receipts.AsNoTracking();
+
+        if (!string.Equals(selectedClientGroup, AllClientGroups, StringComparison.OrdinalIgnoreCase))
+        {
+            var includedOutletGroups = await _clientGroups.ResolveOutletGroupsForClientAsync(selectedClientGroup, ct);
+            baseQuery = baseQuery.Where(r =>
+                (r.CustomerId.HasValue && _db.Customers.Any(c =>
+                    c.Id == r.CustomerId.Value && includedOutletGroups.Contains(c.GroupName))) ||
+                (!r.CustomerId.HasValue && _db.Customers.Any(c =>
+                    c.Name == r.CustomerName && includedOutletGroups.Contains(c.GroupName))));
+        }
 
         if (options.UnpaidOnly)
         {
@@ -104,6 +125,8 @@ public sealed class ReceiptQueryService : IReceiptQueryService
             TotalCount = totalCount,
             Receipts = receipts,
             Query = q,
+            SelectedClientGroup = selectedClientGroup,
+            AvailableClientGroups = availableClientGroups,
             Date = options.Date?.Date,
             DateFrom = options.Date.HasValue ? options.Date.Value.Date : options.DateFrom?.Date,
             DateTo = options.Date.HasValue ? options.Date.Value.Date : options.DateTo?.Date,
