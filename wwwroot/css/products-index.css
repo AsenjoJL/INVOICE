@@ -1,6 +1,6 @@
 :root {
-    --product-font: "DM Sans", "Segoe UI", Arial, sans-serif;
-    --product-font-mono: "DM Mono", "Consolas", "Courier New", monospace;
+    --product-font: inherit;
+    --product-font-mono: inherit;
     --product-bg: #ffffff;
     --product-surface: #ffffff;
     --product-text: #0a0a0a;
@@ -9,7 +9,7 @@
 }
 
 .product-page {
-    font-family: var(--product-font);
+    font-family: inherit;
     color: var(--product-text);
     background: transparent;
     font-size: 14px;
