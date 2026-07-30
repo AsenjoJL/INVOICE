@@ -4509,3 +4509,58 @@ body {
 .table-responsive table thead th:last-child {
   border-top-right-radius: var(--ui-radius-lg);
 }
+
+/* Shared layout guard: prevents rounded admin surfaces from clipping or crowding content. */
+.content-area .admin-page-hero,
+.content-area .admin-filter-strip,
+.content-area .admin-page-footerbar,
+.content-area .admin-surface-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.content-area .admin-page-hero {
+  padding: clamp(1rem, 2vw, 1.5rem) !important;
+  overflow: visible;
+}
+
+.content-area .admin-filter-strip,
+.content-area .admin-page-footerbar {
+  padding: clamp(0.9rem, 1.7vw, 1.25rem) !important;
+  overflow: visible;
+}
+
+.content-area .admin-surface-card {
+  overflow: hidden;
+}
+
+.content-area .admin-page-hero > *,
+.content-area .admin-filter-strip > *,
+.content-area .admin-page-footerbar > *,
+.content-area .admin-surface-card > * {
+  min-width: 0;
+}
+
+.content-area .admin-page-flow,
+.content-area .dashboard-shell,
+.content-area .order-shell,
+.content-area .invoice-ui,
+.content-area .product-page,
+.content-area .outlet-page,
+.content-area .supplier-page,
+.content-area .purchase-page,
+.content-area .expense-page,
+.content-area .workforce-page,
+.content-area .payroll-page {
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+  .content-area .admin-page-hero,
+  .content-area .admin-filter-strip,
+  .content-area .admin-page-footerbar {
+    padding: 1rem !important;
+  }
+}
