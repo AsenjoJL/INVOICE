@@ -9,7 +9,7 @@
 
 <div class="container outlet-page py-4">
     <div class="outlet-form-shell">
-        <div class="outlet-form-card">
+        <div class="outlet-form-card" id="outletCreateCard">
             <div class="outlet-form-banner">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
@@ -24,10 +24,10 @@
             <div class="outlet-form-body">
                 @if (TempData["Message"] is string message && !string.IsNullOrWhiteSpace(message))
                 {
-                    <div class="alert alert-success mb-3">@message</div>
+                    <div class="alert alert-success mb-3 outlet-save-alert" id="outletSaveAlert">@message</div>
                 }
 
-                <form asp-action="Create">
+                <form asp-action="Create" id="outletCreateForm">
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
                     <div class="outlet-form-section">
@@ -97,7 +97,7 @@
 
                     <div class="outlet-form-section outlet-form-actions">
                         <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary btn-lg">Save Outlet</button>
+                        <button type="submit" class="btn btn-primary btn-lg" id="outletSaveButton" data-saving-text="Saving outlet...">Save Outlet</button>
                     </div>
                 </form>
             </div>
@@ -107,4 +107,29 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        (() => {
+            const form = document.getElementById('outletCreateForm');
+            const card = document.getElementById('outletCreateCard');
+            const saveButton = document.getElementById('outletSaveButton');
+            const nameInput = document.getElementById('Name');
+            const saveAlert = document.getElementById('outletSaveAlert');
+
+            if (saveAlert && nameInput) {
+                requestAnimationFrame(() => {
+                    nameInput.focus({ preventScroll: true });
+                });
+            }
+
+            if (!form || !saveButton) return;
+
+            form.addEventListener('submit', () => {
+                if (!form.checkValidity()) return;
+
+                card?.classList.add('is-saving');
+                saveButton.disabled = true;
+                saveButton.innerHTML = `<span class="outlet-save-spinner" aria-hidden="true"></span>${saveButton.dataset.savingText || 'Saving...'}`;
+            });
+        })();
+    </script>
 }

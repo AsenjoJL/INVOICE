@@ -138,6 +138,47 @@
         overflow: hidden;
     }
 
+    .outlet-form-card.is-saving {
+        opacity: 0.82;
+        transform: translateY(1px);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .outlet-save-alert {
+        animation: outletSaveReveal 0.28s ease both;
+        border-radius: var(--ui-radius-md);
+    }
+
+    .outlet-save-spinner {
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        border-top-color: #ffffff;
+        border-radius: 999px;
+        display: inline-block;
+        margin-right: 8px;
+        vertical-align: -2px;
+        animation: outletSpin 0.7s linear infinite;
+    }
+
+    @@keyframes outletSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @@keyframes outletSaveReveal {
+        from {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     .outlet-form-banner,
     .outlet-delete-header {
         padding: 18px 20px;
