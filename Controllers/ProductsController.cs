@@ -428,7 +428,7 @@ public class ProductsController : Controller
         };
     }
 
-    [HttpPost]
+    [HttpGet]
     [AllowAnonymous] // For easy execution
     public async Task<IActionResult> BackfillClientGroup()
     {
