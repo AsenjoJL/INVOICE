@@ -131,18 +131,23 @@
 }
 
 .product-refresh .product-search-bar .search-input-width,
-.product-refresh .product-search-bar .category-filter-width {
-    border: none;
-    background: transparent;
-    font-size: 0.9rem;
-    padding: 0;
-    color: var(--product-text);
+.product-refresh .product-search-bar .category-filter-width,
+.product-refresh .product-search-bar select,
+.product-refresh .product-search-bar input {
+    border: none !important;
+    background: transparent !important;
+    font-size: 0.9rem !important;
+    padding: 0 !important;
+    color: var(--product-text) !important;
+    box-shadow: none !important;
 }
 
 .product-refresh .product-search-bar .search-input-width:focus,
-.product-refresh .product-search-bar .category-filter-width:focus {
-    box-shadow: none;
-    outline: none;
+.product-refresh .product-search-bar .category-filter-width:focus,
+.product-refresh .product-search-bar select:focus,
+.product-refresh .product-search-bar input:focus {
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 /* Metric Cards */

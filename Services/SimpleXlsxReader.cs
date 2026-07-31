@@ -23,7 +23,9 @@ public static class SimpleXlsxReader
         using var zip = new ZipArchive(xlsxStream, ZipArchiveMode.Read, leaveOpen: true);
 
         var sharedStrings = LoadSharedStrings(zip);
-        var sheetPath = ResolveFirstSheetPath(zip);
+        var sheetPath = ResolveAllSheetPaths(zip).FirstOrDefault().Path;
+        if (string.IsNullOrEmpty(sheetPath)) throw new InvalidOperationException("Worksheet not found.");
+
         var sheetEntry = zip.GetEntry(sheetPath)
             ?? throw new InvalidOperationException($"Worksheet not found: {sheetPath}");
 
@@ -51,6 +53,43 @@ public static class SimpleXlsxReader
         }
 
         return result;
+    }
+
+    public static IReadOnlyList<(string SheetName, SimpleXlsxSheet Sheet)> ReadAllSheets(Stream xlsxStream)
+    {
+        xlsxStream.Position = 0;
+        using var zip = new ZipArchive(xlsxStream, ZipArchiveMode.Read, leaveOpen: true);
+
+        var sharedStrings = LoadSharedStrings(zip);
+        var sheetDefinitions = ResolveAllSheetPaths(zip);
+        
+        var results = new List<(string SheetName, SimpleXlsxSheet Sheet)>();
+        foreach (var def in sheetDefinitions)
+        {
+            var sheetEntry = zip.GetEntry(def.Path);
+            if (sheetEntry == null) continue;
+
+            using var sheetStream = sheetEntry.Open();
+            var xdoc = XDocument.Load(sheetStream);
+            var ns = xdoc.Root?.Name.Namespace ?? XNamespace.None;
+
+            var sheetResult = new SimpleXlsxSheet();
+            var cells = xdoc.Descendants(ns + "c");
+            foreach (var cell in cells)
+            {
+                var reference = (string?)cell.Attribute("r");
+                if (string.IsNullOrWhiteSpace(reference)) continue;
+                if (!TryParseA1(reference, out var row, out var col)) continue;
+                var type = (string?)cell.Attribute("t");
+                var value = ReadCellValue(cell, ns, type, sharedStrings);
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                sheetResult.Cells[(row, col)] = value.Trim();
+            }
+
+            results.Add((def.Name, sheetResult));
+        }
+
+        return results;
     }
 
     public static bool TryParseDecimal(string? raw, out decimal value)
@@ -113,7 +152,7 @@ public static class SimpleXlsxReader
             .ToList();
     }
 
-    private static string ResolveFirstSheetPath(ZipArchive zip)
+    private static IReadOnlyList<(string Name, string Path)> ResolveAllSheetPaths(ZipArchive zip)
     {
         var workbookEntry = zip.GetEntry("xl/workbook.xml")
             ?? throw new InvalidOperationException("Invalid workbook: xl/workbook.xml not found.");
@@ -130,31 +169,35 @@ public static class SimpleXlsxReader
 
         var wbNs = workbookDoc.Root?.Name.Namespace ?? XNamespace.None;
         XNamespace relNs = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-
-        var firstSheet = workbookDoc
-            .Descendants(wbNs + "sheet")
-            .FirstOrDefault()
-            ?? throw new InvalidOperationException("Workbook has no sheets.");
-
-        var relId = (string?)firstSheet.Attribute(relNs + "id")
-            ?? throw new InvalidOperationException("Sheet relationship id not found.");
-
         var relRootNs = relsDoc.Root?.Name.Namespace ?? XNamespace.None;
-        var rel = relsDoc
-            .Descendants(relRootNs + "Relationship")
-            .FirstOrDefault(r => string.Equals((string?)r.Attribute("Id"), relId, StringComparison.Ordinal))
-            ?? throw new InvalidOperationException("Sheet relationship target not found.");
+        var relElements = relsDoc.Descendants(relRootNs + "Relationship").ToList();
 
-        var target = (string?)rel.Attribute("Target")
-            ?? throw new InvalidOperationException("Sheet relationship target is empty.");
+        var results = new List<(string Name, string Path)>();
 
-        var normalized = target.Replace('\\', '/');
-        if (normalized.StartsWith("/"))
-            normalized = normalized.TrimStart('/');
-        else if (!normalized.StartsWith("xl/", StringComparison.OrdinalIgnoreCase))
-            normalized = $"xl/{normalized}";
+        foreach (var sheet in workbookDoc.Descendants(wbNs + "sheet"))
+        {
+            var name = (string?)sheet.Attribute("name") ?? "Sheet";
+            var relId = (string?)sheet.Attribute(relNs + "id");
+            if (string.IsNullOrEmpty(relId)) continue;
 
-        return normalized;
+            var rel = relElements.FirstOrDefault(r => string.Equals((string?)r.Attribute("Id"), relId, StringComparison.Ordinal));
+            if (rel == null) continue;
+
+            var target = (string?)rel.Attribute("Target");
+            if (string.IsNullOrEmpty(target)) continue;
+
+            var normalized = target.Replace('\\', '/');
+            if (normalized.StartsWith("/"))
+                normalized = normalized.TrimStart('/');
+            else if (!normalized.StartsWith("xl/", StringComparison.OrdinalIgnoreCase))
+                normalized = $"xl/{normalized}";
+
+            results.Add((name, normalized));
+        }
+
+        if (results.Count == 0) throw new InvalidOperationException("Workbook has no valid sheets.");
+
+        return results;
     }
 
     private static bool TryParseA1(string reference, out int row, out int col)

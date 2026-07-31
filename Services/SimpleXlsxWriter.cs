@@ -13,6 +13,13 @@ public sealed class SimpleXlsxSheetOptions
     public double ColumnPadding { get; init; } = 2;
 }
 
+public sealed class SimpleXlsxWorksheetDef
+{
+    public string SheetName { get; init; } = "Sheet";
+    public IReadOnlyList<IReadOnlyList<string>> Rows { get; init; } = Array.Empty<IReadOnlyList<string>>();
+    public SimpleXlsxSheetOptions? Options { get; init; }
+}
+
 /// <summary>
 /// Minimal .xlsx writer (single worksheet) with inline strings.
 /// Avoids external dependencies (ClosedXML/EPPlus) for easier packaging/offline builds.
@@ -27,24 +34,43 @@ public static class SimpleXlsxWriter
         IReadOnlyList<IReadOnlyList<string>> rows,
         SimpleXlsxSheetOptions? options)
     {
-        if (string.IsNullOrWhiteSpace(sheetName))
-            sheetName = "Sheet1";
+        return WriteMultipleSheets(new[]
+        {
+            new SimpleXlsxWorksheetDef
+            {
+                SheetName = sheetName,
+                Rows = rows,
+                Options = options
+            }
+        });
+    }
+
+    public static byte[] WriteMultipleSheets(IReadOnlyList<SimpleXlsxWorksheetDef> sheets)
+    {
+        if (sheets == null || sheets.Count == 0)
+            throw new ArgumentException("At least one sheet is required.", nameof(sheets));
 
         using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
-            WriteContentTypes(zip);
+            WriteContentTypes(zip, sheets.Count);
             WriteRootRels(zip);
-            WriteWorkbook(zip, sheetName);
-            WriteWorkbookRels(zip);
-            WriteSheet(zip, rows, options);
+            WriteWorkbook(zip, sheets);
+            WriteWorkbookRels(zip, sheets.Count);
+            
+            for (int i = 0; i < sheets.Count; i++)
+            {
+                var sheet = sheets[i];
+                WriteSheet(zip, sheet.Rows, sheet.Options, i + 1);
+            }
+            
             WriteDocProps(zip);
         }
 
         return ms.ToArray();
     }
 
-    private static void WriteContentTypes(ZipArchive zip)
+    private static void WriteContentTypes(ZipArchive zip, int sheetCount)
     {
         XNamespace ct = "http://schemas.openxmlformats.org/package/2006/content-types";
         var doc = new XDocument(
@@ -57,17 +83,24 @@ public static class SimpleXlsxWriter
                     new XAttribute("ContentType", "application/xml")),
                 new XElement(ct + "Override",
                     new XAttribute("PartName", "/xl/workbook.xml"),
-                    new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml")),
-                new XElement(ct + "Override",
-                    new XAttribute("PartName", "/xl/worksheets/sheet1.xml"),
-                    new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml")),
-                new XElement(ct + "Override",
-                    new XAttribute("PartName", "/docProps/core.xml"),
-                    new XAttribute("ContentType", "application/vnd.openxmlformats-package.core-properties+xml")),
-                new XElement(ct + "Override",
-                    new XAttribute("PartName", "/docProps/app.xml"),
-                    new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.extended-properties+xml"))
+                    new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"))
             )
+        );
+
+        for (int i = 1; i <= sheetCount; i++)
+        {
+            doc.Root!.Add(new XElement(ct + "Override",
+                new XAttribute("PartName", $"/xl/worksheets/sheet{i}.xml"),
+                new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml")));
+        }
+
+        doc.Root!.Add(
+            new XElement(ct + "Override",
+                new XAttribute("PartName", "/docProps/core.xml"),
+                new XAttribute("ContentType", "application/vnd.openxmlformats-package.core-properties+xml")),
+            new XElement(ct + "Override",
+                new XAttribute("PartName", "/docProps/app.xml"),
+                new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.extended-properties+xml"))
         );
 
         WriteXml(zip, "[Content_Types].xml", doc);
@@ -88,37 +121,48 @@ public static class SimpleXlsxWriter
         WriteXml(zip, "_rels/.rels", doc);
     }
 
-    private static void WriteWorkbook(ZipArchive zip, string sheetName)
+    private static void WriteWorkbook(ZipArchive zip, IReadOnlyList<SimpleXlsxWorksheetDef> sheets)
     {
         XNamespace ss = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
+        var sheetsElement = new XElement(ss + "sheets");
+        for (int i = 0; i < sheets.Count; i++)
+        {
+            sheetsElement.Add(
+                new XElement(ss + "sheet",
+                    new XAttribute("name", string.IsNullOrWhiteSpace(sheets[i].SheetName) ? $"Sheet{i + 1}" : sheets[i].SheetName),
+                    new XAttribute("sheetId", i + 1),
+                    new XAttribute(r + "id", $"rId{i + 1}"))
+            );
+        }
+
         var doc = new XDocument(
             new XElement(ss + "workbook",
                 new XAttribute(XNamespace.Xmlns + "r", r),
-                new XElement(ss + "sheets",
-                    new XElement(ss + "sheet",
-                        new XAttribute("name", sheetName),
-                        new XAttribute("sheetId", 1),
-                        new XAttribute(r + "id", "rId1"))
-                )
+                sheetsElement
             )
         );
 
         WriteXml(zip, "xl/workbook.xml", doc);
     }
 
-    private static void WriteWorkbookRels(ZipArchive zip)
+    private static void WriteWorkbookRels(ZipArchive zip, int sheetCount)
     {
         XNamespace rel = "http://schemas.openxmlformats.org/package/2006/relationships";
         var doc = new XDocument(
-            new XElement(rel + "Relationships",
-                new XElement(rel + "Relationship",
-                    new XAttribute("Id", "rId1"),
-                    new XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"),
-                    new XAttribute("Target", "worksheets/sheet1.xml"))
-            )
+            new XElement(rel + "Relationships")
         );
+
+        for (int i = 1; i <= sheetCount; i++)
+        {
+            doc.Root!.Add(
+                new XElement(rel + "Relationship",
+                    new XAttribute("Id", $"rId{i}"),
+                    new XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"),
+                    new XAttribute("Target", $"worksheets/sheet{i}.xml"))
+            );
+        }
 
         WriteXml(zip, "xl/_rels/workbook.xml.rels", doc);
     }
@@ -126,7 +170,8 @@ public static class SimpleXlsxWriter
     private static void WriteSheet(
         ZipArchive zip,
         IReadOnlyList<IReadOnlyList<string>> rows,
-        SimpleXlsxSheetOptions? options)
+        SimpleXlsxSheetOptions? options,
+        int sheetIndex)
     {
         XNamespace ss = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 
@@ -166,7 +211,7 @@ public static class SimpleXlsxWriter
             )
         );
 
-        WriteXml(zip, "xl/worksheets/sheet1.xml", doc);
+        WriteXml(zip, $"xl/worksheets/sheet{sheetIndex}.xml", doc);
     }
 
     private static XElement? BuildColumnsElement(
