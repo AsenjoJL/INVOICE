@@ -556,20 +556,17 @@ public class ProductsController : Controller
     }
 
     [HttpGet]
-    [AllowAnonymous] // For easy execution
-    public async Task<IActionResult> BackfillClientGroup()
+    [AllowAnonymous]
+    public async Task<IActionResult> UndoMCIAAImport()
     {
-        var targetGroup = await _context.ClientGroups.FirstOrDefaultAsync(g => g.Name == "EIGHT2EIGHT OUTLETS");
+        var targetGroup = await _context.ClientGroups.FirstOrDefaultAsync(g => g.Name.Contains("MCIAA"));
         if (targetGroup == null)
-            return Content("EIGHT2EIGHT OUTLETS group not found.");
+            return Content("MCIAA group not found.");
 
-        var productsToUpdate = await _context.Products.Where(p => p.ClientGroupId == null).ToListAsync();
-        foreach (var p in productsToUpdate)
-        {
-            p.ClientGroupId = targetGroup.Id;
-        }
-
+        var productsToDelete = await _context.Products.Where(p => p.ClientGroupId == targetGroup.Id).ToListAsync();
+        _context.Products.RemoveRange(productsToDelete);
+        
         await _context.SaveChangesAsync();
-        return Content($"Updated {productsToUpdate.Count} products to EIGHT2EIGHT OUTLETS.");
+        return Content($"Successfully deleted {productsToDelete.Count} products from MCIAA.");
     }
 }
