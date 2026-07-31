@@ -181,72 +181,7 @@ public class DailyPurchaseCostsController : Controller
 
         foreach (var (sheetName, sheet) in sheets)
         {
-            var sheetDate = targetDate;
-            
-            // Parse date from sheet (Row 2, Col 2 is "Cost Date" value)
-            var dateCell = sheet.GetCell(2, 2);
-            if (!string.IsNullOrWhiteSpace(dateCell) && DateTime.TryParseExact(dateCell.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
-            {
-                sheetDate = parsedDate;
-            }
-            
-            var headerRow = FindTemplateHeaderRow(sheet);
-            if (headerRow <= 0)
-                continue;
-
-            var itemCol = FindColumnByHeader(sheet, headerRow, "listofitems", "item", "items", "product", "productname", "particulars");
-            var priceCol = FindColumnByHeader(sheet, headerRow, "price", "purchasecost", "dailycost", "dailypurchasecost", "unitcost", "cost");
-            var skuCol = FindColumnByHeader(sheet, headerRow, "sku", "code");
-
-            if (itemCol <= 0 || priceCol <= 0)
-                continue;
-
-            var importedItems = new List<DailyPurchaseCostItemViewModel>();
-
-            for (var row = headerRow + 1; row <= sheet.MaxRow; row++)
-            {
-                var productName = sheet.GetCell(row, itemCol).Trim();
-                var sku = skuCol > 0 ? sheet.GetCell(row, skuCol).Trim() : string.Empty;
-                var rawPrice = sheet.GetCell(row, priceCol).Trim();
-
-                if (string.IsNullOrWhiteSpace(productName) && string.IsNullOrWhiteSpace(sku) && string.IsNullOrWhiteSpace(rawPrice))
-                    continue;
-
-                if (string.IsNullOrWhiteSpace(rawPrice))
-                    continue;
-
-                if (!SimpleXlsxReader.TryParseDecimal(rawPrice, out var purchaseCost) || purchaseCost <= 0m)
-                {
-                    allInvalidPrices.Add(string.IsNullOrWhiteSpace(productName) ? $"row {row}" : productName);
-                    continue;
-                }
-
-                Product? product = null;
-                if (!string.IsNullOrWhiteSpace(sku) &&
-                    productMap.TryGetValue(OrderImportHelpers.NormalizeKey(sku), out var skuProduct))
-                {
-                    product = skuProduct;
-                }
-                else if (!string.IsNullOrWhiteSpace(productName) &&
-                         OrderImportHelpers.TryResolveProductByName(productName, productMap, out var nameProduct))
-                {
-                    product = nameProduct;
-                }
-
-                if (product == null)
-                {
-                    allUnmatched.Add(string.IsNullOrWhiteSpace(productName) ? $"row {row}" : productName);
-                    continue;
-                }
-
-                importedItems.Add(new DailyPurchaseCostItemViewModel
-                {
-                    ProductId = product.Id,
-                    PurchaseCostPerUnit = purchaseCost
-                });
-            }
-
-            if (importedItems.Count > 0)
+            if (TryParsePurchaseCostSheet(sheet, targetDate, productMap, allUnmatched, allInvalidPrices, out var sheetDate, out var importedItems))
             {
                 var saved = await SavePurchaseCostsAsync(
                     sheetDate,
@@ -503,6 +438,82 @@ public class DailyPurchaseCostsController : Controller
                 line.CostPriceSnapshot = unitCost;
             }
         }
+    }
+
+    private bool TryParsePurchaseCostSheet(
+        SimpleXlsxSheet sheet,
+        DateTime defaultTargetDate,
+        Dictionary<string, Product> productMap,
+        List<string> allUnmatched,
+        List<string> allInvalidPrices,
+        out DateTime sheetDate,
+        out List<DailyPurchaseCostItemViewModel> importedItems)
+    {
+        sheetDate = defaultTargetDate;
+        importedItems = new List<DailyPurchaseCostItemViewModel>();
+
+        // Parse date from sheet (Row 2, Col 2 is "Cost Date" value)
+        var dateCell = sheet.GetCell(2, 2);
+        if (!string.IsNullOrWhiteSpace(dateCell) && DateTime.TryParseExact(dateCell.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+        {
+            sheetDate = parsedDate;
+        }
+
+        var headerRow = FindTemplateHeaderRow(sheet);
+        if (headerRow <= 0)
+            return false;
+
+        var itemCol = FindColumnByHeader(sheet, headerRow, "listofitems", "item", "items", "product", "productname", "particulars");
+        var priceCol = FindColumnByHeader(sheet, headerRow, "price", "purchasecost", "dailycost", "dailypurchasecost", "unitcost", "cost");
+        var skuCol = FindColumnByHeader(sheet, headerRow, "sku", "code");
+
+        if (itemCol <= 0 || priceCol <= 0)
+            return false;
+
+        for (var row = headerRow + 1; row <= sheet.MaxRow; row++)
+        {
+            var productName = sheet.GetCell(row, itemCol).Trim();
+            var sku = skuCol > 0 ? sheet.GetCell(row, skuCol).Trim() : string.Empty;
+            var rawPrice = sheet.GetCell(row, priceCol).Trim();
+
+            if (string.IsNullOrWhiteSpace(productName) && string.IsNullOrWhiteSpace(sku) && string.IsNullOrWhiteSpace(rawPrice))
+                continue;
+
+            if (string.IsNullOrWhiteSpace(rawPrice))
+                continue;
+
+            if (!SimpleXlsxReader.TryParseDecimal(rawPrice, out var purchaseCost) || purchaseCost <= 0m)
+            {
+                allInvalidPrices.Add(string.IsNullOrWhiteSpace(productName) ? $"row {row}" : productName);
+                continue;
+            }
+
+            Product? product = null;
+            if (!string.IsNullOrWhiteSpace(sku) &&
+                productMap.TryGetValue(OrderImportHelpers.NormalizeKey(sku), out var skuProduct))
+            {
+                product = skuProduct;
+            }
+            else if (!string.IsNullOrWhiteSpace(productName) &&
+                     OrderImportHelpers.TryResolveProductByName(productName, productMap, out var nameProduct))
+            {
+                product = nameProduct;
+            }
+
+            if (product == null)
+            {
+                allUnmatched.Add(string.IsNullOrWhiteSpace(productName) ? $"row {row}" : productName);
+                continue;
+            }
+
+            importedItems.Add(new DailyPurchaseCostItemViewModel
+            {
+                ProductId = product.Id,
+                PurchaseCostPerUnit = purchaseCost
+            });
+        }
+
+        return importedItems.Count > 0;
     }
 
     private async Task<DailyPurchaseCostIndexViewModel> BuildIndexModelAsync(
