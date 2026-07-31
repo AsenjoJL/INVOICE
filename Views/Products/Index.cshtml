@@ -59,6 +59,25 @@
                             }
                         </select>
 
+                        @{
+                            var clientGroupOptions = (ViewBag.ClientGroupOptions as List<HazelInvoice.Models.ClientGroup>) ?? new List<HazelInvoice.Models.ClientGroup>();
+                            var selectedGroupId = ViewBag.ClientGroupId as int?;
+                        }
+                        <select name="clientGroupId" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
+                            <option value="">-- All Groups --</option>
+                            @foreach (var g in clientGroupOptions)
+                            {
+                                if (selectedGroupId == g.Id)
+                                {
+                                    <option value="@g.Id" selected>@g.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@g.Id">@g.Name</option>
+                                }
+                            }
+                        </select>
+
                         <button type="submit" class="btn btn-search">
                             <span>Go</span>
                         </button>

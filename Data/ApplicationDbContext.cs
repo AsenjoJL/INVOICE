@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using HazelInvoice.Models;
 
@@ -84,6 +84,7 @@ public class ApplicationDbContext : IdentityDbContext
         builder.Entity<PurchaseLine>().HasIndex(l => l.ProductId);
 
         builder.Entity<Product>().HasIndex(p => p.IsActive);
+        builder.Entity<Product>().HasIndex(p => p.ClientGroupId);
         builder.Entity<Customer>().HasIndex(c => c.IsActive);
         builder.Entity<Customer>().HasIndex(c => c.GroupName);
         builder.Entity<Customer>().HasIndex(c => c.Name);

@@ -171,10 +171,13 @@ public class OrdersController : Controller
                 .ToList();
         }
 
+        var clientGroupEntity = await _context.ClientGroups.FirstOrDefaultAsync(g => g.Name == model.SelectedGroupName, HttpContext.RequestAborted);
+        int? clientGroupId = clientGroupEntity?.Id;
+
         // Preload products (avoid FindAsync inside loops)
         var productMap = await _context.Products
             .AsNoTracking()
-            .Where(p => affectedProductIds.Contains(p.Id) && p.IsActive)
+            .Where(p => affectedProductIds.Contains(p.Id) && p.IsActive && (p.ClientGroupId == null || p.ClientGroupId == clientGroupId))
             .Select(p => new { p.Id, p.Name, p.Unit, p.UnitCost, p.Markup, p.DeliveryFee })
             .ToDictionaryAsync(x => x.Id, x => x);
         var activeProductIds = productMap.Keys.ToHashSet();
@@ -546,8 +549,12 @@ public class OrdersController : Controller
             return RedirectToAction(nameof(VegetableMatrix), new { date = targetDate.ToString("yyyy-MM-dd"), page, productPage, details, groupName = selectedGroup });
         }
 
+        var clientGroupEntity = await _context.ClientGroups.FirstOrDefaultAsync(g => g.Name == selectedGroup, HttpContext.RequestAborted);
+        int? clientGroupId = clientGroupEntity?.Id;
+
         var products = await _context.Products
             .AsNoTracking()
+            .Where(p => p.ClientGroupId == null || p.ClientGroupId == clientGroupId)
             .ToListAsync();
 
         // Keep import matching aligned with SaveMatrix/receipt creation by using

@@ -37,6 +37,9 @@ public class Product
     public decimal DeliveryFee { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    public int? ClientGroupId { get; set; }
+    public ClientGroup? ClientGroup { get; set; }
 }
 
 public class Service

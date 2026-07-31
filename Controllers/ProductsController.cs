@@ -30,15 +30,24 @@ public class ProductsController : Controller
     }
 
     // GET: Products
-    public async Task<IActionResult> Index(string? q = null, DateTime? date = null, string? scope = null)
+    public async Task<IActionResult> Index(string? q = null, DateTime? date = null, string? scope = null, int? clientGroupId = null)
     {
         var businessMoment = date ?? BusinessDate.Now();
         var businessDate = businessMoment.Date;
         var applicableBusinessDate = WeeklyPriceCalendar.GetApplicablePriceDate(businessMoment);
         var isResetDay = WeeklyPriceCalendar.IsResetDay(businessMoment);
         var normalizedScope = NormalizeScope(scope);
-        var summary = await _context.Products
+        
+        var query = _context.Products
             .AsNoTracking()
+            .AsQueryable();
+
+        if (clientGroupId.HasValue)
+        {
+            query = query.Where(p => p.ClientGroupId == clientGroupId.Value || p.ClientGroupId == null);
+        }
+
+        var summary = await query
             .GroupBy(_ => 1)
             .Select(g => new
             {
@@ -46,10 +55,6 @@ public class ProductsController : Controller
                 Active = g.Count(p => p.IsActive)
             })
             .FirstOrDefaultAsync();
-
-        var query = _context.Products
-            .AsNoTracking()
-            .AsQueryable();
 
         query = normalizedScope switch
         {
@@ -131,6 +136,8 @@ public class ProductsController : Controller
         ViewBag.SearchTerm = q ?? string.Empty;
         ViewBag.TargetDate = businessDate;
         ViewBag.Scope = normalizedScope;
+        ViewBag.ClientGroupId = clientGroupId;
+        ViewBag.ClientGroupOptions = await _context.ClientGroups.Where(g => g.IsActive).OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name).ToListAsync();
         ViewBag.TotalProducts = summary?.Total ?? 0;
         ViewBag.ActiveProducts = summary?.Active ?? 0;
         ViewBag.InactiveProducts = (summary?.Total ?? 0) - (summary?.Active ?? 0);
@@ -142,13 +149,14 @@ public class ProductsController : Controller
     {
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
+        ViewBag.ClientGroupOptions = await _context.ClientGroups.Where(g => g.IsActive).OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name).ToListAsync();
         return View();
     }
 
     // POST: Products/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,SupplierId,Unit,UnitCost,DeliveryFee,IsActive")] Product product)
+    public async Task<IActionResult> Create([Bind("Id,SKU,Name,Category,SupplierId,ClientGroupId,Unit,UnitCost,DeliveryFee,IsActive")] Product product)
     {
         // Auto-generate SKU if empty or default
         if (string.IsNullOrWhiteSpace(product.SKU) || product.SKU == "V-XXX")
@@ -181,6 +189,7 @@ public class ProductsController : Controller
         }
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
+        ViewBag.ClientGroupOptions = await _context.ClientGroups.Where(g => g.IsActive).OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name).ToListAsync();
         return View(product);
     }
 
@@ -194,13 +203,14 @@ public class ProductsController : Controller
         ViewBag.ReturnUrl = returnUrl;
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
+        ViewBag.ClientGroupOptions = await _context.ClientGroups.Where(g => g.IsActive).OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name).ToListAsync();
         return View(product);
     }
 
     // POST: Products/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,SupplierId,Unit,UnitCost,DeliveryFee,IsActive")] Product product, string? returnUrl = null, int? returnClientPage = null)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,SKU,Name,Category,SupplierId,ClientGroupId,Unit,UnitCost,DeliveryFee,IsActive")] Product product, string? returnUrl = null, int? returnClientPage = null)
     {
         if (id != product.Id) return NotFound();
 
@@ -242,6 +252,7 @@ public class ProductsController : Controller
         ViewBag.ReturnUrl = returnUrl;
         ViewBag.CategoryOptions = await GetCategoryOptionsAsync();
         ViewBag.SupplierOptions = await GetSupplierOptionsAsync();
+        ViewBag.ClientGroupOptions = await _context.ClientGroups.Where(g => g.IsActive).OrderBy(g => g.DisplayOrder).ThenBy(g => g.Name).ToListAsync();
         return View(product);
     }
 
@@ -415,5 +426,23 @@ public class ProductsController : Controller
             ScopeAll => ScopeAll,
             _ => ScopeActive
         };
+    }
+
+    [HttpPost]
+    [AllowAnonymous] // For easy execution
+    public async Task<IActionResult> BackfillClientGroup()
+    {
+        var targetGroup = await _context.ClientGroups.FirstOrDefaultAsync(g => g.Name == "EIGHT2EIGHT OUTLETS");
+        if (targetGroup == null)
+            return Content("EIGHT2EIGHT OUTLETS group not found.");
+
+        var productsToUpdate = await _context.Products.Where(p => p.ClientGroupId == null).ToListAsync();
+        foreach (var p in productsToUpdate)
+        {
+            p.ClientGroupId = targetGroup.Id;
+        }
+
+        await _context.SaveChangesAsync();
+        return Content($"Updated {productsToUpdate.Count} products to EIGHT2EIGHT OUTLETS.");
     }
 }

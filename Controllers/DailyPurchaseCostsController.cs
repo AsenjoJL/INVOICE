@@ -141,9 +141,12 @@ public class DailyPurchaseCostsController : Controller
             return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
         }
 
+        var clientGroupEntity = await _context.ClientGroups.FirstOrDefaultAsync(g => g.Name == groupName, cancellationToken);
+        int? clientGroupId = clientGroupEntity?.Id;
+
         var products = await _context.Products
             .AsNoTracking()
-            .Where(p => p.IsActive)
+            .Where(p => p.IsActive && (p.ClientGroupId == null || p.ClientGroupId == clientGroupId))
             .ToListAsync(cancellationToken);
         var productMap = OrderImportHelpers.BuildProductLookup(products);
         var importedItems = new List<DailyPurchaseCostItemViewModel>();

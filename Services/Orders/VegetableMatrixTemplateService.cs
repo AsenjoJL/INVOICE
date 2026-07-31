@@ -51,9 +51,12 @@ public sealed class VegetableMatrixTemplateService : IVegetableMatrixTemplateSer
             .Select(c => c.Name)
             .ToListAsync(cancellationToken);
 
+        var clientGroupEntity = await _context.ClientGroups.FirstOrDefaultAsync(g => g.Name == selectedGroup, cancellationToken);
+        int? clientGroupId = clientGroupEntity?.Id;
+
         var products = await _context.Products
             .AsNoTracking()
-            .Where(p => p.IsActive)
+            .Where(p => p.IsActive && (p.ClientGroupId == null || p.ClientGroupId == clientGroupId))
             .OrderBy(p => p.Name)
             .Select(p => new
             {

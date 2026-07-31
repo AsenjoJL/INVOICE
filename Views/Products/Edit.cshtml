@@ -78,6 +78,21 @@
                             <label asp-for="SupplierId">Supplier / Owner</label>
                             <span asp-validation-for="SupplierId" class="text-danger"></span>
                         </div>
+
+                        <div class="form-floating mt-3">
+                            @{
+                                var clientGroupOptions = (ViewBag.ClientGroupOptions as List<HazelInvoice.Models.ClientGroup>) ?? new List<HazelInvoice.Models.ClientGroup>();
+                            }
+                            <select asp-for="ClientGroupId" class="form-select">
+                                <option value="">-- Shared / Global --</option>
+                                @foreach (var g in clientGroupOptions)
+                                {
+                                    <option value="@g.Id">@g.Name</option>
+                                }
+                            </select>
+                            <label asp-for="ClientGroupId">Client Group Scope</label>
+                            <span asp-validation-for="ClientGroupId" class="text-danger"></span>
+                        </div>
                     </div>
 
                     <div class="product-form-section">
