@@ -9,6 +9,10 @@ public class DailyPurchaseCostIndexViewModel
 
     public string? SearchTerm { get; set; }
 
+    public string? SelectedGroupName { get; set; }
+
+    public List<string> AvailableGroupNames { get; set; } = new();
+
     public int TotalProducts { get; set; }
 
     public int UpdatedForDateCount { get; set; }

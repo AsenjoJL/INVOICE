@@ -187,7 +187,7 @@
     .dpc-card-body  { padding: 20px; }
 
     /* ─── Form controls ──────────────────────────────────── */
-    .dpc-filter { display: grid; grid-template-columns: 200px 1fr auto; gap: 12px; align-items: end; }
+    .dpc-filter { display: grid; grid-template-columns: 180px 220px 1fr auto; gap: 12px; align-items: end; }
     .dpc-import-strip { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
 
     .dpc-label {
@@ -387,7 +387,7 @@
             <div class="dpc-card-head">
                 <div>
                     <div class="dpc-card-title">Filter Products</div>
-                    <div class="dpc-card-sub">Choose a date and narrow by name, SKU, unit, or category</div>
+                    <div class="dpc-card-sub">Choose a date, client group, or search by name</div>
                 </div>
             </div>
             <div class="dpc-card-body">
@@ -398,8 +398,24 @@
                             <input type="date" name="date" value="@Model.TargetDate.ToString("yyyy-MM-dd")" class="dpc-input" />
                         </div>
                         <div>
+                            <label class="dpc-label">Client Group</label>
+                            <select name="groupName" class="dpc-input" onchange="this.form.submit()">
+                                @foreach (var g in Model.AvailableGroupNames)
+                                {
+                                    if (g == Model.SelectedGroupName)
+                                    {
+                                        <option value="@g" selected>@g</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@g">@g</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div>
                             <label class="dpc-label">Search Product</label>
-                            <input type="text" name="q" value="@Model.SearchTerm" class="dpc-input" placeholder="Name, SKU, unit, category…" />
+                            <input type="text" name="q" value="@Model.SearchTerm" class="dpc-input" placeholder="Name, SKU, unit…" />
                         </div>
                         <div>
                             <label class="dpc-label">&nbsp;</label>
@@ -425,6 +441,7 @@
                         <label class="dpc-label">Download Template for @Model.TargetDate.ToString("MMM dd, yyyy")</label>
                         <a asp-action="DownloadTemplate"
                            asp-route-date="@Model.TargetDate.ToString("yyyy-MM-dd")"
+                           asp-route-groupName="@Model.SelectedGroupName"
                            class="dpc-btn dpc-btn-outline" style="width:100%;max-width:240px;">
                             <i class="bi bi-download"></i> Download Template
                         </a>
@@ -437,6 +454,7 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="targetDate" value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
                             <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
+                            <input type="hidden" name="groupName" value="@Model.SelectedGroupName" />
                             <div>
                                 <label class="dpc-label">Import .xlsx File</label>
                                 <input type="file" name="importFile" accept=".xlsx" class="dpc-input" required />
@@ -528,6 +546,7 @@
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="targetDate"  value="@Model.TargetDate.ToString("yyyy-MM-dd")" />
                                         <input type="hidden" name="searchTerm"  value="@Model.SearchTerm" />
+                                        <input type="hidden" name="groupName"   value="@Model.SelectedGroupName" />
                                         <input type="hidden" name="productId"   value="@item.ProductId" />
                                         <button type="submit" class="dpc-btn dpc-btn-save">Save</button>
                                     </form>

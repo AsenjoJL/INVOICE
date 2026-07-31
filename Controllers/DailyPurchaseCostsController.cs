@@ -20,31 +20,34 @@ public class DailyPurchaseCostsController : Controller
     private readonly ApplicationDbContext _context;
     private readonly IDailyPurchaseCostService _dailyPurchaseCosts;
     private readonly IAppCacheInvalidator _cacheInvalidator;
+    private readonly HazelInvoice.Services.Clients.IClientGroupService _clientGroups;
 
     public DailyPurchaseCostsController(
         ApplicationDbContext context,
         IDailyPurchaseCostService dailyPurchaseCosts,
-        IAppCacheInvalidator cacheInvalidator)
+        IAppCacheInvalidator cacheInvalidator,
+        HazelInvoice.Services.Clients.IClientGroupService clientGroups)
     {
         _context = context;
         _dailyPurchaseCosts = dailyPurchaseCosts;
         _cacheInvalidator = cacheInvalidator;
+        _clientGroups = clientGroups;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(DateTime? date, string? q, CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(DateTime? date, string? q, string? groupName, CancellationToken cancellationToken)
     {
         var targetDate = (date ?? BusinessDate.Today()).Date;
-        var model = await BuildIndexModelAsync(targetDate, q, cancellationToken);
+        var model = await BuildIndexModelAsync(targetDate, q, groupName, cancellationToken);
         return View(model);
     }
 
     [HttpGet]
-    public async Task<IActionResult> DownloadTemplate(DateTime? date, string? q, CancellationToken cancellationToken)
+    public async Task<IActionResult> DownloadTemplate(DateTime? date, string? q, string? groupName, CancellationToken cancellationToken)
     {
         var targetDate = (date ?? BusinessDate.Today()).Date;
         // Templates are always full active-product exports so newly added items are included.
-        var model = await BuildIndexModelAsync(targetDate, null, cancellationToken);
+        var model = await BuildIndexModelAsync(targetDate, null, groupName, cancellationToken);
 
         var rows = new List<IReadOnlyList<string>>
         {
@@ -70,7 +73,8 @@ public class DailyPurchaseCostsController : Controller
             {
                 AutoFitColumns = true
             });
-        var fileName = $"DailyPurchaseCostTemplate_{targetDate:yyyy-MM-dd}.xlsx";
+        var safeGroup = string.IsNullOrWhiteSpace(groupName) ? "All" : System.Text.RegularExpressions.Regex.Replace(groupName, "[^A-Za-z0-9]+", "_").Trim('_');
+        var fileName = $"DailyPurchaseCostTemplate_{safeGroup}_{targetDate:yyyy-MM-dd}.xlsx";
         return File(
             bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -83,6 +87,7 @@ public class DailyPurchaseCostsController : Controller
         IFormFile? importFile,
         DateTime targetDate,
         string? searchTerm,
+        string? groupName,
         CancellationToken cancellationToken)
     {
         targetDate = targetDate.Date;
@@ -90,19 +95,19 @@ public class DailyPurchaseCostsController : Controller
         if (importFile == null || importFile.Length == 0)
         {
             TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) daily purchase cost template.";
-            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm, groupName });
         }
 
         if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
-            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm, groupName });
         }
 
         if (importFile.Length > MaxImportFileBytes)
         {
             TempData["ErrorMessage"] = "File is too large. Maximum size is 20 MB.";
-            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm });
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm, groupName });
         }
 
         await using var stream = new MemoryStream();
@@ -236,7 +241,7 @@ public class DailyPurchaseCostsController : Controller
 
         if (!ModelState.IsValid)
         {
-            var invalidModel = await BuildIndexModelAsync(targetDate, model.SearchTerm, cancellationToken);
+            var invalidModel = await BuildIndexModelAsync(targetDate, model.SearchTerm, model.SelectedGroupName, cancellationToken);
             var postedMap = model.Items
                 .Where(i => i.ProductId > 0)
                 .GroupBy(i => i.ProductId)
@@ -254,7 +259,7 @@ public class DailyPurchaseCostsController : Controller
         if (postedItems.Count == 0)
         {
             TempData["Message"] = "No daily purchase costs were entered.";
-            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm });
+            return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm, groupName = model.SelectedGroupName });
         }
 
         var saved = await SavePurchaseCostsAsync(targetDate, postedItems, cancellationToken);
@@ -263,7 +268,7 @@ public class DailyPurchaseCostsController : Controller
             ? "Daily purchase costs were already up to date."
             : $"Saved {saved} daily purchase cost update{(saved == 1 ? "" : "s")}.";
 
-        return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm });
+        return RedirectToAction(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm, groupName = model.SelectedGroupName });
     }
 
     [HttpPost]
@@ -271,13 +276,14 @@ public class DailyPurchaseCostsController : Controller
     public async Task<IActionResult> SaveItem(
         DateTime targetDate,
         string? searchTerm,
+        string? groupName,
         int productId,
         decimal? purchaseCostPerUnit,
         CancellationToken cancellationToken)
     {
         targetDate = targetDate.Date;
         var anchor = $"cost-row-{productId}";
-        var returnUrl = BuildIndexReturnUrl(targetDate, searchTerm, anchor);
+        var returnUrl = BuildIndexReturnUrl(targetDate, searchTerm, groupName, anchor);
 
         if (productId <= 0)
         {
@@ -367,9 +373,9 @@ public class DailyPurchaseCostsController : Controller
         return saved;
     }
 
-    private string BuildIndexReturnUrl(DateTime targetDate, string? searchTerm, string anchor)
+    private string BuildIndexReturnUrl(DateTime targetDate, string? searchTerm, string? groupName, string anchor)
     {
-        var url = Url.Action(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm }) ?? "/DailyPurchaseCosts";
+        var url = Url.Action(nameof(Index), new { date = targetDate.ToString("yyyy-MM-dd"), q = searchTerm, groupName }) ?? "/DailyPurchaseCosts";
         return $"{url}#{anchor}";
     }
 
@@ -442,9 +448,13 @@ public class DailyPurchaseCostsController : Controller
     private async Task<DailyPurchaseCostIndexViewModel> BuildIndexModelAsync(
         DateTime targetDate,
         string? searchTerm,
+        string? groupName,
         CancellationToken cancellationToken)
     {
         var normalizedSearch = searchTerm?.Trim() ?? string.Empty;
+        var selectedGroup = await _clientGroups.ResolveClientGroupOrDefaultAsync(groupName, cancellationToken);
+        var availableGroups = await _clientGroups.GetClientGroupNamesAsync(cancellationToken);
+        
         var productsQuery = _context.Products
             .AsNoTracking()
             .Where(p => p.IsActive);
@@ -456,6 +466,46 @@ public class DailyPurchaseCostsController : Controller
                 p.SKU.Contains(normalizedSearch) ||
                 p.Unit.Contains(normalizedSearch) ||
                 p.Category.Contains(normalizedSearch));
+        }
+        else if (selectedGroup != "All")
+        {
+            var includedGroups = await _clientGroups.ResolveOutletGroupsForClientAsync(selectedGroup, cancellationToken);
+            var dayStart = targetDate.Date;
+            var dayEnd = dayStart.AddDays(1);
+
+            var outletsAll = await _context.Customers
+                .AsNoTracking()
+                .Where(c => c.IsActive && includedGroups.Contains(c.GroupName))
+                .Select(c => new { c.Id, c.Name })
+                .ToListAsync(cancellationToken);
+                
+            var allOutletIds = outletsAll.Select(c => c.Id).ToList();
+            var allOutletNames = outletsAll.Select(c => c.Name).ToList();
+
+            var productIdsInDay = await _context.ReceiptLines
+                .AsNoTracking()
+                .Where(l => l.ProductId != null)
+                .Join(_context.Receipts.AsNoTracking(),
+                    l => l.ReceiptId,
+                    r => r.Id,
+                    (l, r) => new { l, r })
+                .Where(x => x.r.Date >= dayStart && x.r.Date < dayEnd &&
+                            x.r.Status != PaymentStatus.Void &&
+                            ((x.r.CustomerId.HasValue && allOutletIds.Contains(x.r.CustomerId.Value)) ||
+                             (!x.r.CustomerId.HasValue && allOutletNames.Contains(x.r.CustomerName))))
+                .Select(x => x.l.ProductId!.Value)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            // Filter to products ordered today OR products that already have a daily cost for today
+            var costsToday = await _context.DailyPurchaseCosts
+                .AsNoTracking()
+                .Where(c => c.CostDate == dayStart)
+                .Select(c => c.ProductId)
+                .ToListAsync(cancellationToken);
+
+            var combinedIds = productIdsInDay.Concat(costsToday).Distinct().ToList();
+            productsQuery = productsQuery.Where(p => combinedIds.Contains(p.Id));
         }
 
         var products = await productsQuery
@@ -499,6 +549,8 @@ public class DailyPurchaseCostsController : Controller
         {
             TargetDate = targetDate,
             SearchTerm = normalizedSearch,
+            SelectedGroupName = selectedGroup,
+            AvailableGroupNames = availableGroups.ToList(),
             TotalProducts = products.Count,
             UpdatedForDateCount = exactCosts.Count,
             Items = items
