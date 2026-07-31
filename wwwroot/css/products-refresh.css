@@ -445,7 +445,31 @@
     .product-refresh.product-page { padding: 1.5rem 1.2rem; }
     .product-refresh .product-header-main { padding: 1.5rem 1.75rem; }
     .product-refresh .product-tools { gap: 0.8rem; }
-    .product-refresh .product-search-bar { flex-direction: column; min-width: auto; align-items: stretch; }
+    
+    .product-refresh .product-search-bar { 
+        flex-direction: column; 
+        min-width: auto; 
+        align-items: stretch; 
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        gap: 0.8rem;
+    }
+    
+    .product-refresh .product-search-bar .search-icon {
+        display: none;
+    }
+    
+    .product-refresh .product-search-bar .search-input-width,
+    .product-refresh .product-search-bar .category-filter-width,
+    .product-refresh .product-search-bar select {
+        border: 1px solid var(--product-border) !important;
+        border-radius: 8px !important;
+        padding: 0.6rem 0.8rem !important;
+        background: var(--product-surface) !important;
+    }
+    
     .product-refresh .product-table thead th,
     .product-refresh .product-table tbody td { padding: 0.8rem 1rem; font-size: 0.85rem; }
 }
