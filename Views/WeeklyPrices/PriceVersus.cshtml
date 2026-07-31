@@ -391,6 +391,27 @@
                 <input type="text" name="q" class="form-control" value="@Model.SearchTerm" placeholder="Name, SKU, category, unit" />
             </div>
             <div>
+                @{
+                    var clientGroupOptions = (ViewBag.ClientGroupOptions as List<HazelInvoice.Models.ClientGroup>) ?? new List<HazelInvoice.Models.ClientGroup>();
+                    var selectedGroupId = ViewBag.ClientGroupId as int?;
+                }
+                <label class="price-field-label">Client Group</label>
+                <select name="clientGroupId" class="form-select" onchange="this.form.submit()">
+                    <option value="">-- All Groups --</option>
+                    @foreach (var g in clientGroupOptions)
+                    {
+                        if (selectedGroupId == g.Id)
+                        {
+                            <option value="@g.Id" selected>@g.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@g.Id">@g.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div>
                 <label class="price-field-label">Page Size</label>
                 <select name="pageSize" class="form-select" onchange="this.form.submit()">
                     <option value="20" selected="@(Model.PageSize == 20)">20</option>
@@ -412,6 +433,7 @@
         <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
         <input type="hidden" name="page" value="@Model.CurrentPage" />
         <input type="hidden" name="pageSize" value="@Model.PageSize" />
+        <input type="hidden" name="clientGroupId" value="@ViewBag.ClientGroupId" />
         <div>
             <label class="price-field-label">Import Weekly Price Template</label>
             <input type="file" name="importFile" accept=".xlsx" class="form-control" required />
@@ -438,6 +460,7 @@
             <a asp-action="DownloadTemplate"
                asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
                asp-route-importMode="both"
+               asp-route-clientGroupId="@ViewBag.ClientGroupId"
                class="btn price-btn price-btn-neutral w-100">
                 <i class="bi bi-download me-1"></i> Both Delivery + Purchase Cost
             </a>
@@ -447,17 +470,19 @@
             <a asp-action="DownloadTemplate"
                asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
                asp-route-importMode="delivery-only"
+               asp-route-clientGroupId="@ViewBag.ClientGroupId"
                class="btn price-btn price-btn-neutral w-100">
-                <i class="bi bi-download me-1"></i> Delivery Template
+                <i class="bi bi-download me-1"></i> Delivery Prices Only
             </a>
         </div>
         <div>
-            <label class="price-field-label">Purchase Cost Only</label>
+            <label class="price-field-label">Purchase Cost</label>
             <a asp-action="DownloadTemplate"
                asp-route-targetDate="@Model.TargetDate.ToString("yyyy-MM-dd")"
                asp-route-importMode="original-only"
+               asp-route-clientGroupId="@ViewBag.ClientGroupId"
                class="btn price-btn price-btn-neutral w-100">
-                <i class="bi bi-download me-1"></i> Purchase Cost Template
+                <i class="bi bi-download me-1"></i> Purchase Cost Only
             </a>
         </div>
     </div>
@@ -470,6 +495,7 @@
                 <input type="hidden" asp-for="SearchTerm" />
                 <input type="hidden" asp-for="CurrentPage" />
                 <input type="hidden" asp-for="PageSize" />
+                <input type="hidden" name="clientGroupId" value="@ViewBag.ClientGroupId" />
 
                 <div asp-validation-summary="All" class="text-danger px-4 pt-3"></div>
 

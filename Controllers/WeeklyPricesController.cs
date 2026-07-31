@@ -36,20 +36,26 @@ public class WeeklyPricesController : Controller
     }
 
     // GET: WeeklyPrices/PriceVersus
-    public async Task<IActionResult> PriceVersus(DateTime? date, string? q = null, int page = 1, int pageSize = 40)
+    public async Task<IActionResult> PriceVersus(DateTime? date, string? q = null, int page = 1, int pageSize = 40, int? clientGroupId = null)
     {
         var targetDate = date ?? BusinessDate.Now();
-        var vm = await BuildPriceVersusModelAsync(targetDate, q, page, pageSize);
+        var vm = await BuildPriceVersusModelAsync(targetDate, q, page, pageSize, null, clientGroupId);
+        ViewBag.ClientGroupOptions = await _context.ClientGroups
+            .Where(g => g.IsActive)
+            .OrderBy(g => g.DisplayOrder)
+            .ThenBy(g => g.Name)
+            .ToListAsync();
+        ViewBag.ClientGroupId = clientGroupId;
         return View(vm);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> PriceVersus(PriceVersusViewModel model, int? singleProductId = null)
+    public async Task<IActionResult> PriceVersus(PriceVersusViewModel model, int? singleProductId = null, int? clientGroupId = null)
     {
         if (model.Items == null || model.Items.Count == 0)
         {
-            return RedirectToPriceVersus(model.TargetDate, model.SearchTerm, model.CurrentPage, model.PageSize);
+            return RedirectToAction(nameof(PriceVersus), new { date = model.TargetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm, page = model.CurrentPage, pageSize = model.PageSize, clientGroupId });
         }
 
         var itemsToSave = GetItemsToSave(model, singleProductId);
@@ -57,40 +63,39 @@ public class WeeklyPricesController : Controller
         if (itemsToSave.Count == 0)
         {
             TempData["ErrorMessage"] = "No price row was selected to save.";
-            return RedirectToPriceVersus(model.TargetDate, model.SearchTerm, model.CurrentPage, model.PageSize);
+            return RedirectToAction(nameof(PriceVersus), new { date = model.TargetDate.ToString("yyyy-MM-dd"), q = model.SearchTerm, page = model.CurrentPage, pageSize = model.PageSize, clientGroupId });
         }
-
-        var saveResult = await SavePriceItemsAsync(model.TargetDate, model.ApplyToMasterCost, itemsToSave);
+        var saveResult = await SavePriceItemsAsync(model.TargetDate, model.ApplyToMasterCost, itemsToSave, false, false, clientGroupId);
         TempData["SuccessMessage"] = saveResult.SavedChanges > 0
             ? singleProductId.HasValue
                 ? "Saved the selected product price."
                 : $"Saved changes for {saveResult.SavedChanges} price record(s)."
             : "No price changes were detected.";
 
-        return RedirectToPriceVersus(model.TargetDate, model.SearchTerm, model.CurrentPage, model.PageSize);
+        return RedirectToPriceVersus(model.TargetDate, model.SearchTerm, model.CurrentPage, model.PageSize, clientGroupId);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ImportTemplate(IFormFile? importFile, DateTime targetDate, string? importMode = null, string? searchTerm = null, int page = 1, int pageSize = 40, string? returnUrl = null)
+    public async Task<IActionResult> ImportTemplate(IFormFile? importFile, DateTime targetDate, string? importMode = null, string? searchTerm = null, int page = 1, int pageSize = 40, string? returnUrl = null, int? clientGroupId = null)
     {
         var normalizedImportMode = NormalizeImportMode(importMode);
         if (importFile == null || importFile.Length == 0)
         {
             TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) price template.";
-            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
         }
 
         if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
-            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
         }
 
         if (importFile.Length > 20 * 1024 * 1024)
         {
             TempData["ErrorMessage"] = "File is too large. Maximum size is 20 MB.";
-            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
         }
 
         await using var stream = new MemoryStream();
@@ -104,7 +109,7 @@ public class WeeklyPricesController : Controller
         catch (Exception ex)
         {
             TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
-            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
         }
 
         var requiresDeliveryPrice = normalizedImportMode is "both" or "delivery-only";
@@ -134,7 +139,7 @@ public class WeeklyPricesController : Controller
         else
         {
             TempData["ErrorMessage"] = "Could not find the price template header row.";
-            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
         }
 
         if (purchasePriceCol <= 0)
@@ -145,7 +150,7 @@ public class WeeklyPricesController : Controller
         if (itemCol <= 0 || unitCol <= 0 || (requiresDeliveryPrice && sellingPriceCol <= 0) || (requiresPurchasePrice && purchasePriceCol <= 0))
         {
             TempData["ErrorMessage"] = "The template must contain item, price, unit, and purchase-price columns.";
-            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
         }
 
         var products = await _context.Products.ToListAsync();
@@ -259,10 +264,8 @@ public class WeeklyPricesController : Controller
 
         if (importedItems.Count == 0)
         {
-            TempData["ErrorMessage"] = unmatchedProducts.Count > 0
-                ? $"No matching products were imported. Unmatched: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
-                : "No valid price rows were found in the template.";
-            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+            TempData["ErrorMessage"] = "No price items were found in the template.";
+            return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
         }
 
         var completeDeliveryPriceRefresh = requiresDeliveryPrice;
@@ -271,7 +274,8 @@ public class WeeklyPricesController : Controller
             applyToMasterCost: false,
             importedItems,
             forceCreateWeeklyRecords: completeDeliveryPriceRefresh,
-            completeWeeklyRefresh: completeDeliveryPriceRefresh);
+            completeWeeklyRefresh: completeDeliveryPriceRefresh,
+            clientGroupId: clientGroupId);
 
         var unmatchedNote = unmatchedProducts.Count > 0
             ? $" Unmatched products: {string.Join(", ", unmatchedProducts.Take(8))}{(unmatchedProducts.Count > 8 ? "..." : "")}."
@@ -290,20 +294,27 @@ public class WeeklyPricesController : Controller
             await UpdateUnpaidReceiptPricesForDateAsync(targetDate);
         }
 
-        return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl);
+        return RedirectAfterImport(targetDate, searchTerm, page, pageSize, returnUrl, clientGroupId);
     }
 
     [HttpGet]
-    public async Task<IActionResult> DownloadTemplate(DateTime? targetDate, string? importMode = null, string? returnUrl = null)
+    public async Task<IActionResult> DownloadTemplate(DateTime? targetDate, string? importMode = null, string? returnUrl = null, int? clientGroupId = null)
     {
         var normalizedImportMode = NormalizeImportMode(importMode);
         var targetMoment = targetDate ?? BusinessDate.Now();
         var day = targetMoment.Date;
         var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(targetMoment);
 
-        var products = await _context.Products
+        var query = _context.Products
             .AsNoTracking()
-            .Where(p => p.IsActive)
+            .Where(p => p.IsActive);
+
+        if (clientGroupId.HasValue)
+        {
+            query = query.Where(p => p.ClientGroupId == clientGroupId.Value);
+        }
+
+        var products = await query
             .OrderBy(p => p.Name)
             .ThenBy(p => p.SKU)
             .ToListAsync();
@@ -535,7 +546,8 @@ public class WeeklyPricesController : Controller
         string? searchTerm = null,
         int page = 1,
         int pageSize = 40,
-        IEnumerable<PriceVersusItem>? postedItems = null)
+        IEnumerable<PriceVersusItem>? postedItems = null,
+        int? clientGroupId = null)
     {
         var day = targetDate.Date;
         var applicableDay = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate);
@@ -548,6 +560,11 @@ public class WeeklyPricesController : Controller
         var productsQuery = _context.Products
             .AsNoTracking()
             .Where(p => p.IsActive);
+
+        if (clientGroupId.HasValue)
+        {
+            productsQuery = productsQuery.Where(p => p.ClientGroupId == clientGroupId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
@@ -693,19 +710,20 @@ public class WeeklyPricesController : Controller
             ? model.Items.Where(i => i.ProductId == singleProductId.Value).ToList()
             : model.Items.ToList();
 
-    private IActionResult RedirectToPriceVersus(DateTime targetDate, string? searchTerm, int page, int pageSize)
+    private IActionResult RedirectToPriceVersus(DateTime targetDate, string? searchTerm, int page, int pageSize, int? clientGroupId)
         => RedirectToAction(nameof(PriceVersus), new
         {
             date = targetDate.ToString("yyyy-MM-dd"),
             q = searchTerm,
             page = Math.Max(1, page),
-            pageSize = Math.Clamp(pageSize, 20, 200)
+            pageSize = Math.Clamp(pageSize, 20, 200),
+            clientGroupId
         });
 
-    private IActionResult RedirectAfterImport(DateTime targetDate, string? searchTerm, int page, int pageSize, string? returnUrl)
+    private IActionResult RedirectAfterImport(DateTime targetDate, string? searchTerm, int page, int pageSize, string? returnUrl, int? clientGroupId)
         => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
             ? LocalRedirect(AttachTargetDate(returnUrl, targetDate))
-            : RedirectToPriceVersus(targetDate, searchTerm, page, pageSize);
+            : RedirectToPriceVersus(targetDate, searchTerm, page, pageSize, clientGroupId);
 
     private static string AttachTargetDate(string returnUrl, DateTime targetDate)
     {
@@ -1025,7 +1043,8 @@ public class WeeklyPricesController : Controller
         bool applyToMasterCost,
         List<PriceVersusItem> itemsToSave,
         bool forceCreateWeeklyRecords = false,
-        bool completeWeeklyRefresh = false)
+        bool completeWeeklyRefresh = false,
+        int? clientGroupId = null)
     {
         var (weekStart, weekEnd) = WeeklyPriceCalendar.GetWeekRange(targetDate);
 
@@ -1039,9 +1058,35 @@ public class WeeklyPricesController : Controller
         var applicableTargetDate = WeeklyPriceCalendar.GetApplicablePriceDate(targetDate) ?? weekStart;
 
         var productQuery = _context.Products.AsQueryable();
-        productQuery = completeWeeklyRefresh
-            ? productQuery.Where(p => p.IsActive || postedProductIds.Contains(p.Id))
-            : productQuery.Where(p => postedProductIds.Contains(p.Id));
+        
+        if (completeWeeklyRefresh)
+        {
+            if (clientGroupId.HasValue)
+            {
+                productQuery = productQuery.Where(p => (p.IsActive && p.ClientGroupId == clientGroupId.Value) || postedProductIds.Contains(p.Id));
+            }
+            else
+            {
+                var involvedClientGroups = await _context.Products
+                    .Where(p => postedProductIds.Contains(p.Id) && p.ClientGroupId.HasValue)
+                    .Select(p => p.ClientGroupId)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (involvedClientGroups.Any())
+                {
+                    productQuery = productQuery.Where(p => (p.IsActive && involvedClientGroups.Contains(p.ClientGroupId)) || postedProductIds.Contains(p.Id));
+                }
+                else
+                {
+                    productQuery = productQuery.Where(p => p.IsActive || postedProductIds.Contains(p.Id));
+                }
+            }
+        }
+        else
+        {
+            productQuery = productQuery.Where(p => postedProductIds.Contains(p.Id));
+        }
 
         var productMap = await productQuery.ToDictionaryAsync(p => p.Id, p => p);
         var pids = productMap.Keys.ToList();

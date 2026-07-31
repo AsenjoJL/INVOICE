@@ -30,6 +30,10 @@ body {
   color: var(--ink);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html, body {
   height: 100%;
   margin: 0;
@@ -1011,6 +1015,7 @@ html, body {
   box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.35);
 }
 
+
 .order-footer td {
   background: #f8fafc;
   font-weight: 700;
@@ -1255,9 +1260,15 @@ a {
   color: var(--accent);
 }
 
+@keyframes pageFadeIn {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 .content-area {
   padding: 1.5rem;
   flex: 1 0 auto;
+  animation: pageFadeIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .footer {
