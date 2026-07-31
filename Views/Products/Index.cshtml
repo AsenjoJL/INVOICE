@@ -114,7 +114,15 @@
                         data-bs-target="#productImportPanel"
                         aria-expanded="false"
                         aria-controls="productImportPanel">
-                    <i class="bi bi-upload"></i> Import Prices
+                    <i class="bi bi-currency-dollar"></i> Import Prices
+                </button>
+                <button type="button"
+                        class="btn btn-ghost"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#productCatalogImportPanel"
+                        aria-expanded="false"
+                        aria-controls="productCatalogImportPanel">
+                    <i class="bi bi-box-seam"></i> Import Catalog
                 </button>
                 <a asp-action="Create" class="btn btn-primary-ghost"><i class="bi bi-plus-lg"></i> Add Product</a>
             </div>
@@ -208,6 +216,43 @@
                     </a>
                 </div>
             </div>
+            <div class="mt-2 text-muted small"><i class="bi bi-info-circle"></i> Import templates will list active products matching the filter (scope/category).</div>
+        </div>
+        
+        <div id="productCatalogImportPanel" class="collapse info-collapse mt-3">
+            <div class="mb-2"><strong>Catalog Import:</strong> Bulk upload new products for the selected Client Group using an Excel file.</div>
+            <form asp-controller="Products"
+                  asp-action="ImportExcel"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="row g-3 align-items-end">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="clientGroupId" value="@(ViewBag.ClientGroupId as int?)" />
+                <div class="col-lg-6">
+                    <label class="form-label small text-uppercase fw-bold">Excel Catalog Template</label>
+                    <input type="file" name="importFile" accept=".xlsx" class="form-control" required />
+                </div>
+                <div class="col-lg-3">
+                    <button type="submit" class="btn btn-primary-ghost w-100">
+                        <i class="bi bi-upload"></i> Import Catalog
+                    </button>
+                </div>
+                <div class="col-lg-3">
+                    <a asp-controller="Products"
+                       asp-action="DownloadTemplate"
+                       class="btn btn-ghost w-100">
+                        <i class="bi bi-download"></i> Blank Template
+                    </a>
+                </div>
+            </form>
+            @if((ViewBag.ClientGroupId as int?) == null)
+            {
+                <div class="mt-2 text-warning small"><i class="bi bi-exclamation-triangle"></i> You have not selected a Client Group in the filter above. Products will be shared globally unless a group is selected.</div>
+            }
+            else
+            {
+                <div class="mt-2 text-success small"><i class="bi bi-check-circle"></i> Products will be imported into the currently selected Client Group.</div>
+            }
         </div>
 
         <div class="filter-bar">

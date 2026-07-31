@@ -3,6 +3,8 @@ using HazelInvoice.Helpers;
 using HazelInvoice.Models;
 using HazelInvoice.Services.Caching;
 using HazelInvoice.ViewModels;
+using HazelInvoice.Helpers;
+using HazelInvoice.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -426,6 +428,131 @@ public class ProductsController : Controller
             ScopeAll => ScopeAll,
             _ => ScopeActive
         };
+    }
+
+    [HttpGet]
+    public IActionResult DownloadTemplate()
+    {
+        var rows = new List<List<string>>
+        {
+            new List<string> { "Name", "Category", "Unit", "UnitCost", "Markup", "DeliveryFee" },
+            new List<string> { "Sample Carrot", "Vegetables", "kg", "50.00", "20.00", "0" },
+            new List<string> { "Sample Pork", "Meat", "kg", "250.00", "30.00", "10.00" }
+        };
+
+        var options = new SimpleXlsxSheetOptions
+        {
+            AutoFitColumns = true,
+            MinimumColumnWidth = 15
+        };
+
+        var xlsxBytes = SimpleXlsxWriter.WriteSingleSheet("Products Template", rows, options);
+        return File(xlsxBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Product_Import_Template.xlsx");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ImportExcel(IFormFile? importFile, int? clientGroupId)
+    {
+        if (importFile == null || importFile.Length == 0)
+        {
+            TempData["ErrorMessage"] = "Please choose an Excel (.xlsx) file.";
+            return RedirectToAction(nameof(Index), new { clientGroupId });
+        }
+
+        if (!string.Equals(Path.GetExtension(importFile.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ErrorMessage"] = "Invalid file type. Please upload an .xlsx file.";
+            return RedirectToAction(nameof(Index), new { clientGroupId });
+        }
+
+        try
+        {
+            await using var stream = new MemoryStream();
+            await importFile.CopyToAsync(stream);
+
+            var sheet = SimpleXlsxReader.ReadFirstSheet(stream);
+            if (sheet.MaxRow < 2)
+            {
+                TempData["ErrorMessage"] = "The file is empty or missing data rows.";
+                return RedirectToAction(nameof(Index), new { clientGroupId });
+            }
+
+            // Find headers
+            int nameCol = -1, catCol = -1, unitCol = -1, costCol = -1, markupCol = -1, deliveryCol = -1;
+            for (int c = 1; c <= sheet.MaxCol; c++)
+            {
+                var header = sheet.GetCell(1, c).Trim().ToLowerInvariant().Replace(" ", "");
+                if (header == "name") nameCol = c;
+                else if (header == "category") catCol = c;
+                else if (header == "unit") unitCol = c;
+                else if (header == "unitcost") costCol = c;
+                else if (header == "markup") markupCol = c;
+                else if (header == "deliveryfee") deliveryCol = c;
+            }
+
+            if (nameCol == -1 || costCol == -1)
+            {
+                TempData["ErrorMessage"] = "Missing required columns: Name, UnitCost.";
+                return RedirectToAction(nameof(Index), new { clientGroupId });
+            }
+
+            var newProducts = new List<Product>();
+            for (int r = 2; r <= sheet.MaxRow; r++)
+            {
+                var name = sheet.GetCell(r, nameCol);
+                if (string.IsNullOrWhiteSpace(name)) continue;
+
+                var cat = catCol != -1 ? sheet.GetCell(r, catCol) : "";
+                var unit = unitCol != -1 ? sheet.GetCell(r, unitCol) : "pc";
+                
+                if (string.IsNullOrWhiteSpace(unit)) unit = "pc";
+                
+                var rawCost = costCol != -1 ? sheet.GetCell(r, costCol) : "0";
+                var rawMarkup = markupCol != -1 ? sheet.GetCell(r, markupCol) : "0";
+                var rawDelivery = deliveryCol != -1 ? sheet.GetCell(r, deliveryCol) : "0";
+
+                SimpleXlsxReader.TryParseDecimal(rawCost, out var cost);
+                SimpleXlsxReader.TryParseDecimal(rawMarkup, out var markup);
+                SimpleXlsxReader.TryParseDecimal(rawDelivery, out var delivery);
+
+                var p = new Product
+                {
+                    Name = name.Length > 100 ? name[..100] : name,
+                    Category = cat.Length > 50 ? cat[..50] : cat,
+                    Unit = unit.Length > 20 ? unit[..20] : unit,
+                    UnitCost = cost,
+                    Markup = markup,
+                    DeliveryFee = delivery,
+                    ClientGroupId = clientGroupId,
+                    IsActive = true,
+                    SKU = "TEMP-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()
+                };
+                newProducts.Add(p);
+            }
+
+            if (newProducts.Count > 0)
+            {
+                _context.Products.AddRange(newProducts);
+                await _context.SaveChangesAsync(HttpContext.RequestAborted);
+                
+                // Fix SKUs to V-XXX standard
+                foreach (var p in newProducts)
+                {
+                    p.SKU = $"V-{p.Id:D4}";
+                }
+                await _context.SaveChangesAsync(HttpContext.RequestAborted);
+                _cacheInvalidator.InvalidateProducts();
+            }
+
+            TempData["SuccessMessage"] = $"Successfully imported {newProducts.Count} products.";
+            return RedirectToAction(nameof(Index), new { clientGroupId });
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = $"Unable to read Excel file: {ex.Message}";
+            return RedirectToAction(nameof(Index), new { clientGroupId });
+        }
     }
 
     [HttpGet]
