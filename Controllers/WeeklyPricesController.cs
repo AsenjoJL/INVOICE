@@ -412,13 +412,30 @@ public class WeeklyPricesController : Controller
     }
 
     // GET: WeeklyPrices
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int? clientGroupId = null)
     {
-        var prices = await _context.WeeklyPrices
+        var query = _context.WeeklyPrices
             .AsNoTracking()
             .Include(w => w.Product)
+            .AsQueryable();
+
+        if (clientGroupId.HasValue)
+        {
+            query = query.Where(w => w.Product != null && w.Product.ClientGroupId == clientGroupId.Value);
+        }
+
+        var prices = await query
             .OrderByDescending(w => w.EffectiveFrom)
+            .Take(500)
             .ToListAsync();
+            
+        ViewBag.ClientGroupOptions = await _context.ClientGroups
+            .Where(g => g.IsActive)
+            .OrderBy(g => g.DisplayOrder)
+            .ThenBy(g => g.Name)
+            .ToListAsync();
+        ViewBag.ClientGroupId = clientGroupId;
+
         return View(prices);
     }
 

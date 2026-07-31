@@ -22,6 +22,32 @@
 
     <partial name="_PageNote" />
 
+    <div class="mb-4">
+        <form method="get" class="d-flex align-items-end gap-3" style="max-width: 300px;">
+            <div class="flex-grow-1">
+                @{
+                    var clientGroupOptions = (ViewBag.ClientGroupOptions as List<HazelInvoice.Models.ClientGroup>) ?? new List<HazelInvoice.Models.ClientGroup>();
+                    var selectedGroupId = ViewBag.ClientGroupId as int?;
+                }
+                <label class="form-label text-muted small fw-bold mb-1">Filter by Client Group</label>
+                <select name="clientGroupId" class="form-select" onchange="this.form.submit()">
+                    <option value="">-- All Groups --</option>
+                    @foreach (var g in clientGroupOptions)
+                    {
+                        if (selectedGroupId == g.Id)
+                        {
+                            <option value="@g.Id" selected>@g.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@g.Id">@g.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
+
     <div class="card weekly-card">
         <div class="card-body p-0">
             <div class="table-responsive">
