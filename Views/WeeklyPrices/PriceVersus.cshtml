@@ -7,13 +7,21 @@
 }
 
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     .price-setup-page {
-        --price-line: #e8e8e8;
-        --price-text: #0a0a0a;
-        --price-muted: #888888;
-        --price-soft: #f7f7f7;
-        font-family: 'DM Sans', sans-serif;
+        --price-line:   #e2e5ea;
+        --price-text:   #0a0a0a;
+        --price-label:  #4b5563;
+        --price-muted:  #6b7280;
+        --price-soft:   #f8fafc;
+        --price-blue:   #1d4ed8;
+        --price-radius: 10px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
         color: var(--price-text);
+        font-size: 14px;
+        line-height: 1.6;
     }
     .price-setup-shell {
         max-width: 1180px;
@@ -22,12 +30,12 @@
     .price-setup-kicker,
     .price-table-toolbar-label,
     .price-field-label {
-        font-family: 'DM Mono', monospace;
-        font-size: 9px;
-        font-weight: 500;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.67rem;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: var(--price-muted);
+        letter-spacing: 0.1em;
+        color: var(--price-label);
     }
     .price-setup-headline {
         display: flex;
@@ -35,49 +43,64 @@
         align-items: center;
         gap: 1rem;
         margin-bottom: 1.25rem;
-        padding: 1.15rem 1.35rem;
+        padding: 1.1rem 1.35rem;
         background: #ffffff;
         border: 1px solid var(--price-line);
-        border-radius: var(--ui-radius-xl);
-        box-shadow: none;
+        border-radius: var(--price-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         box-sizing: border-box;
         overflow: visible;
     }
     .price-setup-meta {
         display: flex;
         flex-direction: column;
-        gap: 0.35rem;
+        gap: 0.3rem;
         min-width: 0;
     }
     .price-setup-sub {
         margin: 0;
         color: var(--price-muted);
-        font-size: 14px;
-        line-height: 1.5;
+        font-size: 0.875rem;
+        line-height: 1.55;
     }
     .price-week-label {
-        color: var(--price-text);
-        font-weight: 600;
+        color: var(--price-blue);
+        font-weight: 700;
     }
     .price-btn {
-        border-radius: var(--ui-radius-xl);
-        font-weight: 500;
+        border-radius: 7px;
+        font-weight: 600;
+        font-size: 0.83rem;
         border-width: 1px;
         box-shadow: none !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 140ms ease;
     }
     .price-btn-neutral {
         border-color: var(--price-line);
         color: var(--price-text);
         background: #ffffff;
     }
+    .price-btn-neutral:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: var(--price-text);
+    }
     .price-btn-primary {
-        border-color: #0a0a0a;
-        background: #0a0a0a;
+        border-color: var(--price-text);
+        background: var(--price-text);
+        color: #ffffff;
+    }
+    .price-btn-primary:hover {
+        background: #1c1c1c;
+        border-color: #1c1c1c;
         color: #ffffff;
     }
     .price-actions {
         display: flex;
-        gap: 12px;
+        gap: 10px;
         align-items: center;
         flex-wrap: wrap;
         justify-content: flex-end;
@@ -87,8 +110,8 @@
         max-width: 760px;
     }
     .price-back-link {
-        min-height: 44px;
-        padding-inline: 1rem 1.1rem;
+        min-height: 38px;
+        padding-inline: 0.9rem 1rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -104,8 +127,8 @@
     .price-date-form {
         background: #ffffff;
         border: 1px solid var(--price-line);
-        border-radius: var(--ui-radius-md);
-        box-shadow: none;
+        border-radius: var(--price-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         padding: 1rem 1.1rem;
     }
     .price-search-form {
@@ -115,16 +138,18 @@
         align-items: end;
         background: #ffffff;
         border: 1px solid var(--price-line);
-        border-radius: var(--ui-radius-md);
-        box-shadow: none;
+        border-radius: var(--price-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         padding: 1rem 1.1rem;
     }
     .price-search-form .form-control,
     .price-search-form .form-select {
-        border-radius: var(--ui-radius-md);
+        border-radius: 7px;
         border: 1px solid var(--price-line);
-        min-height: 44px;
+        min-height: 40px;
         box-shadow: none;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
     }
     .price-import-form {
         display: grid;
@@ -133,31 +158,33 @@
         align-items: end;
         background: #ffffff;
         border: 1px solid var(--price-line);
-        border-radius: var(--ui-radius-md);
-        box-shadow: none;
+        border-radius: var(--price-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         padding: 1rem 1.1rem;
     }
     .price-import-form .form-control {
-        border-radius: var(--ui-radius-md);
+        border-radius: 7px;
         border: 1px solid var(--price-line);
-        min-height: 44px;
+        min-height: 40px;
         box-shadow: none;
     }
     .price-date-form label {
         display: block;
-        margin-bottom: 0.55rem;
+        margin-bottom: 0.5rem;
     }
     .price-date-form input[type="date"] {
-        border-radius: var(--ui-radius-md);
+        border-radius: 7px;
         border: 1px solid var(--price-line);
         font-weight: 500;
-        min-height: 48px;
+        min-height: 42px;
+        font-family: 'Inter', sans-serif;
     }
     .price-card {
         border: 1px solid var(--price-line);
-        border-radius: var(--ui-radius-md);
-        box-shadow: none;
+        border-radius: var(--price-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         overflow: hidden;
+        background: #ffffff;
     }
     .price-table-toolbar {
         display: flex;
@@ -165,161 +192,177 @@
         align-items: center;
         gap: 16px;
         flex-wrap: wrap;
-        padding: 1.1rem 1.25rem;
+        padding: 1rem 1.25rem;
         border-bottom: 1px solid var(--price-line);
-        background: #ffffff;
+        background: #f8fafc;
     }
     .price-table-toolbar-copy {
         min-width: min(100%, 540px);
     }
     .price-table-toolbar-label {
-        font-family: 'DM Mono', monospace;
-        font-size: 9px;
-        font-weight: 500;
+        font-size: 0.67rem;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
-        color: var(--price-muted);
+        letter-spacing: 0.1em;
+        color: var(--price-label);
+        margin-bottom: 0.2rem;
+        display: block;
     }
     .price-table-toolbar-title {
-        margin: 0.45rem 0 0;
-        font-size: 16px;
-        font-weight: 600;
+        margin: 0.3rem 0 0;
+        font-size: 0.95rem;
+        font-weight: 700;
         color: var(--price-text);
+        letter-spacing: -0.01em;
     }
     .price-table-toolbar-sub {
-        margin: 0.35rem 0 0;
+        margin: 0.25rem 0 0;
         color: var(--price-muted);
-        font-size: 14px;
-        line-height: 1.6;
+        font-size: 0.825rem;
+        line-height: 1.55;
     }
     .price-table-toolbar-meta {
-        margin-top: 0.55rem;
+        margin-top: 0.4rem;
         color: var(--price-muted);
-        font-size: 12px;
+        font-size: 0.78rem;
     }
     .price-save-btn {
-        min-width: 180px;
-        min-height: 46px;
-        padding-inline: 1.15rem;
+        min-width: 160px;
+        min-height: 40px;
+        padding-inline: 1.1rem;
     }
     .price-save-btn.is-saving {
         opacity: 0.72;
         pointer-events: none;
     }
     .price-feedback {
-        padding: 0.85rem 1.25rem;
+        padding: 0.75rem 1.25rem;
         border-bottom: 1px solid var(--price-line);
-        font-size: 14px;
+        font-size: 0.875rem;
     }
     .price-feedback-success {
-        background: #fbfbfb;
-        color: #111111;
+        background: #f0fdf4;
+        color: #15803d;
+        border-left: 3px solid #15803d;
     }
     .price-feedback-error {
-        background: #fff8f8;
-        color: #8b1e1e;
+        background: #fef2f2;
+        color: #b91c1c;
+        border-left: 3px solid #b91c1c;
     }
-    .price-feedback.is-hidden {
-        display: none;
-    }
+    .price-feedback.is-hidden { display: none; }
     .price-table-wrap {
         max-height: 70vh;
         overflow: auto;
         scroll-margin-top: 110px;
     }
-    .price-table {
-        margin: 0;
-    }
+    .price-table { margin: 0; }
     .price-table thead th {
-        background: #ffffff;
-        color: var(--price-muted);
-        font-family: 'DM Mono', monospace;
+        background: #f8fafc;
+        color: var(--price-label);
+        font-family: 'Inter', sans-serif;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
-        font-size: 9px;
-        font-weight: 500;
-        border-bottom: 1px solid var(--price-line);
+        letter-spacing: 0.1em;
+        font-size: 0.67rem;
+        font-weight: 700;
+        border-bottom: 1.5px solid var(--price-line);
+        padding: 0.85rem 1rem;
+        white-space: nowrap;
     }
-    .price-table tbody tr:hover {
-        background: #fafafa;
+    .price-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #edf0f3;
+        vertical-align: middle;
+        color: var(--price-text);
+        font-size: 0.875rem;
     }
-    .price-table .row-edited td {
-        background: #fafafa !important;
-    }
+    .price-table tbody tr:last-child td { border-bottom: none; }
+    .price-table tbody tr:hover { background: #f8fafc; }
+    .price-table .row-edited td { background: #eff6ff !important; }
     .price-product-name {
-        font-weight: 500;
+        font-weight: 600;
         color: var(--price-text);
     }
     .price-unit {
         color: var(--price-muted);
-        font-family: 'DM Mono', monospace;
-        font-size: 10px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.72rem;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.06em;
     }
     .price-input {
-        border-radius: var(--ui-radius-md);
+        border-radius: 7px;
         border: 1px solid var(--price-line);
         font-weight: 500;
         box-shadow: none;
-        min-height: 44px;
+        min-height: 38px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
     }
     .price-input:focus {
-        border-color: #d4d4d4;
-        box-shadow: none;
+        border-color: var(--price-blue);
+        box-shadow: 0 0 0 2px rgba(29,78,216,0.1);
+        outline: none;
     }
+    /* Blue for price values */
     .price-value {
-        color: var(--price-text);
+        color: var(--price-blue);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
     }
     .price-delivery-input {
-        border-radius: var(--ui-radius-md);
+        border-radius: 7px;
         border: 1px solid var(--price-line);
         background: #ffffff;
         color: var(--price-text);
         font-weight: 500;
-        min-height: 44px;
+        min-height: 38px;
+        font-family: 'Inter', sans-serif;
     }
     .price-reset-btn {
-        border-radius: var(--ui-radius-md);
-        font-weight: 500;
+        border-radius: 7px;
+        font-weight: 600;
     }
     .price-status {
-        border-radius: 999px;
-        font-family: 'DM Mono', monospace;
-        font-weight: 500;
-        font-size: 10px;
-        padding: 0.3rem 0.65rem;
+        border-radius: 20px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        border: 1px solid transparent;
     }
     .price-status-weekly {
-        background: #ffffff;
-        color: var(--price-text);
-        border: 1px solid var(--price-line);
+        background: #eff6ff;
+        color: var(--price-blue);
+        border-color: #bfdbfe;
     }
     .price-status-default {
-        background: #ffffff;
+        background: #f1f5f9;
         color: var(--price-muted);
-        border: 1px solid var(--price-line);
+        border-color: var(--price-line);
     }
     .price-saved-row td {
-        background: #f8f8f8 !important;
-        transition: background-color 0.25s ease;
+        background: #eff6ff !important;
+        transition: background-color 0.35s ease;
     }
     .price-pager {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        padding: 0.95rem 1.25rem 1.1rem;
+        padding: 0.85rem 1.25rem;
         border-top: 1px solid var(--price-line);
-        background: #ffffff;
+        background: #f8fafc;
     }
     .price-pager-text {
         color: var(--price-muted);
-        font-size: 13px;
+        font-size: 0.8rem;
     }
     .price-pager-actions {
         display: flex;
-        gap: 0.65rem;
+        gap: 0.6rem;
         align-items: center;
     }
     @@media (max-width: 768px) {
@@ -337,25 +380,15 @@
             width: 100%;
             justify-content: flex-start;
         }
-        .price-control-row {
-            grid-template-columns: 1fr;
-        }
-        .price-search-form {
-            grid-template-columns: 1fr;
-        }
-        .price-import-form {
-            grid-template-columns: 1fr;
-        }
-        .price-save-btn {
-            width: 100%;
-        }
+        .price-control-row { grid-template-columns: 1fr; }
+        .price-search-form { grid-template-columns: 1fr; }
+        .price-import-form { grid-template-columns: 1fr; }
+        .price-save-btn { width: 100%; }
         .price-pager {
             flex-direction: column;
             align-items: stretch;
         }
-        .price-pager-actions {
-            justify-content: space-between;
-        }
+        .price-pager-actions { justify-content: space-between; }
     }
 </style>
 

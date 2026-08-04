@@ -1,7 +1,20 @@
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     .weekly-page {
-        font-family: 'DM Sans', sans-serif;
-        color: #0f172a;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        color: #0a0a0a;
+        font-size: 14px;
+        line-height: 1.6;
+        --wp-border:  #e2e5ea;
+        --wp-bg:      #f5f6f8;
+        --wp-surface: #ffffff;
+        --wp-text:    #0a0a0a;
+        --wp-label:   #4b5563;
+        --wp-muted:   #6b7280;
+        --wp-blue:    #1d4ed8;
+        --wp-radius:  10px;
     }
 
     .weekly-header {
@@ -10,157 +23,202 @@
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
-        background: #ffffff;
-        border: 2px solid #cbd5e1;
-        border-radius: var(--ui-radius-xl);
-        box-shadow: none;
-        padding: 1rem 1.2rem;
+        background: var(--wp-surface);
+        border: 1px solid var(--wp-border);
+        border-radius: var(--wp-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        padding: 1.1rem 1.35rem;
         margin-bottom: 1.2rem;
     }
+
     .weekly-header h1,
     .weekly-form-title {
         margin: 0;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 800;
-        color: #000000;
-    }
-    .weekly-sub {
-        margin: 0.3rem 0 0;
-        color: #334155;
-        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--wp-text);
     }
 
+    .weekly-sub {
+        margin: 0.25rem 0 0;
+        color: var(--wp-muted);
+        font-weight: 400;
+        font-size: 0.875rem;
+    }
+
+    /* ── Buttons ───────────────────────────────────────── */
     .weekly-btn {
-        border-radius: var(--ui-radius-md);
-        font-weight: 700;
+        border-radius: 7px;
+        font-weight: 600;
+        font-size: 0.83rem;
         box-shadow: none !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 140ms ease;
     }
     .weekly-btn-neutral {
-        border: 1px solid #cbd5e1;
-        color: #0f172a;
-        background: #ffffff;
+        border: 1px solid var(--wp-border);
+        color: var(--wp-text);
+        background: var(--wp-surface);
+    }
+    .weekly-btn-neutral:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: var(--wp-text);
     }
     .weekly-btn-primary {
-        border: 1px solid #0f766e;
-        background: #0f766e;
+        border: 1px solid var(--wp-text);
+        background: var(--wp-text);
+        color: #ffffff;
+    }
+    .weekly-btn-primary:hover {
+        background: #1c1c1c;
+        border-color: #1c1c1c;
         color: #ffffff;
     }
 
+    /* ── Table Card ────────────────────────────────────── */
     .weekly-card {
-        border: 2px solid #cbd5e1;
-        border-radius: var(--ui-radius-xl);
-        box-shadow: none;
-        background: #ffffff;
+        border: 1px solid var(--wp-border);
+        border-radius: var(--wp-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background: var(--wp-surface);
         overflow: hidden;
     }
+
     .weekly-table {
         margin-bottom: 0;
     }
     .weekly-table thead th {
-        background: #f1f5f9;
-        color: #334155;
+        background: #f8fafc;
+        color: var(--wp-label);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-size: 0.76rem;
+        letter-spacing: 0.1em;
+        font-size: 0.67rem;
         font-weight: 700;
+        border-bottom: 1.5px solid var(--wp-border);
+        padding: 0.85rem 1rem;
+        white-space: nowrap;
     }
-    .weekly-table tbody tr:nth-child(even) {
-        background: #fafcff;
+    .weekly-table tbody td {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid #edf0f3;
+        vertical-align: middle;
+        color: var(--wp-text);
+        font-size: 0.875rem;
     }
-    .weekly-table tbody tr:hover {
-        background: #f0fdfa;
-    }
-    .weekly-row-active {
-        background: #ecfdf5 !important;
-    }
+    .weekly-table tbody tr:last-child td { border-bottom: none; }
+    .weekly-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .weekly-table tbody tr:hover { background: #f1f5f9 !important; }
+
+    /* Blue for active row */
+    .weekly-row-active { background: #eff6ff !important; }
+    .weekly-row-active:hover { background: #dbeafe !important; }
+
     .weekly-name {
-        font-weight: 800;
+        font-weight: 600;
+        color: var(--wp-text);
     }
+    /* Blue for all money values */
     .weekly-money {
         font-weight: 700;
         text-align: right;
+        color: var(--wp-blue);
+        font-variant-numeric: tabular-nums;
     }
+
+    /* ── Status badges ─────────────────────────────────── */
     .weekly-status {
         display: inline-flex;
         align-items: center;
-        border-radius: 999px;
-        padding: 0.28rem 0.7rem;
-        font-size: 0.74rem;
-        font-weight: 700;
+        border-radius: 20px;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.7rem;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.03em;
+        border: 1px solid transparent;
     }
     .weekly-status-active {
-        color: #166534;
-        background: #dcfce7;
+        color: #15803d;
+        background: #f0fdf4;
+        border-color: #dcfce7;
     }
     .weekly-status-expired {
-        color: #475569;
-        background: #e2e8f0;
+        color: var(--wp-muted);
+        background: #f1f5f9;
+        border-color: var(--wp-border);
     }
     .weekly-status-upcoming {
-        color: #0e7490;
-        background: #cffafe;
+        color: var(--wp-blue);
+        background: #eff6ff;
+        border-color: #bfdbfe;
     }
 
+    /* ── Form ──────────────────────────────────────────── */
     .weekly-form-wrap {
-        max-width: 660px;
+        max-width: 620px;
         margin: 0 auto;
     }
     .weekly-form-card {
-        border: 2px solid #cbd5e1;
-        border-radius: var(--ui-radius-xl);
-        box-shadow: none;
-        background: #ffffff;
+        border: 1px solid var(--wp-border);
+        border-radius: var(--wp-radius);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background: var(--wp-surface);
         overflow: hidden;
     }
     .weekly-form-header {
-        padding: 0.9rem 1rem;
-        border-bottom: 1px solid #e2e8f0;
-        background: #ffffff;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--wp-border);
+        background: #f8fafc;
     }
     .weekly-form-body {
-        padding: 1rem;
+        padding: 1.25rem;
     }
     .weekly-form-body .form-control,
     .weekly-form-body .form-select {
-        border-radius: var(--ui-radius-md);
-        border: 1px solid #cbd5e1;
-        font-weight: 600;
+        border-radius: 7px;
+        border: 1px solid var(--wp-border);
+        font-weight: 500;
         box-shadow: none;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
     }
     .weekly-form-body .form-control:focus,
     .weekly-form-body .form-select:focus {
-        border-color: #0f766e;
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+        border-color: var(--wp-blue);
+        box-shadow: 0 0 0 2px rgba(29,78,216,0.1);
+        outline: none;
     }
     .weekly-form-body .form-label {
-        font-weight: 700;
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: var(--wp-label);
+        margin-bottom: 0.35rem;
     }
     .weekly-form-actions .btn {
-        border-radius: var(--ui-radius-md);
-        font-weight: 700;
+        border-radius: 7px;
+        font-weight: 600;
     }
 
     @@media (max-width: 768px) {
-        .weekly-header {
-            padding: 0.85rem 1rem;
-        }
-        .weekly-form-body {
-            padding: 0.85rem;
-        }
+        .weekly-header { padding: 0.85rem 1rem; }
+        .weekly-form-body { padding: 1rem; }
     }
 
     .weekly-header,
     .weekly-card,
     .weekly-form-card {
-        border-radius: var(--ui-radius-xl) !important;
+        border-radius: var(--wp-radius) !important;
     }
 
     .weekly-btn,
     .weekly-form-body .form-control,
     .weekly-form-body .form-select,
     .weekly-form-actions .btn {
-        border-radius: var(--ui-radius-md) !important;
+        border-radius: 7px !important;
     }
 </style>
