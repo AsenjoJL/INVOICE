@@ -1,20 +1,24 @@
 :root {
-    --product-font: inherit;
-    --product-font-mono: inherit;
-    --product-bg: #ffffff;
+    --product-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --product-font-mono: 'Inter', sans-serif;
+    --product-bg: #f5f6f8;
     --product-surface: #ffffff;
     --product-text: #0a0a0a;
-    --product-muted: #888888;
-    --product-line: #e8e8e8;
+    --product-label: #4b5563;
+    --product-muted: #6b7280;
+    --product-line: #e2e5ea;
+    --product-blue: #1d4ed8;
 }
 
 .product-page {
-    font-family: inherit;
+    font-family: var(--product-font);
     color: var(--product-text);
     background: transparent;
     font-size: 14px;
-    --product-shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.04);
-    --product-shadow-press: 0 8px 18px rgba(15, 23, 42, 0.06);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+    --product-shadow-soft: 0 1px 4px rgba(0, 0, 0, 0.05);
+    --product-shadow-press: 0 2px 8px rgba(0, 0, 0, 0.07);
 }
 
 .product-header {
@@ -50,12 +54,12 @@
 .section-title,
 .product-meta,
 .filter-pill {
-    font-family: var(--product-font-mono);
-    font-size: 9px;
-    font-weight: 500;
+    font-family: var(--product-font);
+    font-size: 0.67rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--product-muted);
+    letter-spacing: 0.1em;
+    color: var(--product-label);
 }
 
 .product-header h1 {
@@ -225,11 +229,12 @@
     justify-content: space-between;
 }
 
+/* Blue for all metric values */
 .metric-value {
     font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    color: var(--product-text);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--product-blue);
 }
 
 .metric-chip {
@@ -259,18 +264,29 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 36px;
+    min-height: 34px;
     padding: 0 12px;
     background: #ffffff;
     border: 1px solid var(--product-line);
     border-radius: 999px !important;
     text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--product-label);
+    transition: all 140ms ease;
+}
+
+.filter-pill:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: var(--product-text);
 }
 
 .filter-pill.active {
     background: #0a0a0a;
     border-color: #0a0a0a;
     color: #ffffff;
+    font-weight: 600;
 }
 
 .zero-badge {
