@@ -500,15 +500,47 @@ public class OrdersController : Controller
         if (productCol <= 0)
             productCol = 1;
 
+        var headerRowCount = 1;
+        for (var r = headerRow + 1; r <= sheet.MaxRow; r++)
+        {
+            var prodName = sheet.GetCell(r, productCol)?.Trim();
+            if (string.IsNullOrWhiteSpace(prodName))
+            {
+                headerRowCount++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        var dataStartRow = headerRow + headerRowCount;
+
         var outletColumns = new Dictionary<int, string>();
         for (var c = 1; c <= sheet.MaxCol; c++)
         {
-            var raw = sheet.GetCell(headerRow, c);
-            var key = OrderImportHelpers.NormalizeKey(raw);
-            if (string.IsNullOrWhiteSpace(key) || _vegetableNonOutletHeaderKeys.Contains(key))
+            var headerParts = new List<string>();
+            for (var i = 0; i < headerRowCount; i++)
+            {
+                var val = sheet.GetCell(headerRow + i, c)?.Trim();
+                if (!string.IsNullOrWhiteSpace(val))
+                {
+                    headerParts.Add(val);
+                }
+            }
+
+            if (headerParts.Count == 0)
                 continue;
 
-            outletColumns[c] = raw.Trim();
+            var firstKey = OrderImportHelpers.NormalizeKey(headerParts[0]);
+            if (_vegetableNonOutletHeaderKeys.Contains(firstKey))
+                continue;
+
+            var combinedHeader = string.Join(" ", headerParts);
+            var combinedKey = OrderImportHelpers.NormalizeKey(combinedHeader);
+            if (_vegetableNonOutletHeaderKeys.Contains(combinedKey))
+                continue;
+
+            outletColumns[c] = combinedHeader;
         }
 
         if (outletColumns.Count == 0)
@@ -536,7 +568,7 @@ public class OrdersController : Controller
             }
             else
             {
-                if (ColumnHasPositiveQuantities(sheet, headerRow, kvp.Key))
+                if (ColumnHasPositiveQuantities(sheet, dataStartRow, kvp.Key))
                 {
                     unmatchedOutletHeaders.Add(kvp.Value);
                 }
@@ -578,7 +610,7 @@ public class OrdersController : Controller
         var inactiveMatchedProducts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fractionalQtyCount = 0;
 
-        for (var r = headerRow + 1; r <= sheet.MaxRow; r++)
+        for (var r = dataStartRow; r <= sheet.MaxRow; r++)
         {
             var productNameRaw = sheet.GetCell(r, productCol);
             if (string.IsNullOrWhiteSpace(productNameRaw))
@@ -1325,9 +1357,9 @@ ModelState.AddModelError("", $"You entered a Price for an item (ID: {kvp.Key}) b
         return false;
     }
 
-    private static bool ColumnHasPositiveQuantities(SimpleXlsxSheet sheet, int headerRow, int columnIndex)
+    private static bool ColumnHasPositiveQuantities(SimpleXlsxSheet sheet, int dataStartRow, int columnIndex)
     {
-        for (var row = headerRow + 1; row <= sheet.MaxRow; row++)
+        for (var row = dataStartRow; row <= sheet.MaxRow; row++)
         {
             var raw = sheet.GetCell(row, columnIndex);
             if (OrderImportHelpers.TryParseQuantityLoose(raw, out var qty) && qty > 0)
