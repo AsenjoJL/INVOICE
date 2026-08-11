@@ -151,14 +151,17 @@ html body .invoice-ui .invoice-btn-primary {
   color: #ffffff !important;
 }
 /* matrix buttons */
-.btn-matrix-primary,
-.btn-matrix-primary:hover,
-.btn-matrix-primary *,
-.btn-matrix.active,
-.btn-matrix.active *,
+html body button.btn-matrix-primary,
+html body button.btn-matrix-primary:hover,
+html body button.btn-matrix-primary *,
+html body button.btn-matrix.active,
+html body button.btn-matrix.active *,
+html body a.btn-matrix-primary,
+html body a.btn-matrix-primary:hover,
+html body a.btn-matrix-primary *,
 /* outlet page tabs */
-.outlet-tab.active,
-.outlet-tab.active *,
+html body button.outlet-tab.active,
+html body button.outlet-tab.active *,
 [class].btn-primary,
 [class].btn-primary:hover {
   color: #ffffff !important;
