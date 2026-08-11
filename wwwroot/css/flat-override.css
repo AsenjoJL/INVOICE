@@ -1,12 +1,11 @@
 /*
- * flat-override.css — v3
+ * flat-override.css — v4
  * Render-style flat light theme. Loaded LAST in _Layout.cshtml.
  */
 
 /* ═══════════════════════════════════════════════
    SLEDGEHAMMER — Must be the very first rule.
-   Forces zero border-radius on EVERY element,
-   including those with hardcoded or !important values.
+   Forces zero border-radius, no shadows, BLACK text.
    ═══════════════════════════════════════════════ */
 *,
 *::before,
@@ -16,6 +15,115 @@ html body *::before,
 html body *::after {
   border-radius: 0 !important;
   box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════════
+   GLOBAL TEXT COLOR — ALL text & numbers = black
+   ═══════════════════════════════════════════════ */
+
+/* Everything defaults to near-black */
+html body,
+html body p,
+html body span,
+html body div,
+html body li,
+html body td,
+html body th,
+html body label,
+html body small,
+html body strong,
+html body em,
+html body h1,
+html body h2,
+html body h3,
+html body h4,
+html body h5,
+html body h6 {
+  color: #111827 !important;
+}
+
+/* Links — black, no blue */
+a,
+a:link,
+a:visited,
+a:hover,
+a:active {
+  color: #111827 !important;
+}
+
+a:hover {
+  color: #000000 !important;
+  text-decoration: underline !important;
+}
+
+/* Numbers, values, metric figures — black */
+.metric-value,
+.metric-label,
+.metric-state,
+[class*="-value"],
+[class*="-count"],
+[class*="-number"],
+[class*="-amount"],
+[class*="-total"],
+[class*="-balance"],
+[class*="-paid"],
+[class*="-price"],
+[class*="-qty"] {
+  color: #111827 !important;
+}
+
+/* Muted/secondary text — dark gray, not blue */
+.text-muted,
+.text-secondary,
+[class*="-sub"],
+[class*="-meta"],
+[class*="-kicker"],
+[class*="-state"],
+.admin-kicker,
+.metric-state {
+  color: #6b7280 !important;
+}
+
+/* Danger/error amounts stay red */
+.text-danger,
+.text-danger *,
+[class*="-danger"],
+.metric-card.is-danger .metric-value {
+  color: #dc2626 !important;
+}
+
+/* Success amounts stay green */
+.text-success,
+.text-success *,
+[class*="-success"],
+.metric-card.is-success .metric-value {
+  color: #059669 !important;
+}
+
+/* Warning stays amber */
+.text-warning,
+.text-warning *,
+.metric-card.is-warning .metric-value {
+  color: #d97706 !important;
+}
+
+/* Buttons — keep button text white when on dark bg */
+.btn-primary, .btn-primary *,
+.btn-dark, .btn-dark *,
+.btn-danger, .btn-danger *,
+.btn-success, .btn-success *,
+.btn-warning, .btn-warning * {
+  color: #ffffff !important;
+}
+
+/* Sidebar text stays white/gray */
+.sidebar,
+.sidebar *,
+.sidebar-link,
+.sidebar-section-title,
+.sidebar-brand,
+.sidebar-subtitle {
+  color: inherit !important;
 }
 
 /* Preserve focus outline for accessibility */
