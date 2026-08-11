@@ -117,7 +117,7 @@ a:hover {
 .btn.btn-warning,
 .btn.btn-warning:hover,
 .btn.btn-warning *,
-/* Custom dashboard button classes */
+/* Custom receipt/invoice button classes */
 a.dash-link-btn,
 a.dash-link-btn:hover,
 a.dash-link-btn:visited,
@@ -132,6 +132,28 @@ a.admin-action-btn.btn-primary:hover,
 .dash-btn-dark *,
 .workforce-btn-primary,
 .workforce-btn-primary *,
+/* invoice-btn classes (used in Receipts page) */
+.invoice-btn-primary,
+.invoice-btn-primary:hover,
+.invoice-btn-primary:visited,
+.invoice-btn-primary *,
+.invoice-btn-solid,
+.invoice-btn-solid:hover,
+.invoice-btn-solid *,
+.invoice-btn-danger,
+.invoice-btn-danger:hover,
+.invoice-btn-danger *,
+a.invoice-btn.invoice-btn-primary,
+a.invoice-btn.invoice-btn-primary:hover,
+/* matrix buttons */
+.btn-matrix-primary,
+.btn-matrix-primary:hover,
+.btn-matrix-primary *,
+.btn-matrix.active,
+.btn-matrix.active *,
+/* outlet page tabs */
+.outlet-tab.active,
+.outlet-tab.active *,
 [class].btn-primary,
 [class].btn-primary:hover {
   color: #ffffff !important;
