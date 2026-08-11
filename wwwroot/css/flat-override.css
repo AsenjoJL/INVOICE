@@ -1,21 +1,36 @@
 /*
- * flat-override.css
- * Global flat-design override — Render-style light theme (v2)
- * Loaded last in _Layout.cshtml to win over all other stylesheets.
+ * flat-override.css — v3
+ * Render-style flat light theme. Loaded LAST in _Layout.cshtml.
  */
 
-/* ─────────────────────────────────────────────
-   1. Typography — Inter
-   ───────────────────────────────────────────── */
-html, body, div, span, p, a, label, td, th,
-h1, h2, h3, h4, h5, h6,
-input, select, textarea, button,
-.btn, .form-control, .form-select,
-.badge, .nav-link, .dropdown-item,
-.sidebar-link, .sidebar-brand, .sidebar-section-title,
-.admin-kicker, .admin-page-title,
-.metric-label, .metric-value, .metric-state,
-.surface-card-title, .table, li, ul {
+/* ═══════════════════════════════════════════════
+   SLEDGEHAMMER — Must be the very first rule.
+   Forces zero border-radius on EVERY element,
+   including those with hardcoded or !important values.
+   ═══════════════════════════════════════════════ */
+*,
+*::before,
+*::after,
+html body *,
+html body *::before,
+html body *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Preserve focus outline for accessibility */
+*:focus-visible {
+  outline: 2px solid #374151 !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════════
+   TYPOGRAPHY — Inter (same as Render dashboard)
+   ═══════════════════════════════════════════════ */
+*,
+*::before,
+*::after {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif !important;
 }
 
@@ -26,67 +41,43 @@ body {
   color: #111827 !important;
 }
 
-h1 { font-size: 1.6rem !important; font-weight: 700 !important; letter-spacing: -0.025em !important; color: #111827 !important; }
-h2 { font-size: 1.25rem !important; font-weight: 700 !important; letter-spacing: -0.02em !important; color: #111827 !important; }
-h3 { font-size: 1.05rem !important; font-weight: 600 !important; color: #111827 !important; }
-
-/* ─────────────────────────────────────────────
-   2. THE SLEDGEHAMMER — Zero radius, no shadows
-   Explicitly targets every possible element type.
-   ───────────────────────────────────────────── */
-div, span, section, article, aside, header, footer, nav, main,
-a, button, input, select, textarea,
-.btn, .card, .modal, .modal-content, .modal-dialog,
-.modal-header, .modal-body, .modal-footer,
-.dropdown-menu, .dropdown-item,
-.form-control, .form-select,
-.badge, .alert, .toast,
-.nav-link, .nav-tabs, .tab-content,
-.offcanvas, .offcanvas-header, .offcanvas-body,
-table, thead, tbody, tr, td, th,
-[class], [class*="card"], [class*="panel"],
-[class*="chip"], [class*="pill"], [class*="badge"],
-[class*="btn"], [class*="box"], [class*="hero"],
-[class*="widget"], [class*="block"],
-.surface-card, .metric-card, .dashboard-hero,
-.page-note, .order-hero, .admin-page-hero,
-.admin-page-hero-soft, .workforce-header,
-.shortcut-pill, .kpi-trend, .dash-chip,
-.title-chip, .section-chip, .order-chip,
-.sidebar, .sidebar-link {
-  border-radius: 0 !important;
-  box-shadow: none !important;
+h1 {
+  font-size: 1.6rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  color: #111827 !important;
+}
+h2 {
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+}
+h3 {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: #111827 !important;
 }
 
-/* Focus ring — accessibility */
-*:focus-visible {
-  outline: 2px solid #111827 !important;
-  outline-offset: 2px !important;
-  box-shadow: none !important;
-}
-
-/* ─────────────────────────────────────────────
-   3. Page background & content area
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   PAGE BACKGROUND
+   ═══════════════════════════════════════════════ */
 .content-area,
-.content,
-main[role="main"] {
+main[role="main"],
+.content {
   background: #f4f5f7 !important;
 }
 
-/* ─────────────────────────────────────────────
-   4. Topbar — clean white, dark text
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   TOPBAR
+   ═══════════════════════════════════════════════ */
 .admin-topbar {
   background: #ffffff !important;
   border-bottom: 1px solid #e5e7eb !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
   padding: 0.85rem 1.75rem !important;
 }
 
 .admin-kicker {
-  font-size: 0.7rem !important;
+  font-size: 0.68rem !important;
   font-weight: 600 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.1em !important;
@@ -101,129 +92,16 @@ main[role="main"] {
   letter-spacing: -0.025em !important;
 }
 
-/* ─────────────────────────────────────────────
-   5. Cards & Panels — white, border-driven
-   ───────────────────────────────────────────── */
-.card,
-.surface-card,
-.metric-card,
-.dashboard-shortcuts,
-.page-note,
-[class*="-card"],
-[class*="-panel"] {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  border: 1px solid #e5e7eb !important;
-  background: #ffffff !important;
-}
-
-.surface-card-header {
-  background: #f9fafb !important;
-  border-bottom: 1px solid #e5e7eb !important;
-  border-radius: 0 !important;
-  padding: 0.85rem 1.25rem !important;
-}
-
-.surface-card-title {
-  font-size: 0.75rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.1em !important;
-  color: #374151 !important;
-}
-
-.surface-card-body {
-  padding: 1.25rem !important;
-  background: #ffffff !important;
-}
-
-/* KPI / Metric cards */
-.metric-card {
-  border: 1px solid #e5e7eb !important;
-  border-left: 3px solid #e5e7eb !important;
-  background: #ffffff !important;
-  padding: 1.1rem 1.2rem !important;
-}
-.metric-card.is-success { border-left-color: #10b981 !important; }
-.metric-card.is-primary { border-left-color: #0f766e !important; }
-.metric-card.is-danger  { border-left-color: #ef4444 !important; }
-.metric-card.is-warning { border-left-color: #f59e0b !important; }
-.metric-card.is-info    { border-left-color: #0284c7 !important; }
-
-.metric-label {
-  font-size: 0.68rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.1em !important;
-  color: #6b7280 !important;
-}
-
-.metric-value {
-  font-size: 1.55rem !important;
-  font-weight: 800 !important;
-  color: #111827 !important;
-  margin-top: 0.2rem !important;
-}
-
-.metric-state {
-  font-size: 0.75rem !important;
-  color: #6b7280 !important;
-  margin-top: 0.15rem !important;
-}
-
-/* ─────────────────────────────────────────────
-   6. Hero sections — keep light, white background,
-      dark text (NOT black background)
-   ───────────────────────────────────────────── */
-.order-hero,
-.admin-page-hero,
-.admin-page-hero-soft,
-.workforce-header,
-.dashboard-hero {
-  background: #ffffff !important;
-  color: #111827 !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  padding: 1.25rem 1.5rem !important;
-}
-
-/* Fix all text inside heroes to be dark */
-.order-hero h1, .order-hero h2, .order-hero h3, .order-hero p, .order-hero span, .order-hero div,
-.admin-page-hero h1, .admin-page-hero h2, .admin-page-hero h3, .admin-page-hero p, .admin-page-hero span, .admin-page-hero div,
-.admin-page-hero-soft h1, .admin-page-hero-soft h2, .admin-page-hero-soft h3, .admin-page-hero-soft p, .admin-page-hero-soft span, .admin-page-hero-soft div,
-.workforce-header h1, .workforce-header h2, .workforce-header h3, .workforce-header p, .workforce-header span, .workforce-header div,
-.dashboard-hero h1, .dashboard-hero h2, .dashboard-hero h3, .dashboard-hero p, .dashboard-hero span, .dashboard-hero div {
-  color: #111827 !important;
-}
-
-/* Section kickers/labels inside heroes */
-.admin-section-kicker,
-.order-chip,
-.order-sub,
-.workforce-sub {
-  color: #6b7280 !important;
-}
-
-.workforce-title,
-.order-title {
-  color: #111827 !important;
-  font-size: 1.5rem !important;
-  font-weight: 700 !important;
-}
-
-/* ─────────────────────────────────────────────
-   7. Sidebar — dark, sharp
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════════════ */
 .sidebar {
   background: #111827 !important;
   border-right: 1px solid #1f2937 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
 }
 
 .sidebar-brand {
-  font-size: 0.9rem !important;
+  font-size: 0.88rem !important;
   font-weight: 800 !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
@@ -236,12 +114,12 @@ main[role="main"] {
 
 .sidebar-subtitle {
   color: #6b7280 !important;
-  font-size: 0.7rem !important;
-  padding: 0 1.25rem 0.75rem !important;
+  font-size: 0.68rem !important;
+  padding: 0.3rem 1.25rem 0.75rem !important;
 }
 
 .sidebar-section-title {
-  font-size: 0.65rem !important;
+  font-size: 0.63rem !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.12em !important;
@@ -256,7 +134,6 @@ main[role="main"] {
   font-weight: 500 !important;
   color: #9ca3af !important;
   text-decoration: none !important;
-  border-radius: 0 !important;
   border-left: 2px solid transparent !important;
 }
 
@@ -274,34 +151,132 @@ main[role="main"] {
   border-left-color: #ffffff !important;
 }
 
-/* ─────────────────────────────────────────────
-   8. Buttons — flat, sharp
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   CARDS & PANELS — white + thin border
+   ═══════════════════════════════════════════════ */
+.card,
+.surface-card,
+.metric-card,
+.dashboard-hero,
+.dashboard-shortcuts,
+.page-note,
+.admin-page-hero,
+.admin-page-hero-soft,
+.order-hero,
+.workforce-header,
+[class*="-card"],
+[class*="-panel"] {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+/* Hero / page header areas — white, flat */
+.admin-page-hero,
+.admin-page-hero-soft,
+.workforce-header,
+.order-hero,
+.dashboard-hero {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #e5e7eb !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+/* Ensure text inside heroes is dark */
+.admin-page-hero *:not(.btn):not(.badge),
+.admin-page-hero-soft *:not(.btn):not(.badge),
+.workforce-header *:not(.btn):not(.badge),
+.order-hero *:not(.btn):not(.badge),
+.dashboard-hero *:not(.btn):not(.badge) {
+  color: #111827 !important;
+}
+
+.admin-section-kicker,
+.order-sub,
+.workforce-sub {
+  color: #6b7280 !important;
+}
+
+/* Surface card parts */
+.surface-card-header {
+  background: #f9fafb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  padding: 0.8rem 1.2rem !important;
+}
+
+.surface-card-title {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  color: #374151 !important;
+}
+
+.surface-card-body {
+  padding: 1.2rem !important;
+  background: #ffffff !important;
+}
+
+/* Metric / KPI cards */
+.metric-card {
+  border: 1px solid #e5e7eb !important;
+  border-left: 3px solid #e5e7eb !important;
+  padding: 1rem 1.1rem !important;
+}
+
+.metric-card.is-success { border-left-color: #10b981 !important; }
+.metric-card.is-primary { border-left-color: #0f766e !important; }
+.metric-card.is-danger  { border-left-color: #ef4444 !important; }
+.metric-card.is-warning { border-left-color: #f59e0b !important; }
+.metric-card.is-info    { border-left-color: #0284c7 !important; }
+
+.metric-label {
+  font-size: 0.66rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  color: #6b7280 !important;
+}
+
+.metric-value {
+  font-size: 1.5rem !important;
+  font-weight: 800 !important;
+  color: #111827 !important;
+}
+
+.metric-state {
+  font-size: 0.73rem !important;
+  color: #6b7280 !important;
+}
+
+/* ═══════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════ */
 .btn,
 button:not(.btn-close),
 [type="submit"],
 [type="button"],
 [type="reset"] {
-  border-radius: 0 !important;
-  box-shadow: none !important;
   font-size: 0.84rem !important;
   font-weight: 600 !important;
   letter-spacing: 0.01em !important;
   padding: 0.42rem 1rem !important;
 }
 
-.btn-primary, .btn-dark {
+.btn-primary,
+.btn-dark {
   background: #111827 !important;
   border-color: #111827 !important;
   color: #ffffff !important;
 }
-.btn-primary:hover, .btn-dark:hover {
+.btn-primary:hover,
+.btn-dark:hover {
   background: #000000 !important;
   border-color: #000000 !important;
   color: #ffffff !important;
 }
 
-.btn-secondary, .btn-outline-secondary {
+.btn-secondary {
   background: #ffffff !important;
   border: 1px solid #d1d5db !important;
   color: #374151 !important;
@@ -339,9 +314,9 @@ button:not(.btn-close),
   color: #ffffff !important;
 }
 
-/* ─────────────────────────────────────────────
-   9. Forms
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   FORMS — flat inputs
+   ═══════════════════════════════════════════════ */
 .form-control,
 .form-select,
 input[type="text"],
@@ -351,9 +326,8 @@ input[type="password"],
 input[type="date"],
 input[type="search"],
 input[type="tel"],
-textarea, select {
-  border-radius: 0 !important;
-  box-shadow: none !important;
+textarea,
+select {
   border: 1px solid #d1d5db !important;
   background: #ffffff !important;
   font-size: 0.875rem !important;
@@ -366,7 +340,6 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: #374151 !important;
-  box-shadow: none !important;
   outline: none !important;
 }
 
@@ -377,9 +350,9 @@ select:focus {
   margin-bottom: 0.3rem !important;
 }
 
-/* ─────────────────────────────────────────────
-   10. Tables
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   TABLES
+   ═══════════════════════════════════════════════ */
 .table {
   border-collapse: collapse !important;
   font-size: 0.86rem !important;
@@ -387,14 +360,13 @@ select:focus {
 
 .table thead th,
 .table > thead > tr > th {
-  font-size: 0.68rem !important;
+  font-size: 0.66rem !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.09em !important;
   color: #6b7280 !important;
   background: #f9fafb !important;
   border-bottom: 1px solid #e5e7eb !important;
-  border-radius: 0 !important;
   padding: 0.65rem 1rem !important;
 }
 
@@ -404,54 +376,36 @@ select:focus {
   border-bottom: 1px solid #f3f4f6 !important;
   color: #111827 !important;
   vertical-align: middle !important;
-  border-radius: 0 !important;
 }
 
 .table-hover tbody tr:hover td {
   background: #f9fafb !important;
 }
 
-/* ─────────────────────────────────────────────
-   11. Badges & chips
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   BADGES & CHIPS
+   ═══════════════════════════════════════════════ */
 .badge {
-  border-radius: 0 !important;
-  font-size: 0.68rem !important;
+  font-size: 0.66rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.06em !important;
-  padding: 0.25rem 0.55rem !important;
+  padding: 0.25rem 0.5rem !important;
 }
 
-.kpi-trend,
-.section-chip,
-.dash-chip,
-.title-chip,
-.shortcut-pill,
-.order-chip {
-  border-radius: 0 !important;
-  font-size: 0.68rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
-}
-
-/* ─────────────────────────────────────────────
-   12. Dropdowns & Modals
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   DROPDOWNS & MODALS
+   ═══════════════════════════════════════════════ */
 .dropdown-menu {
-  border-radius: 0 !important;
   border: 1px solid #e5e7eb !important;
   padding: 0.25rem 0 !important;
   background: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
 }
 
 .dropdown-item {
   font-size: 0.855rem !important;
   padding: 0.45rem 1rem !important;
   color: #111827 !important;
-  border-radius: 0 !important;
 }
-
 .dropdown-item:hover,
 .dropdown-item:focus {
   background: #f3f4f6 !important;
@@ -459,14 +413,11 @@ select:focus {
 }
 
 .modal-content {
-  border-radius: 0 !important;
   border: 1px solid #e5e7eb !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
 }
 
 .modal-header {
   border-bottom: 1px solid #e5e7eb !important;
-  border-radius: 0 !important;
   background: #f9fafb !important;
   padding: 1rem 1.5rem !important;
 }
@@ -479,50 +430,54 @@ select:focus {
 
 .modal-footer {
   border-top: 1px solid #e5e7eb !important;
-  border-radius: 0 !important;
   background: #f9fafb !important;
   padding: 0.85rem 1.5rem !important;
 }
 
-/* ─────────────────────────────────────────────
-   13. Alerts
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   ALERTS
+   ═══════════════════════════════════════════════ */
 .alert {
-  border-radius: 0 !important;
-  box-shadow: none !important;
   font-size: 0.875rem !important;
   border-left-width: 3px !important;
 }
 
-/* ─────────────────────────────────────────────
-   14. Nav tabs
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   NAV TABS & PILLS
+   ═══════════════════════════════════════════════ */
 .nav-tabs {
   border-bottom: 1px solid #e5e7eb !important;
 }
 
-.nav-tabs .nav-link {
-  border-radius: 0 !important;
+.nav-tabs .nav-link,
+.nav-pills .nav-link {
   font-size: 0.84rem !important;
   font-weight: 600 !important;
   color: #6b7280 !important;
   border: none !important;
   border-bottom: 2px solid transparent !important;
   padding: 0.6rem 1rem !important;
+  background: transparent !important;
 }
 
 .nav-tabs .nav-link.active,
-.nav-tabs .nav-link:hover {
+.nav-pills .nav-link.active {
   border-bottom: 2px solid #111827 !important;
   color: #111827 !important;
   background: transparent !important;
 }
 
-/* ─────────────────────────────────────────────
-   15. Pagination
-   ───────────────────────────────────────────── */
+.nav-tabs .nav-link:hover,
+.nav-pills .nav-link:hover {
+  border-bottom: 2px solid #d1d5db !important;
+  color: #374151 !important;
+  background: transparent !important;
+}
+
+/* ═══════════════════════════════════════════════
+   PAGINATION
+   ═══════════════════════════════════════════════ */
 .page-link {
-  border-radius: 0 !important;
   color: #374151 !important;
   border: 1px solid #e5e7eb !important;
   font-size: 0.84rem !important;
@@ -533,10 +488,10 @@ select:focus {
   color: #ffffff !important;
 }
 
-/* ─────────────────────────────────────────────
-   16. Scrollbar
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════ */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: #f3f4f6; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 0; }
+::-webkit-scrollbar-thumb { background: #d1d5db; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
