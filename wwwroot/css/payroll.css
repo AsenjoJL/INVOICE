@@ -15,7 +15,7 @@
 .payroll-panel {
     background: #ffffff;
     border: 1px solid var(--payroll-border);
-    border-radius: var(--ui-radius-xl);
+    border-radius: 0;
     box-shadow: none;
 }
 
@@ -71,7 +71,7 @@
     justify-content: center;
     padding: 5px 10px;
     border: 1px solid var(--payroll-border);
-    border-radius: 999px;
+    border-radius: 0;
     background: #ffffff;
 }
 
@@ -162,7 +162,7 @@
 .payroll-page .form-control,
 .payroll-page .form-select,
 .payroll-page .input-group-text {
-    border-radius: var(--ui-radius-md);
+    border-radius: 0;
     box-shadow: none;
 }
 
@@ -271,7 +271,7 @@
 .modal-content .payroll-header,
 .modal-content .payroll-kpi,
 .modal-content .payroll-panel {
-    border-radius: 20px;
+    border-radius: 0;
 }
 
 .modal-content .payroll-header {
@@ -348,12 +348,13 @@
 .payroll-filter,
 .payroll-table-card,
 .payroll-panel {
-    border-radius: var(--ui-radius-xl) !important;
+    border-radius: 0;
 }
 
 .payroll-page .btn,
 .payroll-page .form-control,
 .payroll-page .form-select,
 .payroll-page .input-group-text {
-    border-radius: var(--ui-radius-md) !important;
+    border-radius: 0;
 }
+

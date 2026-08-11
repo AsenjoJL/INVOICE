@@ -15,7 +15,7 @@
         radial-gradient(circle at top left, rgba(16, 185, 129, 0.07), transparent 28%),
         radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent 24%),
         var(--receipt-bg);
-    border-radius: 32px;
+    border-radius: 0;
     padding: 1.5rem !important;
 }
 
@@ -28,7 +28,7 @@
 }
 
 .receipts-refresh .invoice-hero {
-    border-radius: 30px;
+    border-radius: 0;
     padding: 1.45rem 1.5rem;
 }
 
@@ -46,7 +46,7 @@
 }
 
 .receipts-refresh .invoice-actions .invoice-btn {
-    border-radius: 16px;
+    border-radius: 0;
     min-height: 46px;
     padding-inline: 1rem;
     font-weight: 700;
@@ -76,7 +76,7 @@
 .receipts-refresh .receipts-summary-card {
     background: var(--receipt-surface);
     border: 1px solid var(--receipt-border);
-    border-radius: 22px;
+    border-radius: 0;
     box-shadow: var(--receipt-shadow);
     padding: 1rem 1.05rem;
     display: flex;
@@ -112,7 +112,7 @@
 }
 
 .receipts-refresh .invoice-card {
-    border-radius: 26px;
+    border-radius: 0;
     overflow: hidden;
 }
 
@@ -132,7 +132,7 @@
 
 .receipts-refresh .invoice-tag,
 .receipts-refresh .status-pill {
-    border-radius: 999px;
+    border-radius: 0;
     padding: 0.45rem 0.8rem;
     border: 1px solid var(--receipt-border);
 }
@@ -155,7 +155,7 @@
 .receipts-refresh .invoice-icon-btn {
     width: 40px;
     height: 40px;
-    border-radius: 999px;
+    border-radius: 0;
     border: 1px solid var(--receipt-border);
     background: #fff;
     display: inline-flex;
@@ -207,7 +207,7 @@
 .receipts-refresh .admin-inline-filter .form-control,
 .receipts-refresh .admin-inline-filter .form-select {
     min-height: 46px;
-    border-radius: 15px;
+    border-radius: 0;
     border-color: var(--receipt-border);
     box-shadow: none;
     background: #fff;
@@ -253,7 +253,7 @@
 
 @media (max-width: 767.98px) {
     .receipts-refresh.invoice-ui {
-        border-radius: 24px;
+        border-radius: 0;
         padding: 1rem !important;
     }
 
@@ -270,3 +270,4 @@
         padding-inline: 1rem;
     }
 }
+

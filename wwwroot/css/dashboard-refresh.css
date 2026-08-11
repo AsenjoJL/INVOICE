@@ -66,7 +66,7 @@
 .dashboard-refresh.dashboard-shell .dashboard-hero-panel {
     background: var(--dash-surface);
     border: 1px solid var(--dash-border);
-    border-radius: var(--dash-radius);
+    border-radius: 0;
     padding: 2rem 2.25rem;
     margin-bottom: 1.25rem;
     box-shadow: var(--dash-shadow-xs);
@@ -84,7 +84,7 @@
     background: #f1f5f9;
     color: var(--dash-muted);
     border: 1px solid var(--dash-border);
-    border-radius: 5px;
+    border-radius: 0;
     padding: 0.3rem 0.7rem;
     width: fit-content;
     font-weight: 600;
@@ -143,7 +143,7 @@
 .dashboard-refresh.dashboard-shell .dashboard-hero-actions .dash-btn {
     padding: 0.65rem 1.2rem;
     font-size: 0.85rem;
-    border-radius: 8px;
+    border-radius: 0;
     border: none;
     font-weight: 600;
     transition: all 150ms ease;
@@ -182,7 +182,7 @@
 .dashboard-refresh.dashboard-shell .dashboard-hero-highlight {
     background: #f8fafc;
     border: 1px solid var(--dash-border);
-    border-radius: var(--dash-radius-sm);
+    border-radius: 0;
     padding: 1.1rem 1.25rem;
 }
 
@@ -258,7 +258,7 @@
 .dashboard-refresh .dashboard-kpi-tile {
     background: var(--dash-surface);
     border: 1px solid var(--dash-border);
-    border-radius: var(--dash-radius);
+    border-radius: 0;
     padding: 1.35rem 1.5rem;
     display: flex;
     flex-direction: column;
@@ -326,7 +326,7 @@
     top: 1rem;
     right: 1rem;
     padding: 0.22rem 0.55rem;
-    border-radius: 20px;
+    border-radius: 0;
     font-size: 0.68rem;
     font-weight: 600;
     display: flex;
@@ -346,7 +346,7 @@
 .dashboard-refresh.dashboard-shell .dashboard-module-bar {
     background: var(--dash-surface);
     border: 1px solid var(--dash-border);
-    border-radius: var(--dash-radius);
+    border-radius: 0;
     padding: 0.6rem 0.85rem;
     display: flex;
     gap: 0.3rem;
@@ -363,7 +363,7 @@
     font-weight: 500;
     padding: 0.45rem 0.9rem;
     font-size: 0.82rem;
-    border-radius: 7px;
+    border-radius: 0;
     transition: background 150ms ease, color 150ms ease;
     white-space: nowrap;
     display: flex;
@@ -389,7 +389,7 @@
     background: var(--dash-surface);
     border: 1px solid var(--dash-border);
     border-left: 3px solid var(--dash-border);
-    border-radius: var(--dash-radius);
+    border-radius: 0;
     padding: 1.25rem 1.4rem;
     display: flex;
     flex-direction: column;
@@ -456,7 +456,7 @@
     align-items: center;
     gap: 0.2rem;
     padding: 0.2rem 0.5rem;
-    border-radius: 20px;
+    border-radius: 0;
     font-size: 0.68rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -495,7 +495,7 @@
     text-decoration: none;
     padding: 0.25rem 0.65rem;
     border: 1px solid var(--dash-border);
-    border-radius: 6px;
+    border-radius: 0;
     transition: background 140ms, border-color 140ms;
     white-space: nowrap;
 }
@@ -510,7 +510,7 @@
 .dashboard-refresh.dashboard-admin .surface-card {
     background: var(--dash-surface);
     border: 1px solid var(--dash-border);
-    border-radius: var(--dash-radius);
+    border-radius: 0;
     overflow: hidden;
     margin-bottom: 1.25rem;
     box-shadow: var(--dash-shadow-xs);
@@ -559,7 +559,7 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.22rem 0.6rem;
-    border-radius: 5px;
+    border-radius: 0;
     background: #f1f5f9;
     border: 1px solid var(--dash-border);
     color: var(--dash-muted);
@@ -643,7 +643,7 @@
     text-decoration: none;
     padding: 0.28rem 0.65rem;
     border: 1px solid var(--dash-border);
-    border-radius: 6px;
+    border-radius: 0;
     transition: background 140ms ease, border-color 140ms ease;
     flex-shrink: 0;
 }
@@ -657,7 +657,7 @@
 .dashboard-refresh .avatar-initial {
     width: 26px;
     height: 26px;
-    border-radius: 6px;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -706,7 +706,7 @@
     border: 1px solid var(--dash-border);
     color: var(--dash-text);
     padding: 0.38rem 0.85rem;
-    border-radius: 7px;
+    border-radius: 0;
     font-weight: 500;
     font-size: 0.8rem;
     text-decoration: none;
@@ -724,7 +724,7 @@
     background: #f0fdf4;
     color: #15803d;
     border: 1px solid #dcfce7;
-    border-radius: 20px;
+    border-radius: 0;
     padding: 0.2rem 0.6rem;
     font-weight: 600;
     font-size: 0.7rem;
@@ -734,7 +734,7 @@
     background: #fef2f2;
     color: #b91c1c;
     border: 1px solid #fee2e2;
-    border-radius: 20px;
+    border-radius: 0;
     padding: 0.2rem 0.6rem;
     font-weight: 600;
     font-size: 0.7rem;
@@ -767,7 +767,7 @@
     .dashboard-refresh.dashboard-shell .dashboard-module-pill { padding: 0.42rem 0.75rem; font-size: 0.78rem; }
     .dashboard-refresh.dashboard-shell .dashboard-section-heading { margin: 1.4rem 0 0.9rem; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
     .dashboard-refresh.dashboard-admin .metric-card { min-height: auto; padding: 1rem 1.2rem; }
-    .dashboard-refresh.dashboard-admin .surface-card { border-radius: 9px; }
+    .dashboard-refresh.dashboard-admin .surface-card { border-radius: 0; }
     .dashboard-refresh .table thead th, .dashboard-refresh .table tbody td { padding: 0.65rem 0.9rem; font-size: 0.8rem; }
 }
 
@@ -776,3 +776,4 @@
     .dashboard-refresh .dashboard-kpi-next-row { flex-direction: column !important; align-items: flex-start !important; gap: 0 !important; }
     .dashboard-refresh .dashboard-kpi-next-row .dashboard-kpi-icon { margin-bottom: 0.7rem !important; }
 }
+

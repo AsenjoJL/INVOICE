@@ -14,7 +14,7 @@ body.receipt-body {
     margin: 0 auto 16px;
     background: #f8fafc;
     border: 1px solid #e5e7eb;
-    border-radius: 10px;
+    border-radius: 0;
     padding: 10px 14px;
     display: flex;
     align-items: center;
@@ -27,7 +27,7 @@ body.receipt-body {
     align-items: center;
     gap: 8px;
     padding: 8px 14px;
-    border-radius: 999px;
+    border-radius: 0;
     border: 1px solid #d1d5db;
     background: #fff;
     font-weight: 700;
@@ -522,3 +522,4 @@ body.receipt-borderless .received-input {
         page-break-inside: avoid;
     }
 }
+

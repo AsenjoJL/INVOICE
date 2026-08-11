@@ -1,18 +1,22 @@
 /*
- * flat-override.css — v4
+ * flat-override.css — v6
  * Render-style flat light theme. Loaded LAST in _Layout.cshtml.
  */
 
 /* ═══════════════════════════════════════════════
-   SLEDGEHAMMER — Must be the very first rule.
-   Forces zero border-radius, no shadows, BLACK text.
+   SLEDGEHAMMER
+   [class] has the same specificity as .classname (0,1,0)
+   so it beats hardcoded !important class rules when
+   loaded AFTER them.
    ═══════════════════════════════════════════════ */
 *,
 *::before,
 *::after,
-html body *,
-html body *::before,
-html body *::after {
+[class],
+[class]::before,
+[class]::after,
+html [class],
+body [class] {
   border-radius: 0 !important;
   box-shadow: none !important;
 }
