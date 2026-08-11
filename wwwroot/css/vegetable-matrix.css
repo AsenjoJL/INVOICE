@@ -158,13 +158,13 @@
 .btn-matrix-primary {
     background: var(--vm-ink);
     border-color: var(--vm-ink);
-    color: #fff;
+    color: #fff !important;
 }
 
 .btn-matrix-primary:hover {
     background: #1c1c1c;
     border-color: #1c1c1c;
-    color: #fff;
+    color: #fff !important;
 }
 
 .btn-action-secondary {
@@ -203,7 +203,7 @@
 .btn-matrix.active {
     background: var(--vm-ink);
     border-color: var(--vm-ink);
-    color: #fff;
+    color: #fff !important;
 }
 
 .btn-alert {
@@ -317,7 +317,7 @@
     .outlet-tab.active {
         background: var(--vm-ink);
         border-color: var(--vm-ink);
-        color: #fff;
+        color: #fff !important;
     }
 
     @media (max-width: 1200px) {
@@ -559,7 +559,7 @@
     .status-one-order { background-color: #f7b267; color: #111827; }
     .status-many-orders { background-color: #ffc000; color: #111827; font-weight: 700; }
     .status-lowest-qty { background-color: #86efac; color: #064e3b; font-weight: 700; }
-    .status-highest-qty { background-color: #2563eb; color: #ffffff; font-weight: 800; }
+    .status-highest-qty { background-color: #2563eb; color: #ffffff !important; font-weight: 800; }
 
     tfoot td {
         position: sticky;
@@ -669,7 +669,7 @@
         white-space: nowrap;
     }
     .badge-paid { background: #facc15; color: #111; font-weight: 900; padding: 2px 8px; border-radius: 0; border: 1px solid var(--vm-border); }
-    .badge-unpaid { background: #ef4444; color: #fff; font-weight: 900; padding: 2px 8px; border-radius: 0; border: 1px solid var(--vm-border); }
+    .badge-unpaid { background: #ef4444; color: #fff !important; font-weight: 900; padding: 2px 8px; border-radius: 0; border: 1px solid var(--vm-border); }
 
     .detail-finance-wrap {
         margin-top: 14px;
@@ -738,7 +738,7 @@
         text-transform: uppercase;
         letter-spacing: 0.08em;
         font-size: 0.72rem;
-        color: #fff;
+        color: #fff !important;
     }
 
     .pp-grid .pp-cell {
@@ -753,7 +753,7 @@
 
     .pp-grid .pp-total {
         text-align: right;
-        color: #fff;
+        color: #fff !important;
         border-top: 2px solid var(--vm-border);
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
@@ -912,7 +912,7 @@
     .btn-matrix-primary {
         background: #0a0a0a;
         border-color: #0a0a0a;
-        color: #ffffff;
+        color: #ffffff !important;
     }
 
     .matrix-table thead th,
@@ -963,4 +963,5 @@
             margin-right: 0;
         }
     }
+
 

@@ -38,7 +38,7 @@ body.receipt-body {
 
 .btn-primary {
     background: #111827;
-    color: #fff;
+    color: #fff !important;
     border-color: #111827;
 }
 
@@ -522,4 +522,5 @@ body.receipt-borderless .received-input {
         page-break-inside: avoid;
     }
 }
+
 

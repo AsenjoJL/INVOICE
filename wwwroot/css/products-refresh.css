@@ -317,7 +317,7 @@
 .product-refresh .scope-filter-pill[aria-current="true"] {
     background: var(--product-dark);
     border-color: var(--product-dark);
-    color: #fff;
+    color: #fff !important;
     font-weight: 600;
 }
 
@@ -600,4 +600,5 @@
         min-width: 100%;
     }
 }
+
 

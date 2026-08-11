@@ -157,12 +157,12 @@
 
 .dashboard-refresh.dashboard-shell .dash-btn.dash-btn-dark {
     background: var(--dash-text);
-    color: #fff;
+    color: #fff !important;
 }
 
 .dashboard-refresh.dashboard-shell .dash-btn.dash-btn-dark:hover {
     background: #1c1c1c;
-    color: #fff;
+    color: #fff !important;
     transform: translateY(-1px);
     box-shadow: var(--dash-shadow-sm);
 }
@@ -380,7 +380,7 @@
 
 .dashboard-refresh.dashboard-shell .dashboard-module-pill.active {
     background: var(--dash-text);
-    color: #fff;
+    color: #fff !important;
     font-weight: 600;
 }
 
@@ -776,4 +776,5 @@
     .dashboard-refresh .dashboard-kpi-next-row { flex-direction: column !important; align-items: flex-start !important; gap: 0 !important; }
     .dashboard-refresh .dashboard-kpi-next-row .dashboard-kpi-icon { margin-bottom: 0.7rem !important; }
 }
+
 
