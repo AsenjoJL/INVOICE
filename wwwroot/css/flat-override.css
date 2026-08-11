@@ -16,7 +16,13 @@
 [class]::before,
 [class]::after,
 html [class],
-body [class] {
+body [class],
+html body .btn,
+html body a.btn,
+html body button.btn,
+html body .btn-sm,
+html body .btn-outline-primary,
+html body .btn-outline-danger {
   border-radius: 0 !important;
   box-shadow: none !important;
 }
@@ -732,3 +738,15 @@ select:focus {
 ::-webkit-scrollbar-track { background: #f3f4f6; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Force NO border radius on table action buttons */
+html body .table-admin td .btn,
+html body .invoice-table tbody td .btn,
+html body .outlet-table td .btn,
+html body .supplier-table td .btn,
+html body .purchase-table td .btn,
+html body table td .btn,
+html body table td a.btn,
+html body table td button.btn {
+  border-radius: 0 !important;
+}
