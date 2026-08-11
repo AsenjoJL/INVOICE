@@ -116,14 +116,81 @@ a:hover {
   color: #ffffff !important;
 }
 
-/* Sidebar text stays white/gray */
-.sidebar,
+/* ═══════════════════════════════════════════════
+   SIDEBAR — explicit white/gray text on dark bg
+   ═══════════════════════════════════════════════ */
+.sidebar {
+  background: #111827 !important;
+  border-right: 1px solid #1f2937 !important;
+}
+
 .sidebar *,
-.sidebar-link,
-.sidebar-section-title,
+.sidebar a,
+.sidebar a:link,
+.sidebar a:visited,
+.sidebar a:hover,
+.sidebar a:active {
+  color: #9ca3af !important;
+  text-decoration: none !important;
+}
+
 .sidebar-brand,
-.sidebar-subtitle {
-  color: inherit !important;
+.sidebar-brand:link,
+.sidebar-brand:visited,
+html body .sidebar-brand {
+  color: #ffffff !important;
+  font-size: 0.88rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  padding: 1.1rem 1.25rem !important;
+  display: block !important;
+  border-bottom: 1px solid #1f2937 !important;
+}
+
+.sidebar-subtitle,
+html body .sidebar-subtitle {
+  color: #6b7280 !important;
+  font-size: 0.68rem !important;
+  padding: 0.3rem 1.25rem 0.75rem !important;
+}
+
+.sidebar-section-title,
+html body .sidebar-section-title {
+  color: #4b5563 !important;
+  font-size: 0.63rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.12em !important;
+  padding: 1rem 1.25rem 0.3rem !important;
+}
+
+.sidebar-link,
+html body .sidebar .sidebar-link,
+html body .sidebar a.sidebar-link {
+  color: #9ca3af !important;
+  display: block !important;
+  padding: 0.42rem 1.25rem !important;
+  font-size: 0.84rem !important;
+  font-weight: 500 !important;
+  border-left: 2px solid transparent !important;
+}
+
+.sidebar-link:hover,
+html body .sidebar .sidebar-link:hover,
+html body .sidebar a.sidebar-link:hover {
+  background: #1f2937 !important;
+  color: #f9fafb !important;
+  border-left-color: #4b5563 !important;
+}
+
+.sidebar-link.active,
+html body .sidebar .sidebar-link.active,
+html body .sidebar a.sidebar-link.active {
+  background: #1f2937 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-left-color: #ffffff !important;
 }
 
 /* Preserve focus outline for accessibility */
