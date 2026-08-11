@@ -46,13 +46,10 @@ html body h6 {
   color: #111827 !important;
 }
 
-/* Links — black, no blue */
-a,
-a:link,
-a:visited,
-a:hover,
-a:active {
+/* Links — black, no blue. Only bare 'a' (low specificity so buttons can override) */
+a {
   color: #111827 !important;
+  text-decoration: none !important;
 }
 
 a:hover {
@@ -79,45 +76,76 @@ a:hover {
 /* Muted/secondary text — dark gray, not blue */
 .text-muted,
 .text-secondary,
-[class*="-sub"],
-[class*="-meta"],
-[class*="-kicker"],
-[class*="-state"],
 .admin-kicker,
 .metric-state {
   color: #6b7280 !important;
 }
 
-/* Danger/error amounts stay red */
-.text-danger,
-.text-danger *,
-[class*="-danger"],
-.metric-card.is-danger .metric-value {
+/* Danger amounts stay red */
+.text-danger {
   color: #dc2626 !important;
 }
 
 /* Success amounts stay green */
-.text-success,
-.text-success *,
-[class*="-success"],
-.metric-card.is-success .metric-value {
+.text-success {
   color: #059669 !important;
 }
 
 /* Warning stays amber */
-.text-warning,
-.text-warning *,
-.metric-card.is-warning .metric-value {
+.text-warning {
   color: #d97706 !important;
 }
 
-/* Buttons — keep button text white when on dark bg */
-.btn-primary, .btn-primary *,
-.btn-dark, .btn-dark *,
-.btn-danger, .btn-danger *,
-.btn-success, .btn-success *,
-.btn-warning, .btn-warning * {
+/* ═══════════════════════════════════════════════
+   BUTTON TEXT — White on dark buttons.
+   Using two-class selectors (0,2,0 specificity) to
+   beat any a:link rules.
+   ═══════════════════════════════════════════════ */
+.btn.btn-primary,
+.btn.btn-primary:hover,
+.btn.btn-primary:visited,
+.btn.btn-primary *,
+.btn.btn-dark,
+.btn.btn-dark:hover,
+.btn.btn-dark *,
+.btn.btn-danger,
+.btn.btn-danger:hover,
+.btn.btn-danger *,
+.btn.btn-success,
+.btn.btn-success:hover,
+.btn.btn-success *,
+.btn.btn-warning,
+.btn.btn-warning:hover,
+.btn.btn-warning *,
+/* Custom dashboard button classes */
+a.dash-link-btn,
+a.dash-link-btn:hover,
+a.dash-link-btn:visited,
+a.admin-action-btn.btn-primary,
+a.admin-action-btn.btn-primary:hover,
+.dash-btn-primary,
+.dash-btn-primary:hover,
+.dash-btn-primary *,
+.dash-btn-dark,
+.dash-btn-dark:hover,
+.dash-btn-dark:visited,
+.dash-btn-dark *,
+.workforce-btn-primary,
+.workforce-btn-primary *,
+[class].btn-primary,
+[class].btn-primary:hover {
   color: #ffffff !important;
+}
+
+/* White bg buttons get dark text */
+.btn.btn-secondary,
+.btn.btn-outline-secondary,
+.btn.btn-outline-primary,
+.btn.btn-light,
+.btn.btn-white,
+.dash-btn-neutral,
+.workforce-btn-neutral {
+  color: #111827 !important;
 }
 
 /* ═══════════════════════════════════════════════
