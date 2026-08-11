@@ -145,6 +145,11 @@ a.admin-action-btn.btn-primary:hover,
 .invoice-btn-danger *,
 a.invoice-btn.invoice-btn-primary,
 a.invoice-btn.invoice-btn-primary:hover,
+html body .receipts-refresh a.invoice-btn.invoice-btn-primary,
+html body .receipts-refresh a.invoice-btn.invoice-btn-primary *,
+html body .invoice-ui .invoice-btn-primary {
+  color: #ffffff !important;
+}
 /* matrix buttons */
 .btn-matrix-primary,
 .btn-matrix-primary:hover,
