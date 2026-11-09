@@ -49,7 +49,18 @@
         };
         string NavClass(string controller, string? action = null)
         {
-            return "sidebar-link";
+            var isCurrentController = string.Equals(
+                currentController,
+                controller,
+                StringComparison.OrdinalIgnoreCase);
+            var isCurrentAction = string.IsNullOrWhiteSpace(action) || string.Equals(
+                currentAction,
+                action,
+                StringComparison.OrdinalIgnoreCase);
+
+            return isCurrentController && isCurrentAction
+                ? "sidebar-link active"
+                : "sidebar-link";
         }
     }
 

@@ -377,7 +377,8 @@ main[role="main"],
   font-weight: 500 !important;
   color: #9ca3af !important;
   text-decoration: none !important;
-  border-left: 2px solid transparent !important;
+  border-left: 3px solid transparent !important;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease !important;
 }
 
 .sidebar-link:hover {
@@ -391,7 +392,7 @@ main[role="main"],
   background: #1f2937 !important;
   color: #ffffff !important;
   font-weight: 700 !important;
-  border-left-color: #ffffff !important;
+  border-left-color: #22d3ee !important;
 }
 
 /* ═══════════════════════════════════════════════
