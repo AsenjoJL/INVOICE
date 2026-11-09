@@ -49,9 +49,7 @@
         };
         string NavClass(string controller, string? action = null)
         {
-            if (!string.IsNullOrEmpty(action))
-                return currentController == controller && currentAction == action ? "sidebar-link active" : "sidebar-link";
-            return currentController == controller ? "sidebar-link active" : "sidebar-link";
+            return "sidebar-link";
         }
     }
 
